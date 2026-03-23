@@ -1,5 +1,6 @@
 import { AppSidebar } from "./components/AppSidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import BookingPage from "./features/booking/bookingPage"
 
 function App() {
   return (
@@ -9,9 +10,7 @@ function App() {
         <div className="mb-4">
           <SidebarTrigger />
         </div>
-        <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
-          Main content area
-        </div>
+        <BookingPage />
       </SidebarInset>
     </SidebarProvider>
   )
