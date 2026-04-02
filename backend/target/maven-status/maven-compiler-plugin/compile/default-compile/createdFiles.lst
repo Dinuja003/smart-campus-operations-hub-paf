@@ -1,0 +1,6 @@
+com\smartcampus\backend\features\ticket\model\Ticket.class
+com\smartcampus\backend\features\ticket\controller\TicketController.class
+com\smartcampus\backend\features\ticket\repository\TicketRepository.class
+com\smartcampus\backend\config\DBConfig.class
+com\smartcampus\backend\features\ticket\service\TicketService.class
+com\smartcampus\backend\BackendApplication.class
