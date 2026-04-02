@@ -28,7 +28,7 @@ function BookigPage() {
 	const [bookings, setBookings] = useState([
 		{
 			id: 1,
-			studentName: "Aisha Rahman",
+			studentName: "Shanaka Kalubowilage",
 			facility: "Library Discussion Room",
 			date: "2026-03-16",
 			timeSlot: "10:00 - 11:00",
