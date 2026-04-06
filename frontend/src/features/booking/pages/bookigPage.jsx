@@ -28,7 +28,7 @@ function BookigPage() {
 	const [bookings, setBookings] = useState([
 		{
 			id: 1,
-			studentName: "Shanaka Kalubowilage",
+			studentName: "Aisha Rahman",
 			facility: "Library Discussion Room",
 			date: "2026-03-16",
 			timeSlot: "10:00 - 11:00",
@@ -105,17 +105,15 @@ function BookigPage() {
 
 	return (
 		<div style={styles.page}>
-			<div style={styles.header}>
-				<h1 style={styles.title}>Facility Booking</h1>
-				<p style={styles.subtitle}>Reserve campus spaces for classes, events, and study sessions</p>
-			</div>
+			<h1 style={styles.title}>Facility Booking</h1>
+			<p style={styles.subtitle}>Reserve campus spaces for classes, events, and study sessions.</p>
 
 			<div style={styles.grid}>
 				<section style={styles.card}>
-					<h2 style={styles.cardTitle}>Book a Facility</h2>
+					<h2 style={styles.cardTitle}>Create Booking</h2>
 					<form onSubmit={handleSubmit} style={styles.form}>
 						<label style={styles.label}>
-							Student Name <span style={{color: "#ef4444"}}>*</span>
+							Student Name *
 							<input
 								type="text"
 								name="studentName"
@@ -123,8 +121,6 @@ function BookigPage() {
 								onChange={handleChange}
 								placeholder="e.g. Sarah Lim"
 								style={styles.input}
-								onFocus={(e) => (e.target.style.borderColor = "#1f2937")}
-								onBlur={(e) => (e.target.style.borderColor = "#d1d5db")}
 							/>
 						</label>
 
@@ -135,8 +131,6 @@ function BookigPage() {
 								value={formData.facility}
 								onChange={handleChange}
 								style={styles.input}
-								onFocus={(e) => (e.target.style.borderColor = "#1f2937")}
-								onBlur={(e) => (e.target.style.borderColor = "#d1d5db")}
 							>
 								{facilities.map((facility) => (
 									<option key={facility} value={facility}>
@@ -147,15 +141,13 @@ function BookigPage() {
 						</label>
 
 						<label style={styles.label}>
-							Date <span style={{color: "#ef4444"}}>*</span>
+							Date *
 							<input
 								type="date"
 								name="date"
 								value={formData.date}
 								onChange={handleChange}
 								style={styles.input}
-								onFocus={(e) => (e.target.style.borderColor = "#1f2937")}
-								onBlur={(e) => (e.target.style.borderColor = "#d1d5db")}
 							/>
 						</label>
 
@@ -166,8 +158,6 @@ function BookigPage() {
 								value={formData.timeSlot}
 								onChange={handleChange}
 								style={styles.input}
-								onFocus={(e) => (e.target.style.borderColor = "#1f2937")}
-								onBlur={(e) => (e.target.style.borderColor = "#d1d5db")}
 							>
 								{timeSlots.map((slot) => (
 									<option key={slot} value={slot}>
@@ -178,7 +168,7 @@ function BookigPage() {
 						</label>
 
 						<label style={styles.label}>
-							Purpose <span style={{color: "#ef4444"}}>*</span>
+							Purpose *
 							<textarea
 								name="purpose"
 								value={formData.purpose}
@@ -186,79 +176,51 @@ function BookigPage() {
 								rows={3}
 								placeholder="Describe why you need this booking"
 								style={{ ...styles.input, resize: "vertical" }}
-								onFocus={(e) => (e.target.style.borderColor = "#1f2937")}
-								onBlur={(e) => (e.target.style.borderColor = "#d1d5db")}
 							/>
 						</label>
 
 						<div
 							style={{
 								...styles.availability,
-								backgroundColor: availabilityText.includes("unavailable") || availabilityText.includes("already")
-									? "#fee2e2"
-									: "#ecfdf5",
 								color: availabilityText.includes("unavailable") || availabilityText.includes("already")
-									? "#b91c1c"
-									: "#065f46",
+									? "#9c2f2f"
+									: "#1f6d1f",
 							}}
 						>
 							{availabilityText}
 						</div>
 
-						<button 
-							type="submit" 
-							style={styles.button}
-							onMouseEnter={(e) => (e.target.style.backgroundColor = "#111827")}
-							onMouseLeave={(e) => (e.target.style.backgroundColor = "#1f2937")}
-						>
-							Book Facility
+						<button type="submit" style={styles.button}>
+							Submit Booking
 						</button>
 					</form>
 				</section>
 
 				<section style={styles.card}>
-					<h2 style={styles.cardTitle}>Your Bookings</h2>
+					<h2 style={styles.cardTitle}>Recent Bookings</h2>
 					{bookings.length === 0 ? (
-						<p style={styles.emptyText}>No bookings yet. Create one to get started.</p>
+						<p style={styles.emptyText}>No bookings yet.</p>
 					) : (
 						<ul style={styles.list}>
 							{bookings.map((booking) => (
-								<li 
-									key={booking.id} 
-									style={styles.listItem}
-									onMouseEnter={(e) => {
-										e.currentTarget.style.borderColor = "#d1d5db";
-										e.currentTarget.style.boxShadow = "0 4px 6px rgba(0, 0, 0, 0.07)";
-									}}
-									onMouseLeave={(e) => {
-										e.currentTarget.style.borderColor = "#e5e7eb";
-										e.currentTarget.style.boxShadow = "none";
-									}}
-								>
+								<li key={booking.id} style={styles.listItem}>
 									<div style={styles.listRow}>
-										<div>
-											<div style={{fontWeight: "600", color: "#111827", marginBottom: "2px"}}>{booking.studentName}</div>
-											<div style={{fontSize: "13px", color: "#6b7280"}}>{booking.facility}</div>
-										</div>
+										<strong>{booking.studentName}</strong>
 										<span
 											style={{
 												...styles.badge,
-												backgroundColor: booking.status === "Approved" ? "#d1fae5" : "#fef3c7",
-												color: booking.status === "Approved" ? "#065f46" : "#92400e",
+												backgroundColor: booking.status === "Approved" ? "#d7f5dd" : "#fff2c7",
+												color: booking.status === "Approved" ? "#0f5b1f" : "#7a5200",
 											}}
 										>
 											{booking.status}
 										</span>
 									</div>
-									<div style={{display: "flex", gap: "16px", marginTop: "10px", fontSize: "13px", color: "#6b7280"}}>
-										<div>
-											<span style={{fontWeight: "500", color: "#374151"}}>Date:</span> {booking.date}
-										</div>
-										<div>
-											<span style={{fontWeight: "500", color: "#374151"}}>Time:</span> {booking.timeSlot}
-										</div>
+									<div>{booking.facility}</div>
+									<div>
+										{booking.date} | {booking.timeSlot}
 									</div>
-									<div style={styles.purposeText}><span style={{fontWeight: "500", color: "#374151"}}>Purpose:</span> {booking.purpose}</div>
+									<div style={styles.purposeText}>{booking.purpose}</div>
 								</li>
 							))}
 						</ul>
@@ -271,134 +233,101 @@ function BookigPage() {
 
 const styles = {
 	page: {
-		maxWidth: "1200px",
+		maxWidth: "1100px",
 		margin: "0 auto",
-		padding: "32px 24px",
-		fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",
-		color: "#1f2937",
-		background: "#f9fafb",
+		padding: "24px",
+		fontFamily: "Segoe UI, sans-serif",
+		color: "#1b1b1b",
+		background: "linear-gradient(180deg, #f6fbff 0%, #ffffff 100%)",
 		minHeight: "100vh",
 	},
-	header: {
-		marginBottom: "40px",
-		paddingBottom: "24px",
-		borderBottom: "1px solid #e5e7eb",
-	},
 	title: {
-		fontSize: "32px",
-		fontWeight: "700",
-		margin: "0 0 8px 0",
-		color: "#111827",
-		letterSpacing: "-0.5px",
+		marginBottom: "4px",
 	},
 	subtitle: {
-		fontSize: "16px",
-		color: "#6b7280",
-		margin: "0",
-		fontWeight: "400",
+		marginTop: 0,
+		color: "#4a4a4a",
+		marginBottom: "20px",
 	},
 	grid: {
 		display: "grid",
-		gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-		gap: "32px",
+		gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+		gap: "20px",
 	},
 	card: {
-		border: "1px solid #e5e7eb",
+		border: "1px solid #d8e3f0",
 		borderRadius: "12px",
 		backgroundColor: "#ffffff",
-		padding: "28px",
-		boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
-		transition: "box-shadow 0.3s ease, border-color 0.3s ease",
+		padding: "18px",
+		boxShadow: "0 6px 20px rgba(0, 0, 0, 0.06)",
 	},
 	cardTitle: {
-		fontSize: "20px",
-		fontWeight: "600",
-		marginTop: "0",
-		marginBottom: "20px",
-		color: "#111827",
+		marginTop: 0,
+		marginBottom: "12px",
 	},
 	form: {
 		display: "flex",
 		flexDirection: "column",
-		gap: "18px",
+		gap: "12px",
 	},
 	label: {
 		display: "flex",
 		flexDirection: "column",
-		gap: "8px",
+		gap: "6px",
 		fontSize: "14px",
-		fontWeight: "500",
-		color: "#374151",
 	},
 	input: {
-		border: "1px solid #d1d5db",
+		border: "1px solid #c9d6e5",
 		borderRadius: "8px",
-		padding: "10px 12px",
+		padding: "10px",
 		fontSize: "14px",
-		transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-		boxSizing: "border-box",
-		fontFamily: "inherit",
 	},
 	availability: {
-		fontWeight: "600",
-		fontSize: "13px",
-		padding: "12px",
-		borderRadius: "8px",
-		marginTop: "4px",
+		fontWeight: 600,
+		fontSize: "14px",
 	},
 	button: {
-		backgroundColor: "#1f2937",
+		backgroundColor: "#0b5ed7",
 		color: "#ffffff",
 		border: "none",
-		padding: "12px 16px",
+		padding: "10px 14px",
 		borderRadius: "8px",
 		cursor: "pointer",
-		fontWeight: "600",
-		fontSize: "14px",
-		transition: "background-color 0.2s ease, transform 0.1s ease",
-		marginTop: "8px",
+		fontWeight: 600,
 	},
 	list: {
 		listStyle: "none",
-		padding: "0",
-		margin: "0",
+		padding: 0,
+		margin: 0,
 		display: "flex",
 		flexDirection: "column",
-		gap: "12px",
+		gap: "10px",
 	},
 	listItem: {
-		border: "1px solid #e5e7eb",
+		border: "1px solid #e2e8f0",
 		borderRadius: "10px",
-		padding: "16px",
-		backgroundColor: "#ffffff",
+		padding: "12px",
+		backgroundColor: "#fbfdff",
 		fontSize: "14px",
-		transition: "border-color 0.2s ease, box-shadow 0.2s ease",
 	},
 	listRow: {
 		display: "flex",
 		justifyContent: "space-between",
 		alignItems: "center",
-		marginBottom: "8px",
+		marginBottom: "4px",
 	},
 	badge: {
-		fontSize: "11px",
-		padding: "4px 10px",
-		borderRadius: "6px",
-		fontWeight: "600",
-		textTransform: "uppercase",
-		letterSpacing: "0.5px",
+		fontSize: "12px",
+		padding: "2px 8px",
+		borderRadius: "999px",
+		fontWeight: 700,
 	},
 	purposeText: {
-		marginTop: "8px",
-		color: "#6b7280",
-		fontSize: "13px",
-		lineHeight: "1.5",
+		marginTop: "6px",
+		color: "#3d3d3d",
 	},
 	emptyText: {
-		color: "#9ca3af",
-		fontSize: "15px",
-		padding: "20px",
-		textAlign: "center",
+		color: "#6b7280",
 	},
 };
 
