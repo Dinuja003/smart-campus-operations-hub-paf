@@ -119,17 +119,18 @@
 
 body {
   margin: 0;
+  height: 100vh;
+  display: flex;
 }
 
 #root {
-  width: 1126px;
+  width: 100%;
   max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  min-height: 100svh;
+  margin: 0;
+  text-align: left;
+  min-height: 100vh;
   display: flex;
-  flex-direction: column;
- 
+  flex-direction: row;
 }
 
 h1,
