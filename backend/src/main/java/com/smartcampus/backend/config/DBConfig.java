@@ -11,7 +11,7 @@ public class DBConfig {
 
     @Bean
     public MongoClient mongoClient(
-            @Value("${spring.data.mongodb.uri:mongodb://localhost:27017/smartcampus}") String mongoUri
+           @Value("${spring.data.mongodb.uri:mongodb+srv://it23540880_db_user:<db_password>@core.xzay0y2.mongodb.net/?appName=core}") String mongoUri
     ) {
         return MongoClients.create(mongoUri);
     }
