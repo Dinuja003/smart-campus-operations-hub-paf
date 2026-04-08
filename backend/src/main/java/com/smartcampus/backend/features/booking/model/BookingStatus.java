@@ -1,5 +1,8 @@
 package com.smartcampus.backend.features.booking.model;
 
-public class BookingStatus {
-    
+public enum BookingStatus {
+    PENDING,
+    APPROVED,
+    REJECTED,
+    CANCELLED
 }
