@@ -25,7 +25,9 @@ public class BookingController {
 
     // ── Helper: extract userId from Spring Security principal ──────────────────
     private String getUserId(Authentication auth) {
-        // adjust if your UserDetails class stores the mongoId differently
+        // auth.getName() returns the principal name set during authentication.
+        // Ensure your UserDetailsService sets the principal name to the MongoDB _id,
+        // not the username/email, otherwise booking ownership checks will fail.
         return auth.getName();
     }
 
@@ -70,10 +72,9 @@ public class BookingController {
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // GET /api/bookings  →  All bookings with optional status filter  (ADMIN only)
+    // GET /api/bookings or /api/bookings/all  →  All bookings with optional status filter  (ADMIN only)
     // ─────────────────────────────────────────────────────────────────────────────
-    @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping({"", "/all"})
     public ResponseEntity<List<BookingResponseDto>> getAllBookings(
             @RequestParam(required = false) BookingStatus status) {
 
@@ -117,7 +118,7 @@ public class BookingController {
             Authentication auth) {
 
         return ResponseEntity.ok(
-                bookingService.cancelBooking(id, getUserId(auth)));
+                bookingService.cancelBooking(id, getUserId(auth), isAdmin(auth)));
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
