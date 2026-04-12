@@ -152,13 +152,13 @@ public class BookingService {
         return toDto(saved);
     }
 
-    // ─── USER: cancel own booking ────────────────────────────────────────────────
-    public BookingResponseDto cancelBooking(String bookingId, String userId) {
+    // ─── USER / ADMIN: cancel booking ───────────────────────────────────────────
+    public BookingResponseDto cancelBooking(String bookingId, String userId, boolean isAdmin) {
         Booking b = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Booking not found"));
 
-        if (!b.getRequestedBy().equals(userId)) {
+        if (!isAdmin && !b.getRequestedBy().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "You can only cancel your own bookings");
         }
