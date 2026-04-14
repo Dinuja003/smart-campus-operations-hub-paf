@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom"
 import {
   LayoutDashboard,
   TriangleAlert,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import logo from "../assets/vite.svg"
 export function AppSidebar() {
+  const navigate = useNavigate()
   return (
     <Sidebar>
       <SidebarContent className="pt-8 bg-white/50 backdrop-blur-lg border-r border-white/30 shadow-lg">
@@ -45,44 +47,50 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="mt-4 space-y-2">
               <SidebarMenuItem>
-                <SidebarMenuButton>
+                <SidebarMenuButton onClick={() => navigate("/")}>
                   <LayoutDashboard />
                   <span>Dashboard</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton>
+                <SidebarMenuButton onClick={() => navigate("/resources")}>
                   <LayoutDashboard />
                   <span>Resources</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
                <SidebarMenuItem>
-                <SidebarMenuButton>
+                <SidebarMenuButton onClick={() => navigate("/my-bookings")}>
                   <LayoutDashboard />
                   <span>My Bookings</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
                <SidebarMenuItem>
-                <SidebarMenuButton>
+                <SidebarMenuButton onClick={() => navigate("/admin/bookings")}>
+                  <LayoutDashboard />
+                  <span>All Bookings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => navigate("/tickets")}>
                   <LayoutDashboard />
                   <span>My Tickets</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
                <SidebarMenuItem>
-                <SidebarMenuButton>
+                <SidebarMenuButton onClick={() => navigate("/notifications")}>
                   <LayoutDashboard />
                   <span>Notifications</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton>
+                <SidebarMenuButton onClick={() => navigate("/profile")}>
                   <TriangleAlert />
                   <span>My Profile</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton>
+                <SidebarMenuButton onClick={() => navigate("/invoices")}>
                   <ReceiptText />
                   <span>Invoices</span>
                 </SidebarMenuButton>
