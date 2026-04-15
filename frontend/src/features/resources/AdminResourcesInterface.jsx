@@ -8,8 +8,10 @@ import {
   Filter,
   MapPin,
   Monitor,
+  Pencil,
   Plus,
   Search,
+  Trash2,
   Users,
   Wrench,
   X,
@@ -144,6 +146,88 @@ const emptyResourceForm = {
   endTime: "17:00",
 };
 
+const getResourceFormValues = (resource = {}) => {
+  const firstWindow = Array.isArray(resource.availabilityWindows)
+    ? resource.availabilityWindows[0]
+    : null;
+
+  return {
+    name: resource.name || "",
+    type: resource.type || "MEETING_ROOM",
+    eqCount: String(resource.eqCount ?? ""),
+    capacity: String(resource.capacity || 1),
+    building: resource.location?.building || "",
+    floor: resource.location?.floor || "",
+    room: resource.location?.room || "",
+    status: resource.status || "AVAILABLE",
+    description: resource.description || "",
+    imageUrl: resource.imageUrl || "",
+    createdBy: resource.createdBy || "",
+    day: firstWindow?.day || "MONDAY",
+    startTime: firstWindow?.startTime || "09:00",
+    endTime: firstWindow?.endTime || "17:00",
+  };
+};
+
+const buildResourcePayload = (form) => {
+  const isEquipment = form.type === "EQUIPMENT";
+  const payload = {
+    name: form.name.trim(),
+    type: form.type.trim(),
+    eqCount: isEquipment ? Number(form.eqCount || 0) : 0,
+    capacity: isEquipment ? 1 : Number(form.capacity || 0),
+    location: {
+      building: form.building.trim(),
+      floor: form.floor.trim(),
+      room: form.room.trim(),
+    },
+    availabilityWindows:
+      form.day || form.startTime || form.endTime
+        ? [
+            {
+              day: form.day,
+              startTime: form.startTime,
+              endTime: form.endTime,
+            },
+          ]
+        : [],
+    status: form.status.trim(),
+    description: form.description.trim(),
+    imageUrl: form.imageUrl.trim(),
+  };
+
+  if (form.createdBy.trim()) {
+    payload.createdBy = form.createdBy.trim();
+  }
+
+  return payload;
+};
+
+const readImageAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Unable to read selected image."));
+    reader.readAsDataURL(file);
+  });
+
+const replaceResourceById = (resources, updatedResource, originalId) => {
+  const updatedId = updatedResource.id || originalId;
+  const normalizedResource = { ...updatedResource, id: updatedId };
+  let replaced = false;
+
+  const nextResources = resources.map((resource) => {
+    if (resource.id === originalId || resource.id === updatedId) {
+      replaced = true;
+      return normalizedResource;
+    }
+
+    return resource;
+  });
+
+  return replaced ? nextResources : resources;
+};
+
 export default function AdminResourcesInterface() {
   const [resources, setResources] = useState([]);
   const [query, setQuery] = useState("");
@@ -151,9 +235,11 @@ export default function AdminResourcesInterface() {
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [selectedResource, setSelectedResource] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingResource, setEditingResource] = useState(null);
   const [form, setForm] = useState(emptyResourceForm);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -235,14 +321,46 @@ export default function AdminResourcesInterface() {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  const updateImage = async (file) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setFormError("Please select a valid image file.");
+      return;
+    }
+
+    try {
+      const imageUrl = await readImageAsDataUrl(file);
+      setForm((current) => ({ ...current, imageUrl }));
+      setFormError("");
+    } catch (imageError) {
+      setFormError(imageError.message);
+    }
+  };
+
   const closeCreateForm = () => {
     if (saving) return;
     setShowCreateForm(false);
+    setEditingResource(null);
     setForm(emptyResourceForm);
     setFormError("");
   };
 
-  const handleCreateResource = async (event) => {
+  const openCreateForm = () => {
+    setEditingResource(null);
+    setForm(emptyResourceForm);
+    setFormError("");
+    setShowCreateForm(true);
+  };
+
+  const openEditForm = (resource) => {
+    setEditingResource(resource);
+    setForm(getResourceFormValues(resource));
+    setFormError("");
+    setShowCreateForm(true);
+  };
+
+  const handleSaveResource = async (event) => {
     event.preventDefault();
     const isEquipment = form.type === "EQUIPMENT";
 
@@ -259,39 +377,22 @@ export default function AdminResourcesInterface() {
     setSaving(true);
     setFormError("");
 
-    const payload = {
-      name: form.name.trim(),
-      type: form.type.trim(),
-      eqCount: isEquipment ? Number(form.eqCount || 0) : 0,
-      capacity: isEquipment ? 1 : Number(form.capacity || 0),
-      location: {
-        building: form.building.trim(),
-        floor: form.floor.trim(),
-        room: form.room.trim(),
-      },
-      availabilityWindows:
-        form.day || form.startTime || form.endTime
-          ? [
-              {
-                day: form.day,
-                startTime: form.startTime,
-                endTime: form.endTime,
-              },
-            ]
-          : [],
-      status: form.status.trim(),
-      description: form.description.trim(),
-      imageUrl: form.imageUrl.trim(),
-    };
-
-    if (form.createdBy.trim()) {
-      payload.createdBy = form.createdBy.trim();
-    }
-
     try {
-      const createdResource = await API.post("/resources", payload).then((response) => response.data);
-      setResources((current) => [createdResource, ...current]);
+      const payload = buildResourcePayload(form);
+      const savedResource = editingResource
+        ? await API.put(`/resources/${editingResource.id}`, payload).then((response) => response.data)
+        : await API.post("/resources", payload).then((response) => response.data);
+
+      setResources((current) =>
+        editingResource
+          ? replaceResourceById(current, savedResource, editingResource.id)
+          : [savedResource, ...current]
+      );
+      if (editingResource) {
+        setSelectedResource({ ...savedResource, id: savedResource.id || editingResource.id });
+      }
       setShowCreateForm(false);
+      setEditingResource(null);
       setForm(emptyResourceForm);
       setFormError("");
     } catch (requestError) {
@@ -303,6 +404,26 @@ export default function AdminResourcesInterface() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteResource = async (resource) => {
+    if (!window.confirm(`Delete ${resource.name || "this resource"}?`)) return;
+
+    setDeleting(true);
+    try {
+      await API.delete(`/resources/${resource.id}`);
+      setResources((current) => current.filter((item) => item.id !== resource.id));
+      setSelectedResource(null);
+    } catch (requestError) {
+      alert(
+        requestError?.response?.data?.message ||
+          requestError?.response?.data ||
+          requestError?.message ||
+          "Unable to delete resource."
+      );
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -382,7 +503,7 @@ export default function AdminResourcesInterface() {
               {loading ? "Loading database resources..." : `${filteredResources.length} resources matching current view`}
             </p>
           </div>
-          <button type="button" style={styles.addButton} onClick={() => setShowCreateForm(true)}>
+          <button type="button" style={styles.addButton} onClick={openCreateForm}>
             <Plus size={16} />
             Add Resource
           </button>
@@ -478,6 +599,9 @@ export default function AdminResourcesInterface() {
         <ResourceDetailsModal
           resource={selectedResource}
           onClose={() => setSelectedResource(null)}
+          onEdit={() => openEditForm(selectedResource)}
+          onDelete={() => handleDeleteResource(selectedResource)}
+          deleting={deleting}
         />
       )}
 
@@ -486,9 +610,11 @@ export default function AdminResourcesInterface() {
           form={form}
           formError={formError}
           saving={saving}
+          editing={Boolean(editingResource)}
           onChange={updateForm}
+          onImageChange={updateImage}
           onClose={closeCreateForm}
-          onSubmit={handleCreateResource}
+          onSubmit={handleSaveResource}
         />
       )}
     </div>
@@ -513,7 +639,7 @@ function StatusBadge({ status }) {
   return <span style={{ ...styles.statusBadge, ...(statusStyles[status] || defaultStatusStyle) }}>{status}</span>;
 }
 
-function ResourceDetailsModal({ resource, onClose }) {
+function ResourceDetailsModal({ resource, onClose, onEdit, onDelete, deleting }) {
   const availabilityWindows = Array.isArray(resource.availabilityWindows) ? resource.availabilityWindows : [];
 
   return (
@@ -562,12 +688,23 @@ function ResourceDetailsModal({ resource, onClose }) {
             <p style={styles.emptyText}>No availability windows configured.</p>
           )}
         </div>
+
+        <div style={styles.detailFooter}>
+          <button type="button" style={styles.deleteActionButton} onClick={onDelete} disabled={deleting}>
+            <Trash2 size={16} />
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+          <button type="button" style={styles.updateActionButton} onClick={onEdit}>
+            <Pencil size={16} />
+            Update
+          </button>
+        </div>
       </section>
     </div>
   );
 }
 
-function CreateResourceModal({ form, formError, saving, onChange, onClose, onSubmit }) {
+function CreateResourceModal({ form, formError, saving, editing, onChange, onImageChange, onClose, onSubmit }) {
   const isEquipment = form.type === "EQUIPMENT";
 
   return (
@@ -575,8 +712,8 @@ function CreateResourceModal({ form, formError, saving, onChange, onClose, onSub
       <form style={styles.modal} onClick={(event) => event.stopPropagation()} onSubmit={onSubmit}>
         <div style={styles.modalHeader}>
           <div>
-            <span style={styles.resourceId}>New Resource</span>
-            <h3 style={styles.modalTitle}>Add Campus Resource</h3>
+            <span style={styles.resourceId}>{editing ? "Update Resource" : "New Resource"}</span>
+            <h3 style={styles.modalTitle}>{editing ? "Update Campus Resource" : "Add Campus Resource"}</h3>
           </div>
           <button type="button" style={styles.closeButton} onClick={onClose} aria-label="Close form">
             <X size={20} />
@@ -718,14 +855,31 @@ function CreateResourceModal({ form, formError, saving, onChange, onClose, onSub
             </div>
           </div>
 
-          <FormField label="Image URL">
-            <input
-              value={form.imageUrl}
-              onChange={(event) => onChange("imageUrl", event.target.value)}
-              placeholder="https://example.com/resource.jpg"
-              style={styles.formInput}
-            />
-          </FormField>
+          <div style={styles.formField}>
+            <span style={styles.formLabel}>Resource Image</span>
+            <label style={styles.imageUploadBox}>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => onImageChange(event.target.files?.[0])}
+                style={styles.fileInput}
+              />
+              <span style={styles.imageUploadTitle}>Choose image</span>
+              <span style={styles.imageUploadText}>PNG, JPG, WEBP, or GIF</span>
+            </label>
+            {form.imageUrl && (
+              <div style={styles.imagePreviewWrap}>
+                <img src={form.imageUrl} alt="Selected resource" style={styles.imagePreview} />
+                <button
+                  type="button"
+                  style={styles.removeImageButton}
+                  onClick={() => onChange("imageUrl", "")}
+                >
+                  Remove image
+                </button>
+              </div>
+            )}
+          </div>
 
           <FormField label="Description">
             <textarea
@@ -743,7 +897,7 @@ function CreateResourceModal({ form, formError, saving, onChange, onClose, onSub
             Cancel
           </button>
           <button type="submit" style={styles.submitButton} disabled={saving}>
-            {saving ? "Saving..." : "Add Resource"}
+            {saving ? "Saving..." : editing ? "Update Resource" : "Add Resource"}
           </button>
         </div>
       </form>
@@ -1196,6 +1350,42 @@ const styles = {
     fontSize: 12,
     fontWeight: 800,
   },
+  detailFooter: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 12,
+    padding: 24,
+    borderTop: "1px solid #e2e8f0",
+    background: "#f8fafc",
+  },
+  deleteActionButton: {
+    minHeight: 42,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: "0 16px",
+    border: "1px solid #fecaca",
+    borderRadius: 8,
+    background: "#fef2f2",
+    color: "#b91c1c",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+  updateActionButton: {
+    minHeight: 42,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: "0 16px",
+    border: "1px solid #0f766e",
+    borderRadius: 8,
+    background: "#0f766e",
+    color: "#ffffff",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
   formBody: {
     display: "grid",
     gap: 18,
@@ -1234,6 +1424,54 @@ const styles = {
     font: "inherit",
     fontSize: 14,
     outline: 0,
+  },
+  imageUploadBox: {
+    minHeight: 98,
+    display: "grid",
+    placeItems: "center",
+    gap: 4,
+    padding: 16,
+    border: "1px dashed #94a3b8",
+    borderRadius: 8,
+    background: "#f8fafc",
+    color: "#334155",
+    cursor: "pointer",
+    textAlign: "center",
+  },
+  fileInput: {
+    display: "none",
+  },
+  imageUploadTitle: {
+    color: "#0f172a",
+    fontSize: 15,
+    fontWeight: 800,
+  },
+  imageUploadText: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: 700,
+  },
+  imagePreviewWrap: {
+    display: "grid",
+    gap: 10,
+  },
+  imagePreview: {
+    width: "100%",
+    maxHeight: 220,
+    objectFit: "cover",
+    borderRadius: 8,
+    border: "1px solid #e2e8f0",
+  },
+  removeImageButton: {
+    justifySelf: "start",
+    minHeight: 34,
+    padding: "0 12px",
+    border: "1px solid #fecaca",
+    borderRadius: 8,
+    background: "#fef2f2",
+    color: "#b91c1c",
+    fontWeight: 800,
+    cursor: "pointer",
   },
   textarea: {
     minHeight: 110,
