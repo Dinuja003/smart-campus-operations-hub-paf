@@ -8,6 +8,7 @@ import {
   Filter,
   MapPin,
   Monitor,
+  Plus,
   Search,
   Users,
   Wrench,
@@ -126,12 +127,33 @@ const defaultStatusStyle = {
   borderColor: "#cbd5e1",
 };
 
+const emptyResourceForm = {
+  name: "",
+  type: "MEETING_ROOM",
+  eqCount: "",
+  capacity: "1",
+  building: "",
+  floor: "",
+  room: "",
+  status: "AVAILABLE",
+  description: "",
+  imageUrl: "",
+  createdBy: "",
+  day: "MONDAY",
+  startTime: "09:00",
+  endTime: "17:00",
+};
+
 export default function AdminResourcesInterface() {
   const [resources, setResources] = useState([]);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [selectedResource, setSelectedResource] = useState(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [form, setForm] = useState(emptyResourceForm);
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -198,8 +220,8 @@ export default function AdminResourcesInterface() {
 
   const stats = useMemo(() => {
     const totalCapacity = resources.reduce((sum, resource) => sum + Number(resource.capacity || 0), 0);
-    const available = resources.filter((resource) =>
-      String(resource.status || "").toLowerCase().includes("available")
+    const available = resources.filter(
+      (resource) => String(resource.status || "").toLowerCase() === "available"
     ).length;
     const maintenance = resources.filter((resource) =>
       String(resource.status || "").toLowerCase().includes("maintenance")
@@ -208,6 +230,81 @@ export default function AdminResourcesInterface() {
 
     return { totalCapacity, available, maintenance, equipmentCount };
   }, [resources]);
+
+  const updateForm = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const closeCreateForm = () => {
+    if (saving) return;
+    setShowCreateForm(false);
+    setForm(emptyResourceForm);
+    setFormError("");
+  };
+
+  const handleCreateResource = async (event) => {
+    event.preventDefault();
+    const isEquipment = form.type === "EQUIPMENT";
+
+    if (!form.name.trim() || !form.type.trim()) {
+      setFormError("Resource name and type are required.");
+      return;
+    }
+
+    if (!isEquipment && Number(form.capacity || 0) < 1) {
+      setFormError("Capacity must be at least 1.");
+      return;
+    }
+
+    setSaving(true);
+    setFormError("");
+
+    const payload = {
+      name: form.name.trim(),
+      type: form.type.trim(),
+      eqCount: isEquipment ? Number(form.eqCount || 0) : 0,
+      capacity: isEquipment ? 1 : Number(form.capacity || 0),
+      location: {
+        building: form.building.trim(),
+        floor: form.floor.trim(),
+        room: form.room.trim(),
+      },
+      availabilityWindows:
+        form.day || form.startTime || form.endTime
+          ? [
+              {
+                day: form.day,
+                startTime: form.startTime,
+                endTime: form.endTime,
+              },
+            ]
+          : [],
+      status: form.status.trim(),
+      description: form.description.trim(),
+      imageUrl: form.imageUrl.trim(),
+    };
+
+    if (form.createdBy.trim()) {
+      payload.createdBy = form.createdBy.trim();
+    }
+
+    try {
+      const createdResource = await API.post("/resources", payload).then((response) => response.data);
+      setResources((current) => [createdResource, ...current]);
+      setShowCreateForm(false);
+      setForm(emptyResourceForm);
+      setFormError("");
+    } catch (requestError) {
+      setFormError(
+        requestError?.response?.data?.message ||
+          requestError?.response?.data ||
+          requestError?.message ||
+          "Unable to create resource."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div style={styles.page}>
@@ -285,6 +382,10 @@ export default function AdminResourcesInterface() {
               {loading ? "Loading database resources..." : `${filteredResources.length} resources matching current view`}
             </p>
           </div>
+          <button type="button" style={styles.addButton} onClick={() => setShowCreateForm(true)}>
+            <Plus size={16} />
+            Add Resource
+          </button>
         </div>
 
         {loading ? (
@@ -379,6 +480,17 @@ export default function AdminResourcesInterface() {
           onClose={() => setSelectedResource(null)}
         />
       )}
+
+      {showCreateForm && (
+        <CreateResourceModal
+          form={form}
+          formError={formError}
+          saving={saving}
+          onChange={updateForm}
+          onClose={closeCreateForm}
+          onSubmit={handleCreateResource}
+        />
+      )}
     </div>
   );
 }
@@ -452,6 +564,202 @@ function ResourceDetailsModal({ resource, onClose }) {
         </div>
       </section>
     </div>
+  );
+}
+
+function CreateResourceModal({ form, formError, saving, onChange, onClose, onSubmit }) {
+  const isEquipment = form.type === "EQUIPMENT";
+
+  return (
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <form style={styles.modal} onClick={(event) => event.stopPropagation()} onSubmit={onSubmit}>
+        <div style={styles.modalHeader}>
+          <div>
+            <span style={styles.resourceId}>New Resource</span>
+            <h3 style={styles.modalTitle}>Add Campus Resource</h3>
+          </div>
+          <button type="button" style={styles.closeButton} onClick={onClose} aria-label="Close form">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={styles.formBody}>
+          {formError && <div style={styles.errorBox}>{formError}</div>}
+
+          <div style={styles.formGrid}>
+            <FormField label="Resource Name" required>
+              <input
+                value={form.name}
+                onChange={(event) => onChange("name", event.target.value)}
+                placeholder="Meeting Room A-105"
+                style={styles.formInput}
+              />
+            </FormField>
+
+            <FormField label="Type" required>
+              <select value={form.type} onChange={(event) => onChange("type", event.target.value)} style={styles.formInput}>
+                <option value="MEETING_ROOM">MEETING_ROOM</option>
+                <option value="LECTURE_HALL">LECTURE_HALL</option>
+                <option value="LAB">LAB</option>
+                <option value="AUDITORIUM">AUDITORIUM</option>
+                <option value="EQUIPMENT">EQUIPMENT</option>
+              </select>
+            </FormField>
+
+            <FormField label="Status">
+              <select
+                value={form.status}
+                onChange={(event) => onChange("status", event.target.value)}
+                style={styles.formInput}
+              >
+                <option value="AVAILABLE">AVAILABLE</option>
+                <option value="BOOKED">BOOKED</option>
+                <option value="MAINTENANCE">MAINTENANCE</option>
+                <option value="UNAVAILABLE">UNAVAILABLE</option>
+              </select>
+            </FormField>
+
+            {!isEquipment && (
+              <FormField label="Capacity">
+                <input
+                  type="number"
+                  min="1"
+                  value={form.capacity}
+                  onChange={(event) => onChange("capacity", event.target.value)}
+                  placeholder="10"
+                  style={styles.formInput}
+                />
+              </FormField>
+            )}
+
+            {isEquipment && (
+              <FormField label="Equipment Count">
+                <input
+                  type="number"
+                  min="0"
+                  value={form.eqCount}
+                  onChange={(event) => onChange("eqCount", event.target.value)}
+                  placeholder="5"
+                  style={styles.formInput}
+                />
+              </FormField>
+            )}
+
+            <FormField label="Created By">
+              <input
+                value={form.createdBy}
+                onChange={(event) => onChange("createdBy", event.target.value)}
+                placeholder="Admin name or ID"
+                style={styles.formInput}
+              />
+            </FormField>
+          </div>
+
+          <div style={styles.formSection}>
+            <h4 style={styles.sectionTitle}>Location</h4>
+            <div style={styles.formGrid}>
+              <FormField label="Building">
+                <input
+                  value={form.building}
+                  onChange={(event) => onChange("building", event.target.value)}
+                  placeholder="Block A"
+                  style={styles.formInput}
+                />
+              </FormField>
+              <FormField label="Floor">
+                <input
+                  value={form.floor}
+                  onChange={(event) => onChange("floor", event.target.value)}
+                  placeholder="1"
+                  style={styles.formInput}
+                />
+              </FormField>
+              <FormField label="Room">
+                <input
+                  value={form.room}
+                  onChange={(event) => onChange("room", event.target.value)}
+                  placeholder="105"
+                  style={styles.formInput}
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <div style={styles.formSection}>
+            <h4 style={styles.sectionTitle}>Availability Window</h4>
+            <div style={styles.formGrid}>
+              <FormField label="Day">
+                <select value={form.day} onChange={(event) => onChange("day", event.target.value)} style={styles.formInput}>
+                  <option value="MONDAY">MONDAY</option>
+                  <option value="TUESDAY">TUESDAY</option>
+                  <option value="WEDNESDAY">WEDNESDAY</option>
+                  <option value="THURSDAY">THURSDAY</option>
+                  <option value="FRIDAY">FRIDAY</option>
+                  <option value="SATURDAY">SATURDAY</option>
+                  <option value="SUNDAY">SUNDAY</option>
+                </select>
+              </FormField>
+              <FormField label="Start Time">
+                <input
+                  type="time"
+                  value={form.startTime}
+                  onChange={(event) => onChange("startTime", event.target.value)}
+                  style={styles.formInput}
+                />
+              </FormField>
+              <FormField label="End Time">
+                <input
+                  type="time"
+                  value={form.endTime}
+                  onChange={(event) => onChange("endTime", event.target.value)}
+                  style={styles.formInput}
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <FormField label="Image URL">
+            <input
+              value={form.imageUrl}
+              onChange={(event) => onChange("imageUrl", event.target.value)}
+              placeholder="https://example.com/resource.jpg"
+              style={styles.formInput}
+            />
+          </FormField>
+
+          <FormField label="Description">
+            <textarea
+              value={form.description}
+              onChange={(event) => onChange("description", event.target.value)}
+              placeholder="Small meeting room with projector"
+              rows={4}
+              style={{ ...styles.formInput, ...styles.textarea }}
+            />
+          </FormField>
+        </div>
+
+        <div style={styles.formFooter}>
+          <button type="button" style={styles.cancelButton} onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
+          <button type="submit" style={styles.submitButton} disabled={saving}>
+            {saving ? "Saving..." : "Add Resource"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function FormField({ label, required, children }) {
+  return (
+    <label style={styles.formField}>
+      <span style={styles.formLabel}>
+        {label}
+        {required && <span style={styles.requiredMark}> *</span>}
+      </span>
+      {children}
+    </label>
   );
 }
 
@@ -631,6 +939,7 @@ const styles = {
   tableHeader: {
     display: "flex",
     justifyContent: "space-between",
+    alignItems: "center",
     gap: 14,
     padding: "18px 20px",
     borderBottom: "1px solid #e2e8f0",
@@ -645,6 +954,21 @@ const styles = {
     marginTop: 4,
     color: "#64748b",
     fontSize: 13,
+  },
+  addButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    minHeight: 42,
+    padding: "0 14px",
+    border: "1px solid #0f766e",
+    borderRadius: 8,
+    background: "#0f766e",
+    color: "#ffffff",
+    fontWeight: 800,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
   },
   tableScroller: {
     overflowX: "auto",
@@ -871,5 +1195,77 @@ const styles = {
     border: "1px solid #a5f3fc",
     fontSize: 12,
     fontWeight: 800,
+  },
+  formBody: {
+    display: "grid",
+    gap: 18,
+    padding: 24,
+  },
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+    gap: 14,
+  },
+  formSection: {
+    display: "grid",
+    gap: 12,
+  },
+  formField: {
+    display: "grid",
+    gap: 7,
+  },
+  formLabel: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: 800,
+  },
+  requiredMark: {
+    color: "#dc2626",
+  },
+  formInput: {
+    width: "100%",
+    minHeight: 44,
+    boxSizing: "border-box",
+    padding: "10px 12px",
+    border: "1px solid #cbd5e1",
+    borderRadius: 8,
+    background: "#ffffff",
+    color: "#0f172a",
+    font: "inherit",
+    fontSize: 14,
+    outline: 0,
+  },
+  textarea: {
+    minHeight: 110,
+    resize: "vertical",
+    lineHeight: 1.5,
+  },
+  formFooter: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 12,
+    padding: 24,
+    borderTop: "1px solid #e2e8f0",
+    background: "#f8fafc",
+  },
+  cancelButton: {
+    minHeight: 42,
+    padding: "0 16px",
+    border: "1px solid #cbd5e1",
+    borderRadius: 8,
+    background: "#ffffff",
+    color: "#334155",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+  submitButton: {
+    minHeight: 42,
+    padding: "0 16px",
+    border: "1px solid #0f766e",
+    borderRadius: 8,
+    background: "#0f766e",
+    color: "#ffffff",
+    fontWeight: 800,
+    cursor: "pointer",
   },
 };
