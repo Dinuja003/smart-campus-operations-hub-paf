@@ -3,6 +3,8 @@ import { SidebarProvider } from "./components/ui/sidebar"
 import { AppSidebar } from "./components/AppSidebar"
 import MyBookingsPage from "./features/booking/pages/MyBookingsPage"
 import AdminBookingsPage from "./features/booking/pages/AdminBookingsPage"
+import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
+
 
 function Dashboard() {
   const navigate = useNavigate()
@@ -88,7 +90,7 @@ function App() {
                     <Route path="/my-bookings" element={<MyBookingsPage />} />
                     <Route path="/admin/bookings" element={<AdminBookingsPage />} />
                     <Route path="/resources" element={<ComingSoon title="Resources" />} />
-                    <Route path="/tickets" element={<ComingSoon title="My Tickets" />} />
+                    <Route path="/tickets" element={<CreateTicketPage />} />
                     <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
                     <Route path="/profile" element={<ComingSoon title="My Profile" />} />
                     <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
