@@ -78,11 +78,11 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/resources")}>
-                  <LayoutDashboard />
-                  <span>Resources</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+  <SidebarMenuButton onClick={() => navigate("/resources")}>
+    <LayoutDashboard />
+    <span>Resources</span>
+  </SidebarMenuButton>
+</SidebarMenuItem>
                <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => navigate("/my-bookings")}>
                   <LayoutDashboard />
