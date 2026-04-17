@@ -13,6 +13,43 @@ import AdminResourcesInterface from "./features/resources/AdminResourcesInterfac
 //       <div>
 //         <h2 style={{ margin: 0, fontSize: "24px" }}>Dashboard</h2>
 //         <p style={{ marginTop: "8px", color: "#64748b" }}>
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom"
+import { SidebarProvider } from "./components/ui/sidebar"
+import { AppSidebar } from "./components/AppSidebar"
+import MyBookingsPage from "./features/booking/pages/MyBookingsPage"
+import AdminBookingsPage from "./features/booking/pages/AdminBookingsPage"
+import LoginPage from "./features/auth/pages/LoginPage"
+import SignupPage from "./features/auth/pages/SignupPage"
+import OAuth2CallbackPage from "./features/auth/pages/OAuth2CallbackPage"
+import ProtectedRoute from "./features/auth/components/ProtectedRoute"
+
+const quickActions = [
+  {
+    label: "My Bookings",
+    icon: "📅",
+    path: "/my-bookings",
+    className:
+      "from-blue-600 to-blue-500 shadow-[0_12px_30px_-16px_rgba(37,99,235,0.7)] hover:from-blue-500 hover:to-blue-400",
+  },
+  {
+    label: "Admin Bookings",
+    icon: "⚙️",
+    path: "/admin/bookings",
+    className:
+      "from-slate-800 to-slate-700 shadow-[0_12px_30px_-16px_rgba(15,23,42,0.7)] hover:from-slate-700 hover:to-slate-600",
+  },
+]
+import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
+
+
+function Dashboard() {
+  const navigate = useNavigate()
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h2 className="m-0 text-2xl font-semibold text-slate-900">Dashboard</h2>
+        <p className="text-sm text-slate-500">
           Welcome to UniSlot. Select a section below to get started.
         </p>
       </div>
@@ -84,6 +121,20 @@ import AdminResourcesInterface from "./features/resources/AdminResourcesInterfac
         >
           🏫 Resources
         </button>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {quickActions.map((action) => (
+          <button
+            key={action.path}
+            type="button"
+            onClick={() => navigate(action.path)}
+            className={`inline-flex items-center gap-3 rounded-xl bg-gradient-to-r px-5 py-4 text-left text-white transition-colors ${action.className}`}
+          >
+            <span aria-hidden="true" className="text-lg">
+              {action.icon}
+            </span>
+            <span className="text-sm font-semibold tracking-wide">{action.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -91,16 +142,14 @@ import AdminResourcesInterface from "./features/resources/AdminResourcesInterfac
 
 function ComingSoon({ title }) {
   return (
-    <div style={{ padding: "40px 24px", textAlign: "center", color: "#64748b" }}>
-      <h2 style={{ fontSize: "28px", marginBottom: "12px", color: "#1a1a2e" }}>
-        {title}
-      </h2>
-      <p>Coming soon...</p>
+    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+      <h2 className="mb-2 text-2xl font-semibold text-slate-900">{title}</h2>
+      <p className="text-sm text-slate-500">Coming soon...</p>
     </div>
   );
 }
 
-function App() {
+function AppShell() {
   return (
     <BrowserRouter>
       <SidebarProvider>
@@ -172,9 +221,31 @@ function App() {
             </main>
           </div>
         </div>
-      </SidebarProvider>
+      </div>
+    </SidebarProvider>
+  )
+}
+
+function App() {
+  const token = localStorage.getItem("token")
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
+        <Route path="/signup" element={token ? <Navigate to="/" replace /> : <SignupPage />} />
+        <Route path="/oauth2/callback" element={<OAuth2CallbackPage />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute allowedRoles={["USER", "ADMIN", "TECHNICIAN"]}>
+              <AppShell />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }
 
-export default App;
+export default App
