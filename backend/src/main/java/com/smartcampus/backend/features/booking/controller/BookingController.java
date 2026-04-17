@@ -75,6 +75,7 @@ public class BookingController {
     // GET /api/bookings or /api/bookings/all  →  All bookings with optional status filter  (ADMIN only)
     // ─────────────────────────────────────────────────────────────────────────────
     @GetMapping({"", "/all"})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<BookingResponseDto>> getAllBookings(
             @RequestParam(required = false) BookingStatus status) {
 
