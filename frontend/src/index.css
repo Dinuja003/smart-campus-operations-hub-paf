@@ -119,8 +119,7 @@
 
 body {
   margin: 0;
-  height: 100vh;
-  display: flex;
+  min-height: 100vh;
 }
 
 #root {
@@ -129,8 +128,6 @@ body {
   margin: 0;
   text-align: left;
   min-height: 100vh;
-  display: flex;
-  flex-direction: row;
 }
 
 h1,
