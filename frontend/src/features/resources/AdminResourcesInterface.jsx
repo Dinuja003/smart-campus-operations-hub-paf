@@ -273,10 +273,14 @@ export default function AdminResourcesInterface() {
     [resources]
   );
 
-  const resourceStatuses = useMemo(
-    () => ["All Status", ...new Set(resources.map((resource) => resource.status).filter(Boolean))],
-    [resources]
-  );
+  const resourceStatuses = useMemo(() => {
+    const preferredStatuses = ["BOOKED", "AVAILABLE", "MAINTENANCE", "UNAVAILABLE"];
+    const existingStatuses = new Set(resources.map((resource) => resource.status).filter(Boolean));
+    const orderedStatuses = preferredStatuses.filter((status) => existingStatuses.has(status));
+    const extraStatuses = [...existingStatuses].filter((status) => !preferredStatuses.includes(status));
+
+    return ["All Status", ...orderedStatuses, ...extraStatuses];
+  }, [resources]);
 
   const filteredResources = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -481,16 +485,23 @@ export default function AdminResourcesInterface() {
               <option key={type}>{type}</option>
             ))}
           </select>
-          <select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-            style={styles.select}
-          >
-            {resourceStatuses.map((status) => (
-              <option key={status}>{status}</option>
-            ))}
-          </select>
         </div>
+      </section>
+
+      <section style={styles.statusFilterBar} aria-label="Filter resources by status">
+        {resourceStatuses.map((status) => (
+          <button
+            key={status}
+            type="button"
+            style={{
+              ...styles.statusFilterButton,
+              ...(statusFilter === status ? styles.statusFilterButtonActive : {}),
+            }}
+            onClick={() => setStatusFilter(status)}
+          >
+            {status}
+          </button>
+        ))}
       </section>
 
       {error && <div style={styles.errorBox}>{error}</div>}
@@ -1075,6 +1086,30 @@ const styles = {
     color: "#334155",
     fontWeight: 700,
     outline: 0,
+  },
+  statusFilterBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  statusFilterButton: {
+    minHeight: 38,
+    padding: "0 16px",
+    border: "1px solid #e2e8f0",
+    borderRadius: 8,
+    background: "#ffffff",
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: "pointer",
+    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04)",
+  },
+  statusFilterButtonActive: {
+    borderColor: "#2563eb",
+    background: "#2563eb",
+    color: "#ffffff",
+    boxShadow: "0 8px 18px rgba(37, 99, 235, 0.24)",
   },
   errorBox: {
     padding: "12px 14px",
