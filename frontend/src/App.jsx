@@ -24,6 +24,8 @@ const quickActions = [
       "from-slate-800 to-slate-700 shadow-[0_12px_30px_-16px_rgba(15,23,42,0.7)] hover:from-slate-700 hover:to-slate-600",
   },
 ]
+import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
+
 
 function Dashboard() {
   const navigate = useNavigate()
