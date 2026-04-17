@@ -1,18 +1,18 @@
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+/*import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { SidebarProvider } from "./components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
 import MyBookingsPage from "./features/booking/pages/MyBookingsPage";
-import AdminBookingsPage from "./features/booking/pages/AdminBookingsPage";
+import AdminBookingsPage from "./features/booking/pages/AdminBookingsPage";*/
 import AdminResourcesInterface from "./features/resources/AdminResourcesInterface.jsx";
 
-function Dashboard() {
-  const navigate = useNavigate();
+// function Dashboard() {
+//   const navigate = useNavigate();
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-      <div>
-        <h2 style={{ margin: 0, fontSize: "24px" }}>Dashboard</h2>
-        <p style={{ marginTop: "8px", color: "#64748b" }}>
+//   return (
+//     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+//       <div>
+//         <h2 style={{ margin: 0, fontSize: "24px" }}>Dashboard</h2>
+//         <p style={{ marginTop: "8px", color: "#64748b" }}>
           Welcome to UniSlot. Select a section below to get started.
         </p>
       </div>
