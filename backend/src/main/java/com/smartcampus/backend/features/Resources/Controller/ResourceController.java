@@ -2,6 +2,7 @@ package com.smartcampus.backend.features.Resources.Controller;
 
 import com.smartcampus.backend.features.Resources.Model.Resource;
 import com.smartcampus.backend.features.Resources.Service.ResourceService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +34,7 @@ public class ResourceController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createResource(@RequestBody Resource resource) {
+    public ResponseEntity<?> createResource(@Valid @RequestBody Resource resource) {
         try {
             Resource created = resourceService.createResource(resource);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -43,10 +44,12 @@ public class ResourceController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateResource(@PathVariable String id, @RequestBody Resource resource) {
+    public ResponseEntity<?> updateResource(@PathVariable String id, @Valid @RequestBody Resource resource) {
         try {
             Resource updated = resourceService.updateResource(id, resource);
             return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }

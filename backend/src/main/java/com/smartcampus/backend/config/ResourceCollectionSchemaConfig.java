@@ -21,7 +21,18 @@ public class ResourceCollectionSchemaConfig {
 
             Document validator = new Document("$jsonSchema", new Document()
                     .append("bsonType", "object")
-                    .append("required", List.of("name", "type", "status", "capacity"))
+                    .append("required", List.of(
+                            "name",
+                            "type",
+                            "eqCount",
+                            "capacity",
+                            "location",
+                            "availabilityWindows",
+                            "status",
+                            "description",
+                            "imageUrl",
+                            "createdBy"
+                    ))
                     .append("properties", new Document()
                             .append("name", new Document("bsonType", "string"))
                             .append("type", new Document()
@@ -37,14 +48,17 @@ public class ResourceCollectionSchemaConfig {
                             .append("capacity", new Document("bsonType", "int").append("minimum", 1))
                             .append("location", new Document()
                                     .append("bsonType", "object")
+                                    .append("required", List.of("building", "floor", "room"))
                                     .append("properties", new Document()
                                             .append("building", new Document("bsonType", "string"))
-                                            .append("floor", new Document("bsonType", "string"))
+                                            .append("floor", new Document("bsonType", "string").append("pattern", "^\\d+$"))
                                             .append("room", new Document("bsonType", "string"))))
                             .append("availabilityWindows", new Document()
                                     .append("bsonType", "array")
+                                    .append("minItems", 1)
                                     .append("items", new Document()
                                             .append("bsonType", "object")
+                                            .append("required", List.of("day", "startTime", "endTime"))
                                             .append("properties", new Document()
                                                     .append("day", new Document("bsonType", "string"))
                                                     .append("startTime", new Document("bsonType", "string"))

@@ -1,5 +1,10 @@
 package com.smartcampus.backend.features.Resources.Model;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -12,15 +17,36 @@ public class Resource {
     @Id
     private String id;
 
+    @NotBlank(message = "Resource name is required")
     private String name;
+
+    @NotBlank(message = "Resource type is required")
     private String type;
+
+    @Min(value = 0, message = "Equipment count cannot be negative")
     private int eqCount;
+
+    @Min(value = 1, message = "Capacity must be greater than 0")
     private int capacity;
+
+    @Valid
+    @NotNull(message = "Location is required")
     private Location location;
+
+    @Valid
+    @NotEmpty(message = "Availability window is required")
     private List<AvailabilityWindow> availabilityWindows;
+
+    @NotBlank(message = "Status is required")
     private String status;
+
+    @NotBlank(message = "Description is required")
     private String description;
+
+    @NotBlank(message = "Resource image is required")
     private String imageUrl;
+
+    @NotBlank(message = "Created by is required")
     private String createdBy;
     private Instant createdAt;
     private Instant updatedAt;
