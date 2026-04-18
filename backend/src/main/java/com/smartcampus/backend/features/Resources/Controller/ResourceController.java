@@ -1,6 +1,7 @@
 package com.smartcampus.backend.features.Resources.Controller;
 
-import com.smartcampus.backend.features.Resources.Model.Resource;
+import com.smartcampus.backend.features.Resources.DTO.ResourceRequestDto;
+import com.smartcampus.backend.features.Resources.DTO.ResourceResponseDto;
 import com.smartcampus.backend.features.Resources.Service.ResourceService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,7 +22,7 @@ public class ResourceController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Resource>> getAllResources() {
+    public ResponseEntity<List<ResourceResponseDto>> getAllResources() {
         return ResponseEntity.ok(resourceService.getAllResources());
     }
 
@@ -34,9 +35,9 @@ public class ResourceController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createResource(@Valid @RequestBody Resource resource) {
+    public ResponseEntity<?> createResource(@Valid @RequestBody ResourceRequestDto resource) {
         try {
-            Resource created = resourceService.createResource(resource);
+            ResourceResponseDto created = resourceService.createResource(resource);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -44,9 +45,9 @@ public class ResourceController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateResource(@PathVariable String id, @Valid @RequestBody Resource resource) {
+    public ResponseEntity<?> updateResource(@PathVariable String id, @Valid @RequestBody ResourceRequestDto resource) {
         try {
-            Resource updated = resourceService.updateResource(id, resource);
+            ResourceResponseDto updated = resourceService.updateResource(id, resource);
             return ResponseEntity.ok(updated);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());

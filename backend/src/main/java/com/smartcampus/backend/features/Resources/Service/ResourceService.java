@@ -1,5 +1,7 @@
 package com.smartcampus.backend.features.Resources.Service;
 
+import com.smartcampus.backend.features.Resources.DTO.ResourceRequestDto;
+import com.smartcampus.backend.features.Resources.DTO.ResourceResponseDto;
 import com.smartcampus.backend.features.Resources.Model.AvailabilityWindow;
 import com.smartcampus.backend.features.Resources.Model.Resource;
 import com.smartcampus.backend.features.Resources.Repository.ResourceRepository;
@@ -13,6 +15,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ResourceService {
@@ -23,23 +26,28 @@ public class ResourceService {
         this.resourceRepository = resourceRepository;
     }
 
-    public List<Resource> getAllResources() {
-        return resourceRepository.findAll();
+    public List<ResourceResponseDto> getAllResources() {
+        return resourceRepository.findAll()
+                .stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
     }
 
-    public Optional<Resource> getResourceById(String id) {
-        return resourceRepository.findById(id);
+    public Optional<ResourceResponseDto> getResourceById(String id) {
+        return resourceRepository.findById(id).map(this::toResponseDto);
     }
 
-    public Resource createResource(Resource resource) {
+    public ResourceResponseDto createResource(ResourceRequestDto dto) {
+        Resource resource = toResource(dto);
         validateResource(resource);
         resource.setId(null);
         resource.setCreatedAt(Instant.now());
         resource.setUpdatedAt(Instant.now());
-        return resourceRepository.save(resource);
+        return toResponseDto(resourceRepository.save(resource));
     }
 
-    public Resource updateResource(String id, Resource updatedResource) {
+    public ResourceResponseDto updateResource(String id, ResourceRequestDto dto) {
+        Resource updatedResource = toResource(dto);
         validateResource(updatedResource);
         return resourceRepository.findById(id).map(existingResource -> {
             existingResource.setName(updatedResource.getName());
@@ -53,7 +61,7 @@ public class ResourceService {
             existingResource.setImageUrl(updatedResource.getImageUrl());
             existingResource.setCreatedBy(updatedResource.getCreatedBy());
             existingResource.setUpdatedAt(Instant.now());
-            return resourceRepository.save(existingResource);
+            return toResponseDto(resourceRepository.save(existingResource));
         }).orElseThrow(() -> new RuntimeException("Resource not found with id: " + id));
     }
 
@@ -104,5 +112,38 @@ public class ResourceService {
         } catch (IllegalArgumentException e) {
             throw e;
         }
+    }
+
+    private Resource toResource(ResourceRequestDto dto) {
+        Resource resource = new Resource();
+        resource.setName(dto.getName());
+        resource.setType(dto.getType());
+        resource.setEqCount(dto.getEqCount());
+        resource.setCapacity(dto.getCapacity());
+        resource.setLocation(dto.getLocation());
+        resource.setAvailabilityWindows(dto.getAvailabilityWindows());
+        resource.setStatus(dto.getStatus());
+        resource.setDescription(dto.getDescription());
+        resource.setImageUrl(dto.getImageUrl());
+        resource.setCreatedBy(dto.getCreatedBy());
+        return resource;
+    }
+
+    private ResourceResponseDto toResponseDto(Resource resource) {
+        ResourceResponseDto dto = new ResourceResponseDto();
+        dto.setId(resource.getId());
+        dto.setName(resource.getName());
+        dto.setType(resource.getType());
+        dto.setEqCount(resource.getEqCount());
+        dto.setCapacity(resource.getCapacity());
+        dto.setLocation(resource.getLocation());
+        dto.setAvailabilityWindows(resource.getAvailabilityWindows());
+        dto.setStatus(resource.getStatus());
+        dto.setDescription(resource.getDescription());
+        dto.setImageUrl(resource.getImageUrl());
+        dto.setCreatedBy(resource.getCreatedBy());
+        dto.setCreatedAt(resource.getCreatedAt());
+        dto.setUpdatedAt(resource.getUpdatedAt());
+        return dto;
     }
 }
