@@ -1,9 +1,16 @@
 package com.smartcampus.backend.features.Resources.Model;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class AvailabilityWindow {
 
+    @NotBlank(message = "Availability day is required")
     private String day;
+
+    @NotBlank(message = "Start time is required")
     private String startTime;
+
+    @NotBlank(message = "End time is required")
     private String endTime;
 
     public AvailabilityWindow() {

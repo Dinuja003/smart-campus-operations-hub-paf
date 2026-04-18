@@ -129,6 +129,16 @@ const defaultStatusStyle = {
   borderColor: "#cbd5e1",
 };
 
+const dayIndex = {
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+};
+
 const emptyResourceForm = {
   name: "",
   type: "MEETING_ROOM",
@@ -194,13 +204,57 @@ const buildResourcePayload = (form) => {
     status: form.status.trim(),
     description: form.description.trim(),
     imageUrl: form.imageUrl.trim(),
+    createdBy: form.createdBy.trim(),
   };
 
-  if (form.createdBy.trim()) {
-    payload.createdBy = form.createdBy.trim();
+  return payload;
+};
+
+const validateResourceForm = (form) => {
+  const isEquipment = form.type === "EQUIPMENT";
+  const requiredFields = [
+    ["Resource name", form.name],
+    ["Type", form.type],
+    ["Status", form.status],
+    ["Building", form.building],
+    ["Floor", form.floor],
+    ["Room", form.room],
+    ["Day", form.day],
+    ["Start time", form.startTime],
+    ["End time", form.endTime],
+    ["Resource image", form.imageUrl],
+    ["Description", form.description],
+    ["Created by", form.createdBy],
+  ];
+
+  const missingField = requiredFields.find(([, value]) => !String(value || "").trim());
+  if (missingField) return `${missingField[0]} is required.`;
+
+  if (!isEquipment && Number(form.capacity || 0) <= 0) {
+    return "Capacity must be greater than 0.";
   }
 
-  return payload;
+  if (isEquipment && Number(form.eqCount || 0) <= 0) {
+    return "Equipment count must be greater than 0.";
+  }
+
+  if (!/^\d+$/.test(form.floor.trim())) {
+    return "Floor number must be a number.";
+  }
+
+  if (form.endTime <= form.startTime) {
+    return "End time must be later than start time.";
+  }
+
+  const now = new Date();
+  const todayName = Object.keys(dayIndex).find((day) => dayIndex[day] === now.getDay());
+  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  if (form.day === todayName && form.startTime < currentTime) {
+    return "Start time must be the current time or a future time.";
+  }
+
+  return "";
 };
 
 const readImageAsDataUrl = (file) =>
@@ -210,6 +264,15 @@ const readImageAsDataUrl = (file) =>
     reader.onerror = () => reject(new Error("Unable to read selected image."));
     reader.readAsDataURL(file);
   });
+
+const addMinutesToTime = (time, minutes) => {
+  if (!time) return "";
+  const [hours, mins] = time.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours, mins + minutes, 0, 0);
+
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+};
 
 const replaceResourceById = (resources, updatedResource, originalId) => {
   const updatedId = updatedResource.id || originalId;
@@ -322,7 +385,18 @@ export default function AdminResourcesInterface() {
   }, [resources]);
 
   const updateForm = (field, value) => {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm((current) => {
+      if (field === "startTime") {
+        const minimumEndTime = addMinutesToTime(value, 1);
+        return {
+          ...current,
+          startTime: value,
+          endTime: current.endTime <= value ? minimumEndTime : current.endTime,
+        };
+      }
+
+      return { ...current, [field]: value };
+    });
   };
 
   const updateImage = async (file) => {
@@ -366,15 +440,10 @@ export default function AdminResourcesInterface() {
 
   const handleSaveResource = async (event) => {
     event.preventDefault();
-    const isEquipment = form.type === "EQUIPMENT";
+    const validationMessage = validateResourceForm(form);
 
-    if (!form.name.trim() || !form.type.trim()) {
-      setFormError("Resource name and type are required.");
-      return;
-    }
-
-    if (!isEquipment && Number(form.capacity || 0) < 1) {
-      setFormError("Capacity must be at least 1.");
+    if (validationMessage) {
+      setFormError(validationMessage);
       return;
     }
 
@@ -717,6 +786,7 @@ function ResourceDetailsModal({ resource, onClose, onEdit, onDelete, deleting })
 
 function CreateResourceModal({ form, formError, saving, editing, onChange, onImageChange, onClose, onSubmit }) {
   const isEquipment = form.type === "EQUIPMENT";
+  const minimumEndTime = addMinutesToTime(form.startTime, 1);
 
   return (
     <div style={styles.modalOverlay} onClick={onClose}>
@@ -740,12 +810,13 @@ function CreateResourceModal({ form, formError, saving, editing, onChange, onIma
                 value={form.name}
                 onChange={(event) => onChange("name", event.target.value)}
                 placeholder="Meeting Room A-105"
+                required
                 style={styles.formInput}
               />
             </FormField>
 
             <FormField label="Type" required>
-              <select value={form.type} onChange={(event) => onChange("type", event.target.value)} style={styles.formInput}>
+              <select value={form.type} onChange={(event) => onChange("type", event.target.value)} style={styles.formInput} required>
                 <option value="MEETING_ROOM">MEETING_ROOM</option>
                 <option value="LECTURE_HALL">LECTURE_HALL</option>
                 <option value="LAB">LAB</option>
@@ -754,11 +825,12 @@ function CreateResourceModal({ form, formError, saving, editing, onChange, onIma
               </select>
             </FormField>
 
-            <FormField label="Status">
+            <FormField label="Status" required>
               <select
                 value={form.status}
                 onChange={(event) => onChange("status", event.target.value)}
                 style={styles.formInput}
+                required
               >
                 <option value="AVAILABLE">AVAILABLE</option>
                 <option value="BOOKED">BOOKED</option>
@@ -768,36 +840,39 @@ function CreateResourceModal({ form, formError, saving, editing, onChange, onIma
             </FormField>
 
             {!isEquipment && (
-              <FormField label="Capacity">
+              <FormField label="Capacity" required>
                 <input
                   type="number"
                   min="1"
                   value={form.capacity}
                   onChange={(event) => onChange("capacity", event.target.value)}
                   placeholder="10"
+                  required
                   style={styles.formInput}
                 />
               </FormField>
             )}
 
             {isEquipment && (
-              <FormField label="Equipment Count">
+              <FormField label="Equipment Count" required>
                 <input
                   type="number"
                   min="0"
                   value={form.eqCount}
                   onChange={(event) => onChange("eqCount", event.target.value)}
                   placeholder="5"
+                  required
                   style={styles.formInput}
                 />
               </FormField>
             )}
 
-            <FormField label="Created By">
+            <FormField label="Created By" required>
               <input
                 value={form.createdBy}
                 onChange={(event) => onChange("createdBy", event.target.value)}
                 placeholder="Admin name or ID"
+                required
                 style={styles.formInput}
               />
             </FormField>
@@ -806,27 +881,33 @@ function CreateResourceModal({ form, formError, saving, editing, onChange, onIma
           <div style={styles.formSection}>
             <h4 style={styles.sectionTitle}>Location</h4>
             <div style={styles.formGrid}>
-              <FormField label="Building">
+              <FormField label="Building" required>
                 <input
                   value={form.building}
                   onChange={(event) => onChange("building", event.target.value)}
                   placeholder="Block A"
+                  required
                   style={styles.formInput}
                 />
               </FormField>
-              <FormField label="Floor">
+              <FormField label="Floor" required>
                 <input
+                  type="number"
+                  min="0"
+                  step="1"
                   value={form.floor}
                   onChange={(event) => onChange("floor", event.target.value)}
                   placeholder="1"
+                  required
                   style={styles.formInput}
                 />
               </FormField>
-              <FormField label="Room">
+              <FormField label="Room" required>
                 <input
                   value={form.room}
                   onChange={(event) => onChange("room", event.target.value)}
                   placeholder="105"
+                  required
                   style={styles.formInput}
                 />
               </FormField>
@@ -836,8 +917,8 @@ function CreateResourceModal({ form, formError, saving, editing, onChange, onIma
           <div style={styles.formSection}>
             <h4 style={styles.sectionTitle}>Availability Window</h4>
             <div style={styles.formGrid}>
-              <FormField label="Day">
-                <select value={form.day} onChange={(event) => onChange("day", event.target.value)} style={styles.formInput}>
+              <FormField label="Day" required>
+                <select value={form.day} onChange={(event) => onChange("day", event.target.value)} style={styles.formInput} required>
                   <option value="MONDAY">MONDAY</option>
                   <option value="TUESDAY">TUESDAY</option>
                   <option value="WEDNESDAY">WEDNESDAY</option>
@@ -847,19 +928,22 @@ function CreateResourceModal({ form, formError, saving, editing, onChange, onIma
                   <option value="SUNDAY">SUNDAY</option>
                 </select>
               </FormField>
-              <FormField label="Start Time">
+              <FormField label="Start Time" required>
                 <input
                   type="time"
                   value={form.startTime}
                   onChange={(event) => onChange("startTime", event.target.value)}
+                  required
                   style={styles.formInput}
                 />
               </FormField>
-              <FormField label="End Time">
+              <FormField label="End Time" required>
                 <input
                   type="time"
                   value={form.endTime}
+                  min={minimumEndTime}
                   onChange={(event) => onChange("endTime", event.target.value)}
+                  required
                   style={styles.formInput}
                 />
               </FormField>
@@ -867,7 +951,7 @@ function CreateResourceModal({ form, formError, saving, editing, onChange, onIma
           </div>
 
           <div style={styles.formField}>
-            <span style={styles.formLabel}>Resource Image</span>
+            <span style={styles.formLabel}>Resource Image<span style={styles.requiredMark}> *</span></span>
             <label style={styles.imageUploadBox}>
               <input
                 type="file"
@@ -892,12 +976,13 @@ function CreateResourceModal({ form, formError, saving, editing, onChange, onIma
             )}
           </div>
 
-          <FormField label="Description">
+          <FormField label="Description" required>
             <textarea
               value={form.description}
               onChange={(event) => onChange("description", event.target.value)}
               placeholder="Small meeting room with projector"
               rows={4}
+              required
               style={{ ...styles.formInput, ...styles.textarea }}
             />
           </FormField>

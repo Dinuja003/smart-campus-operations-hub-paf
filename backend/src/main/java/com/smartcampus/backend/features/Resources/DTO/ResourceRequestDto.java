@@ -1,21 +1,16 @@
-package com.smartcampus.backend.features.Resources.Model;
+package com.smartcampus.backend.features.Resources.DTO;
 
+import com.smartcampus.backend.features.Resources.Model.AvailabilityWindow;
+import com.smartcampus.backend.features.Resources.Model.Location;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.Instant;
 import java.util.List;
 
-@Document(collection = "resources")
-public class Resource {
-
-    @Id
-    private String id;
+public class ResourceRequestDto {
 
     @NotBlank(message = "Resource name is required")
     private String name;
@@ -48,37 +43,8 @@ public class Resource {
 
     @NotBlank(message = "Created by is required")
     private String createdBy;
-    private Instant createdAt;
-    private Instant updatedAt;
 
-    public Resource() {
-    }
-
-    public Resource(String id, String name, String type, int eqCount, int capacity,
-                    Location location, List<AvailabilityWindow> availabilityWindows,
-                    String status, String description, String imageUrl,
-                    String createdBy, Instant createdAt, Instant updatedAt) {
-        this.id = id;
-        this.name = name;
-        this.type = type;
-        this.eqCount = eqCount;
-        this.capacity = capacity;
-        this.location = location;
-        this.availabilityWindows = availabilityWindows;
-        this.status = status;
-        this.description = description;
-        this.imageUrl = imageUrl;
-        this.createdBy = createdBy;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
+    public ResourceRequestDto() {
     }
 
     public String getName() {
@@ -159,21 +125,5 @@ public class Resource {
 
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }
