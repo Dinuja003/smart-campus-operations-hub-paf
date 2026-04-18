@@ -1,10 +1,13 @@
 import { useNavigate } from "react-router-dom"
 import {
+  Bell,
+  CalendarCheck2,
   LayoutDashboard,
-  TriangleAlert,
-  ReceiptText,
+  ShieldCheck,
+  Ticket,
   User,
   LogOut,
+  Wrench,
 } from "lucide-react"
 import {
   Sidebar,
@@ -29,6 +32,32 @@ import {
 import { clearAuth } from "@/features/auth/services/authService"
 import logo from "../assets/vite.svg"
 
+const navItemsByRole = {
+  USER: [
+    { label: "Dashboard", path: "/", icon: LayoutDashboard },
+    { label: "My Bookings", path: "/my-bookings", icon: CalendarCheck2 },
+    { label: "My Tickets", path: "/tickets", icon: Ticket },
+    { label: "Notifications", path: "/notifications", icon: Bell },
+    { label: "My Profile", path: "/profile", icon: User },
+  ],
+  ADMIN: [
+    { label: "Dashboard", path: "/", icon: LayoutDashboard },
+    { label: "All Bookings", path: "/admin/bookings", icon: ShieldCheck },
+    { label: "My Bookings", path: "/my-bookings", icon: CalendarCheck2 },
+    { label: "Resources", path: "/resources", icon: Wrench },
+    { label: "Tickets", path: "/tickets", icon: Ticket },
+    { label: "Notifications", path: "/notifications", icon: Bell },
+    { label: "My Profile", path: "/profile", icon: User },
+  ],
+  TECHNICIAN: [
+    { label: "Dashboard", path: "/", icon: LayoutDashboard },
+    { label: "Resources", path: "/resources", icon: Wrench },
+    { label: "Tickets", path: "/tickets", icon: Ticket },
+    { label: "Notifications", path: "/notifications", icon: Bell },
+    { label: "My Profile", path: "/profile", icon: User },
+  ],
+}
+
 function deriveDisplayName(email) {
   if (!email) return "My Account"
   const local = email.split("@")[0] || ""
@@ -49,10 +78,11 @@ function deriveInitials(displayName) {
 export function AppSidebar() {
   const navigate = useNavigate()
   const email = localStorage.getItem("email") || ""
-  const role = (localStorage.getItem("role") || "").toUpperCase()
+  const role = (localStorage.getItem("role") || "USER").toUpperCase()
   const displayName = deriveDisplayName(email)
   const initials = deriveInitials(displayName)
   const subtitle = email || role || "Signed in user"
+  const navItems = navItemsByRole[role] || navItemsByRole.USER
 
   return (
     <Sidebar className="[--sidebar-accent:#e0f2fe] [--sidebar-accent-foreground:#0f172a]">
@@ -71,55 +101,18 @@ export function AppSidebar() {
 
           <SidebarGroupContent>
             <SidebarMenu className="mt-4 space-y-2">
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/")}>
-                  <LayoutDashboard />
-                  <span>Dashboard</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-  <SidebarMenuButton onClick={() => navigate("/resources")}>
-    <LayoutDashboard />
-    <span>Resources</span>
-  </SidebarMenuButton>
-</SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/my-bookings")}>
-                  <LayoutDashboard />
-                  <span>My Bookings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/admin/bookings")}>
-                  <LayoutDashboard />
-                  <span>All Bookings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/tickets")}>
-                  <LayoutDashboard />
-                  <span>My Tickets</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/notifications")}>
-                  <LayoutDashboard />
-                  <span>Notifications</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/profile")}>
-                  <TriangleAlert />
-                  <span>My Profile</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {navItems.map((item) => {
+                const Icon = item.icon
 
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/invoices")}>
-                  <ReceiptText />
-                  <span>Invoices</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton onClick={() => navigate(item.path)}>
+                      <Icon />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

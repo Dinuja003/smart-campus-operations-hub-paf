@@ -416,7 +416,11 @@ export default function MyBookingsPage() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <h2 style={styles.heading}>My Bookings</h2>
+        <div style={styles.headerText}>
+          <p style={styles.kicker}>Booking Workspace</p>
+          <h2 style={styles.heading}>My Bookings</h2>
+          <p style={styles.headerSubtext}>Review requests, edit pending bookings, and schedule campus resources with confidence.</p>
+        </div>
         <button
           style={styles.newBtn}
           onClick={() => {
@@ -751,7 +755,7 @@ export default function MyBookingsPage() {
       {bookings.length === 0 ? (
         <div style={styles.emptyBox}>
           <p>You have no bookings yet.</p>
-          <button style={styles.newBtn} onClick={() => setShowNewBooking(true)}>
+          <button style={styles.newBtn} onClick={startNewBooking}>
             Create Your First Booking
           </button>
         </div>
@@ -808,25 +812,47 @@ export default function MyBookingsPage() {
 
 /* ── styles ─────────────────────────────────────────────────────────────── */
 const styles = {
-  page:    { maxWidth: 760, margin: '0 auto', padding: '32px 16px' },
-  header:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  heading: { margin: 0, fontSize: 24, fontWeight: 700, color: '#1a1a2e' },
+  page: {
+    maxWidth: 1180,
+    margin: '0 auto',
+    padding: '28px 18px 42px',
+    background: 'linear-gradient(180deg, #f8fbff 0%, #f4f7fb 100%)',
+    borderRadius: 24,
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 16,
+    marginBottom: 22,
+  },
+  headerText: { display: 'flex', flexDirection: 'column', gap: 4 },
+  kicker: {
+    margin: 0,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+    color: '#64748b',
+    fontWeight: 700,
+  },
+  heading: { margin: 0, fontSize: 32, lineHeight: 1.1, fontWeight: 800, color: '#0f172a' },
+  headerSubtext: { margin: 0, color: '#475569', fontSize: 14 },
   sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' },
+  sectionTitle: { margin: 0, fontSize: 17, fontWeight: 750, color: '#0f172a' },
   categorySection: {
     background: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 12,
-    padding: 16,
+    border: '1px solid #dbe3ef',
+    borderRadius: 14,
+    padding: 18,
     marginBottom: 16,
-    boxShadow: '0 1px 8px rgba(0,0,0,.05)',
+    boxShadow: '0 10px 28px -24px rgba(15, 23, 42, 0.3)',
   },
-  typeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 10 },
+  typeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 },
   typeCard: {
-    border: '1px solid #d1d5db',
+    border: '1px solid #d8e0ec',
     borderRadius: 10,
     background: '#f8fafc',
-    padding: 12,
+    padding: 13,
     cursor: 'pointer',
     textAlign: 'left',
     display: 'flex',
@@ -834,14 +860,14 @@ const styles = {
     gap: 4,
   },
   typeCardActive: {
-    borderColor: '#2563eb',
-    background: '#eff6ff',
+    borderColor: '#0f4c81',
+    background: '#edf5ff',
   },
-  typeCount: { fontSize: 12, color: '#6b7280' },
+  typeCount: { fontSize: 12, color: '#64748b' },
   helper: { margin: 0, fontSize: 13, color: '#6b7280' },
   categoryResourceList: {
     marginTop: 12,
-    border: '1px solid #e5e7eb',
+    border: '1px solid #dbe3ef',
     borderRadius: 10,
     background: '#ffffff',
     overflow: 'hidden',
@@ -851,8 +877,8 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '10px 12px',
-    borderBottom: '1px solid #e5e7eb',
-    background: '#f8fafc',
+    borderBottom: '1px solid #e2e8f0',
+    background: '#f6f9fd',
     fontSize: 14,
   },
   categoryResourceItem: {
@@ -861,7 +887,7 @@ const styles = {
     alignItems: 'center',
     gap: 10,
     padding: '10px 12px',
-    borderBottom: '1px solid #f1f5f9',
+    borderBottom: '1px solid #eef2f7',
   },
   categoryResourceMain: { minWidth: 0 },
   categoryResourceName: {
@@ -905,15 +931,15 @@ const styles = {
   bookingStudio: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-    gap: 16,
+    gap: 18,
     marginBottom: 20,
   },
   resourceShowcase: {
     background: '#ffffff',
-    border: '1px solid #e5e7eb',
+    border: '1px solid #dbe3ef',
     borderRadius: 14,
-    padding: 14,
-    boxShadow: '0 12px 30px -24px rgba(15, 23, 42, 0.35)',
+    padding: 16,
+    boxShadow: '0 18px 32px -28px rgba(15, 23, 42, 0.35)',
   },
   resourceImageWrap: {
     position: 'relative',
@@ -942,11 +968,11 @@ const styles = {
   },
   resourceHeading: {
     margin: '0 0 6px',
-    fontSize: 36,
-    lineHeight: 1.1,
+    fontSize: 42,
+    lineHeight: 1.02,
     color: '#0f172a',
     fontWeight: 800,
-    letterSpacing: '-0.02em',
+    letterSpacing: '-0.03em',
   },
   resourceDescription: {
     margin: '0 0 14px',
@@ -961,10 +987,10 @@ const styles = {
     marginBottom: 12,
   },
   statCard: {
-    border: '1px solid #e2e8f0',
+    border: '1px solid #dbe3ef',
     borderRadius: 10,
     padding: 10,
-    background: '#f8fafc',
+    background: '#f7fafd',
   },
   statLabel: {
     fontSize: 11,
@@ -980,9 +1006,9 @@ const styles = {
     fontWeight: 700,
   },
   scheduleBox: {
-    border: '1px solid #e2e8f0',
+    border: '1px solid #dbe3ef',
     borderRadius: 10,
-    padding: 10,
+    padding: 12,
     background: '#ffffff',
   },
   scheduleTitle: {
@@ -1032,19 +1058,19 @@ const styles = {
   },
   requestPanel: {
     background: '#ffffff',
-    border: '1px solid #e5e7eb',
+    border: '1px solid #dbe3ef',
     borderRadius: 14,
-    padding: 16,
-    boxShadow: '0 12px 30px -24px rgba(15, 23, 42, 0.35)',
+    padding: 18,
+    boxShadow: '0 18px 32px -28px rgba(15, 23, 42, 0.35)',
     alignSelf: 'start',
     position: 'relative',
   },
   requestTitle: {
     margin: 0,
-    fontSize: 24,
+    fontSize: 29,
     color: '#111827',
     fontWeight: 800,
-    letterSpacing: '-0.02em',
+    letterSpacing: '-0.03em',
   },
   requestHeaderRow: {
     display: 'flex',
@@ -1065,28 +1091,30 @@ const styles = {
   },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
   field: { display: 'flex', flexDirection: 'column', gap: 6 },
-  label: { fontSize: 12, color: '#374151', fontWeight: 600 },
+  label: { fontSize: 11, color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.45 },
   input: {
-    padding: '9px 10px',
-    border: '1px solid #d1d5db',
+    padding: '10px 11px',
+    border: '1px solid #cdd6e2',
     borderRadius: 8,
     fontSize: 14,
     background: '#fff',
+    color: '#0f172a',
   },
   textarea: {
-    padding: '9px 10px',
-    border: '1px solid #d1d5db',
+    padding: '10px 11px',
+    border: '1px solid #cdd6e2',
     borderRadius: 8,
     fontSize: 14,
     resize: 'vertical',
     fontFamily: 'inherit',
+    color: '#0f172a',
   },
   formActions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
   secondaryBtn: {
     padding: '9px 14px',
     background: '#ffffff',
-    color: '#1f2937',
-    border: '1px solid #9ca3af',
+    color: '#334155',
+    border: '1px solid #b8c4d4',
     borderRadius: 8,
     fontSize: 14,
     fontWeight: 600,
@@ -1094,7 +1122,7 @@ const styles = {
   },
   primaryActionBtn: {
     padding: '10px 16px',
-    background: '#1d4ed8',
+    background: 'linear-gradient(135deg, #114380 0%, #0f4c81 100%)',
     color: '#ffffff',
     border: 'none',
     borderRadius: 8,
@@ -1105,7 +1133,7 @@ const styles = {
   linkBtn: {
     background: 'transparent',
     border: 'none',
-    color: '#2563eb',
+    color: '#0f4c81',
     cursor: 'pointer',
     fontWeight: 600,
     fontSize: 13,
@@ -1114,7 +1142,7 @@ const styles = {
   list:    { display: 'flex', flexDirection: 'column', gap: 16 },
   card: {
     background: '#fff', borderRadius: 12, padding: 20,
-    boxShadow: '0 1px 8px rgba(0,0,0,.07)', border: '1px solid #e5e7eb',
+    boxShadow: '0 10px 26px -24px rgba(15, 23, 42, 0.35)', border: '1px solid #dbe3ef',
   },
   cardTop:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
   resourceName: { fontWeight: 700, fontSize: 16, color: '#111827' },
@@ -1129,19 +1157,20 @@ const styles = {
   },
   editBtn: {
     padding: '7px 16px',
-    background: '#eff6ff',
-    color: '#1d4ed8',
-    border: '1px solid #93c5fd',
+    background: '#edf5ff',
+    color: '#0f4c81',
+    border: '1px solid #9fc3e6',
     borderRadius: 8,
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
   },
   newBtn: {
-    padding: '9px 18px', background: '#2563eb', color: '#fff',
-    border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+    padding: '10px 18px', background: 'linear-gradient(135deg, #114380 0%, #0f4c81 100%)', color: '#fff',
+    border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+    boxShadow: '0 12px 22px -16px rgba(15, 76, 129, 0.72)',
   },
-  msg:      { padding: 24, textAlign: 'center', color: '#666' },
+  msg:      { padding: 24, textAlign: 'center', color: '#64748b' },
   error:    { background: '#fef2f2', color: '#dc2626', padding: '12px 16px', borderRadius: 8, marginBottom: 16 },
   success:  { background: '#f0fdf4', color: '#166534', padding: '12px 16px', borderRadius: 8, marginBottom: 16 },
   emptyBox: { textAlign: 'center', padding: 60, color: '#6b7280' },
