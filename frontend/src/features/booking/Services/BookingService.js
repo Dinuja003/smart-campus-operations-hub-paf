@@ -14,6 +14,9 @@ const bookingService = {
   /** POST /api/bookings — create a new booking request */
   createBooking: (data) => API.post('/bookings', data).then(r => r.data),
 
+  /** PUT /api/bookings/:id — edit a pending booking */
+  updateBooking: (id, data) => API.put(`/bookings/${id}`, data).then(r => r.data),
+
   /** GET /api/bookings/my — current user's bookings */
   getMyBookings: () => API.get('/bookings/my').then(r => r.data),
 
