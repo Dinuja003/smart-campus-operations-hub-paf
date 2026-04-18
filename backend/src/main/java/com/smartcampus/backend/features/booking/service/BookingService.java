@@ -1,5 +1,7 @@
 package com.smartcampus.backend.features.booking.service;
 
+import com.smartcampus.backend.features.Resources.Model.Resource;
+import com.smartcampus.backend.features.Resources.Repository.ResourceRepository;
 import com.smartcampus.backend.features.booking.dto.BookingRequestDto;
 import com.smartcampus.backend.features.booking.dto.BookingResponseDto;
 import com.smartcampus.backend.features.booking.dto.BookingReviewDto;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 public class BookingService {
 
     private final BookingRepository bookingRepository;
+    private final ResourceRepository resourceRepository;
 
     // ─── Helper: convert "HH:mm" to total minutes since midnight ───────────────
     private int toMinutes(String time) {
@@ -50,6 +53,20 @@ public class BookingService {
 
     // ─── CREATE booking request ─────────────────────────────────────────────────
     public BookingResponseDto createBooking(BookingRequestDto dto, String userId) {
+        Resource resource = resourceRepository.findById(dto.getResourceId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Resource not found"));
+
+        if (!"AVAILABLE".equalsIgnoreCase(resource.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Selected resource is not available for booking");
+        }
+
+        if (dto.getExpectedAttendees() > resource.getCapacity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Expected attendees exceed resource capacity");
+        }
+
         int startMins = toMinutes(dto.getStartTime());
         int endMins   = toMinutes(dto.getEndTime());
 
@@ -69,6 +86,7 @@ public class BookingService {
 
         Booking booking = Booking.builder()
                 .resourceId(dto.getResourceId())
+            .resourceType(resource.getType())
                 .requestedBy(userId)
                 .bookingReason(dto.getBookingReason())
                 .date(dto.getDate())
@@ -81,7 +99,6 @@ public class BookingService {
                 .status(BookingStatus.PENDING)
                 .build();
 
-        // resourceType will be set by controller after fetching from resource service
         Booking saved = bookingRepository.save(booking);
         log.info("Booking created: {} by user {}", saved.getId(), userId);
         return toDto(saved);
