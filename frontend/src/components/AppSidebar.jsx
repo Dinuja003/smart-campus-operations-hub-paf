@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import {
+  BarChart3,
   Bell,
   CalendarCheck2,
   LayoutDashboard,
@@ -43,6 +44,7 @@ const navItemsByRole = {
   ADMIN: [
     { label: "Dashboard", path: "/", icon: LayoutDashboard },
     { label: "All Bookings", path: "/admin/bookings", icon: ShieldCheck },
+    { label: "Analytics", path: "/analytics", icon: BarChart3 },
     { label: "My Bookings", path: "/my-bookings", icon: CalendarCheck2 },
     { label: "Resources", path: "/resources", icon: Wrench },
     { label: "Tickets", path: "/tickets", icon: Ticket },

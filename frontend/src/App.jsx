@@ -26,6 +26,7 @@ import bookingService from "./features/booking/Services/BookingService"
 import resourceService from "./features/resources/services/resourceService"
 import AdminResourcesInterface from "./features/resources/AdminResourcesInterface.jsx"
 import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
+import AnalyticsPage from "./features/booking/pages/AnalyticsPage"
 
 const actionConfigByRole = {
   USER: [
@@ -51,6 +52,13 @@ const actionConfigByRole = {
       icon: ShieldCheck,
       path: "/admin/bookings",
       className: "from-blue-700 to-indigo-600",
+    },
+    {
+      label: "Analytics",
+      subtitle: "View peak hours and booking trends",
+      icon: TrendingUp,
+      path: "/analytics",
+      className: "from-indigo-700 to-blue-700",
     },
     {
       label: "Resources",
@@ -518,6 +526,14 @@ function AppShell() {
                     element={
                       <RoleRoute allowedRoles={["ADMIN"]}>
                         <AdminBookingsPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/analytics"
+                    element={
+                      <RoleRoute allowedRoles={["ADMIN"]}>
+                        <AnalyticsPage />
                       </RoleRoute>
                     }
                   />
