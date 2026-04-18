@@ -50,6 +50,20 @@ public class BookingController {
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
+    // PUT /api/bookings/{id}  →  Edit own pending booking  (USER / ADMIN)
+    // ─────────────────────────────────────────────────────────────────────────────
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    public ResponseEntity<BookingResponseDto> updateBooking(
+            @PathVariable String id,
+            @Valid @RequestBody BookingRequestDto dto,
+            Authentication auth) {
+
+        return ResponseEntity.ok(
+                bookingService.updateBooking(id, dto, getUserId(auth), isAdmin(auth)));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
     // GET /api/bookings/my  →  Current user's bookings  (USER / ADMIN)
     // ─────────────────────────────────────────────────────────────────────────────
     @GetMapping("/my")

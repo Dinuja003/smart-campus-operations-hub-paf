@@ -25,6 +25,7 @@ export function useBooking() {
   }, []);
 
   const createBooking   = (data)          => run(() => bookingService.createBooking(data));
+  const updateBooking   = (id, data)      => run(() => bookingService.updateBooking(id, data));
   const getMyBookings   = ()              => run(() => bookingService.getMyBookings());
   const getBookingById  = (id)            => run(() => bookingService.getBookingById(id));
   const getAllBookings   = (status)        => run(() => bookingService.getAllBookings(status));
@@ -35,7 +36,7 @@ export function useBooking() {
 
   return {
     loading, error,
-    createBooking, getMyBookings, getBookingById,
+    createBooking, updateBooking, getMyBookings, getBookingById,
     getAllBookings, getSchedule, reviewBooking,
     cancelBooking, deleteBooking,
   };

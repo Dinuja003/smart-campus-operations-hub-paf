@@ -36,8 +36,19 @@ const getResourceLabel = (resource) => {
   return `${resource?.name || 'Unnamed Resource'}${resource?.capacity ? ` (cap: ${resource.capacity})` : ''}${locationText ? ` - ${locationText}` : ''}`;
 };
 
+const createEmptyForm = () => ({
+  date: todayISO(),
+  startTime: '09:00',
+  endTime: '10:00',
+  resourceType: '',
+  resourceId: '',
+  bookingReason: '',
+  purpose: '',
+  expectedAttendees: '1',
+});
+
 export default function MyBookingsPage() {
-  const { getMyBookings, cancelBooking, createBooking, loading, error } = useBooking();
+  const { getMyBookings, cancelBooking, createBooking, updateBooking, loading, error } = useBooking();
   const [bookings, setBookings] = useState([]);
   const [resources, setResources] = useState([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
@@ -52,17 +63,9 @@ export default function MyBookingsPage() {
   const [availableResources, setAvailableResources] = useState([]);
   const [selectedResourceSchedule, setSelectedResourceSchedule] = useState([]);
   const [resourceScheduleLoading, setResourceScheduleLoading] = useState(false);
+  const [editingBookingId, setEditingBookingId] = useState(null);
 
-  const [form, setForm] = useState({
-    date: todayISO(),
-    startTime: '09:00',
-    endTime: '10:00',
-    resourceType: '',
-    resourceId: '',
-    bookingReason: '',
-    purpose: '',
-    expectedAttendees: '1',
-  });
+  const [form, setForm] = useState(() => createEmptyForm());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -138,6 +141,11 @@ export default function MyBookingsPage() {
     return null;
   }, [displayedResources, form.resourceId, resources, selectedCategoryResources]);
 
+  const editingBooking = useMemo(
+    () => bookings.find((booking) => booking.id === editingBookingId) || null,
+    [bookings, editingBookingId]
+  );
+
   const daySlots = useMemo(
     () => [
       '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
@@ -151,6 +159,7 @@ export default function MyBookingsPage() {
       const slotStart = toMinutes(slot);
       const slotEnd = slotStart + 60;
       const busy = selectedResourceSchedule.some((item) => {
+        if (editingBookingId && item.id === editingBookingId) return false;
         const start = toMinutes(item.startTime);
         const end = toMinutes(item.endTime);
         if (start === null || end === null) return false;
@@ -174,7 +183,11 @@ export default function MyBookingsPage() {
       setResourceScheduleLoading(true);
       try {
         const schedule = await bookingService.getSchedule(selectedResource.id, form.date);
-        if (active) setSelectedResourceSchedule(toArray(schedule));
+        if (active) {
+          setSelectedResourceSchedule(
+            toArray(schedule).filter((item) => !editingBookingId || item.id !== editingBookingId)
+          );
+        }
       } catch (_) {
         if (active) setSelectedResourceSchedule([]);
       } finally {
@@ -187,7 +200,7 @@ export default function MyBookingsPage() {
     return () => {
       active = false;
     };
-  }, [showNewBooking, selectedResource?.id, form.date]);
+  }, [showNewBooking, selectedResource?.id, form.date, editingBookingId]);
 
   const resetAvailability = () => {
     setAvailabilityChecked(false);
@@ -228,7 +241,8 @@ export default function MyBookingsPage() {
       const checks = await Promise.all(
         targetResources.map(async (resource) => {
           try {
-            const schedule = toArray(await bookingService.getSchedule(resource.id, form.date));
+            const schedule = toArray(await bookingService.getSchedule(resource.id, form.date))
+              .filter((item) => !editingBookingId || item.id !== editingBookingId);
             const hasConflict = schedule.some((slot) => {
               const slotStart = toMinutes(slot.startTime);
               const slotEnd = toMinutes(slot.endTime);
@@ -264,6 +278,37 @@ export default function MyBookingsPage() {
 
   const handleCheckAvailability = async () => {
     await checkAvailability();
+  };
+
+  const startNewBooking = () => {
+    setEditingBookingId(null);
+    setForm(createEmptyForm());
+    resetAvailability();
+    setShowNewBooking(true);
+  };
+
+  const startEditBooking = (booking) => {
+    const resource = resources.find((item) => item.id === booking.resourceId);
+
+    setEditingBookingId(booking.id);
+    setForm({
+      date: booking.date || todayISO(),
+      startTime: booking.startTime || '09:00',
+      endTime: booking.endTime || '10:00',
+      resourceType: resource?.type || booking.resourceType || '',
+      resourceId: booking.resourceId || '',
+      bookingReason: booking.bookingReason || '',
+      purpose: booking.purpose || '',
+      expectedAttendees: String(booking.expectedAttendees || 1),
+    });
+    setShowNewBooking(true);
+    resetAvailability();
+  };
+
+  const cancelEditMode = () => {
+    setEditingBookingId(null);
+    setForm(createEmptyForm());
+    resetAvailability();
   };
 
   const handleCancel = async (id) => {
@@ -332,7 +377,7 @@ export default function MyBookingsPage() {
     }
 
     try {
-      await createBooking({
+      const payload = {
         resourceId: form.resourceId,
         bookingReason: form.bookingReason,
         date: form.date,
@@ -340,22 +385,20 @@ export default function MyBookingsPage() {
         endTime: form.endTime,
         purpose: form.purpose,
         expectedAttendees: attendeeCount,
-      });
+      };
+
+      if (editingBookingId) {
+        await updateBooking(editingBookingId, payload);
+      } else {
+        await createBooking(payload);
+      }
 
       const refreshed = await getMyBookings();
       setBookings(toArray(refreshed));
-      setSubmitSuccess('Booking request submitted successfully.');
+      setSubmitSuccess(editingBookingId ? 'Booking updated successfully.' : 'Booking request submitted successfully.');
       setShowNewBooking(false);
-      setForm({
-        date: todayISO(),
-        startTime: '09:00',
-        endTime: '10:00',
-        resourceType: '',
-        resourceId: '',
-        bookingReason: '',
-        purpose: '',
-        expectedAttendees: '1',
-      });
+      setEditingBookingId(null);
+      setForm(createEmptyForm());
       resetAvailability();
     } catch (err) {
       const backendMessage =
@@ -374,8 +417,18 @@ export default function MyBookingsPage() {
     <div style={styles.page}>
       <div style={styles.header}>
         <h2 style={styles.heading}>My Bookings</h2>
-        <button style={styles.newBtn} onClick={() => setShowNewBooking((prev) => !prev)}>
-          {showNewBooking ? 'Close New Booking' : '+ New Booking'}
+        <button
+          style={styles.newBtn}
+          onClick={() => {
+            if (showNewBooking) {
+              setShowNewBooking(false);
+              cancelEditMode();
+              return;
+            }
+            startNewBooking();
+          }}
+        >
+          {showNewBooking ? 'Close Booking Form' : '+ New Booking'}
         </button>
       </div>
 
@@ -534,7 +587,20 @@ export default function MyBookingsPage() {
               <div style={styles.error}>{submitError || availabilityError}</div>
             )}
 
-            <h3 style={styles.requestTitle}>Request a Booking</h3>
+            <div style={styles.requestHeaderRow}>
+              <h3 style={styles.requestTitle}>{editingBookingId ? 'Edit Booking' : 'Request a Booking'}</h3>
+              {editingBookingId && (
+                <button type="button" style={styles.linkBtn} onClick={cancelEditMode}>
+                  Cancel Edit
+                </button>
+              )}
+            </div>
+
+            {editingBookingId && editingBooking && (
+              <div style={styles.editNotice}>
+                Editing pending booking: {editingBooking.bookingReason || editingBooking.id}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} style={styles.form}>
               <div style={styles.field}>
@@ -674,7 +740,7 @@ export default function MyBookingsPage() {
                   style={styles.primaryActionBtn}
                   disabled={loading || checkingAvailability || resourcesLoading}
                 >
-                  {loading ? 'Submitting...' : 'Send Booking Request'}
+                  {loading ? 'Saving...' : editingBookingId ? 'Save Changes' : 'Send Booking Request'}
                 </button>
               </div>
             </form>
@@ -713,6 +779,15 @@ export default function MyBookingsPage() {
               )}
 
               <div style={styles.actions}>
+                {b.status === 'PENDING' && (
+                  <button
+                    style={styles.editBtn}
+                    onClick={() => startEditBooking(b)}
+                  >
+                    Edit Booking
+                  </button>
+                )}
+
                 {(b.status === 'PENDING' || b.status === 'APPROVED') && (
                   <button
                     style={styles.cancelBtn}
@@ -971,6 +1046,23 @@ const styles = {
     fontWeight: 800,
     letterSpacing: '-0.02em',
   },
+  requestHeaderRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  editNotice: {
+    marginTop: 10,
+    marginBottom: 4,
+    padding: '8px 10px',
+    borderRadius: 8,
+    background: '#eff6ff',
+    color: '#1d4ed8',
+    border: '1px solid #bfdbfe',
+    fontSize: 12,
+    fontWeight: 600,
+  },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
   field: { display: 'flex', flexDirection: 'column', gap: 6 },
   label: { fontSize: 12, color: '#374151', fontWeight: 600 },
@@ -1034,6 +1126,16 @@ const styles = {
     padding: '7px 16px', background: '#fff', color: '#dc2626',
     border: '1px solid #dc2626', borderRadius: 8, fontSize: 13,
     fontWeight: 600, cursor: 'pointer',
+  },
+  editBtn: {
+    padding: '7px 16px',
+    background: '#eff6ff',
+    color: '#1d4ed8',
+    border: '1px solid #93c5fd',
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
   },
   newBtn: {
     padding: '9px 18px', background: '#2563eb', color: '#fff',

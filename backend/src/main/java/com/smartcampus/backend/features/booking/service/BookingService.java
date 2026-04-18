@@ -104,6 +104,69 @@ public class BookingService {
         return toDto(saved);
     }
 
+        // ─── UPDATE pending booking ────────────────────────────────────────────────
+        public BookingResponseDto updateBooking(String bookingId, BookingRequestDto dto,
+                           String userId, boolean isAdmin) {
+        Booking existing = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Booking not found"));
+
+        if (!isAdmin && !existing.getRequestedBy().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "You can only edit your own bookings");
+        }
+
+        if (existing.getStatus() != BookingStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Only PENDING bookings can be edited");
+        }
+
+        Resource resource = resourceRepository.findById(dto.getResourceId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Resource not found"));
+
+        if (!"AVAILABLE".equalsIgnoreCase(resource.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Selected resource is not available for booking");
+        }
+
+        if (dto.getExpectedAttendees() > resource.getCapacity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Expected attendees exceed resource capacity");
+        }
+
+        int startMins = toMinutes(dto.getStartTime());
+        int endMins = toMinutes(dto.getEndTime());
+
+        if (endMins <= startMins) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "End time must be after start time");
+        }
+
+        List<Booking> conflicts = bookingRepository.findConflictingBookingsExcludingBookingId(
+            bookingId, dto.getResourceId(), dto.getDate(), startMins, endMins);
+
+        if (!conflicts.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This resource is already booked for the selected time slot");
+        }
+
+        existing.setResourceId(dto.getResourceId());
+        existing.setResourceType(resource.getType());
+        existing.setBookingReason(dto.getBookingReason());
+        existing.setDate(dto.getDate());
+        existing.setStartTime(dto.getStartTime());
+        existing.setEndTime(dto.getEndTime());
+        existing.setStartTimeMinutes(startMins);
+        existing.setEndTimeMinutes(endMins);
+        existing.setPurpose(dto.getPurpose());
+        existing.setExpectedAttendees(dto.getExpectedAttendees());
+
+        Booking saved = bookingRepository.save(existing);
+        log.info("Booking {} updated by user {}", bookingId, userId);
+        return toDto(saved);
+        }
+
     // ─── GET my bookings ────────────────────────────────────────────────────────
     public List<BookingResponseDto> getMyBookings(String userId) {
         return bookingRepository.findByRequestedByOrderByCreatedAtDesc(userId)
