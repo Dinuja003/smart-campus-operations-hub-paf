@@ -1,8 +1,20 @@
 import { useState } from "react"
 
-const DUMMY_USER_ID = "69c038632d897c2ee8880785"
+const TEMP_USER_ID = "69c038632d897c2ee8880785"
 const API_USERNAME = "user"
-const API_PASSWORD = "31771d5d-6b1c-4c45-86df-39052126c47a"
+
+function getApiPassword() {
+  let savedPassword = sessionStorage.getItem("apiPassword")
+
+  if (!savedPassword) {
+    savedPassword = prompt("Enter backend password")
+    if (savedPassword) {
+      sessionStorage.setItem("apiPassword", savedPassword)
+    }
+  }
+
+  return savedPassword || ""
+}
 
 function CreateTicketPage() {
   const [formData, setFormData] = useState({
@@ -41,6 +53,24 @@ function CreateTicketPage() {
     setError("")
   }
 
+  const handleUpdatePassword = () => {
+    sessionStorage.removeItem("apiPassword")
+    const newPassword = prompt("Enter new backend password")
+    if (newPassword) {
+      sessionStorage.setItem("apiPassword", newPassword)
+      setMessage("Backend password updated successfully.")
+      setError("")
+    }
+  }
+
+  const validateForm = () => {
+    if (!formData.subject.trim()) return "Subject is required."
+    if (!formData.description.trim()) return "Description is required."
+    if (!formData.location.trim()) return "Location is required."
+    if (!formData.preferredContact.trim()) return "Preferred contact is required."
+    return ""
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -48,8 +78,19 @@ function CreateTicketPage() {
     setError("")
 
     try {
+      const validationError = validateForm()
+      if (validationError) {
+        throw new Error(validationError)
+      }
+
+      const apiPassword = getApiPassword()
+
+      if (!apiPassword) {
+        throw new Error("Backend password is required to continue.")
+      }
+
       const payload = {
-        userId: DUMMY_USER_ID,
+        userId: TEMP_USER_ID,
         category: formData.category,
         subject: formData.subject.trim(),
         description: formData.description.trim(),
@@ -66,13 +107,19 @@ function CreateTicketPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Basic " + btoa(`${API_USERNAME}:${API_PASSWORD}`),
+          Authorization: "Basic " + btoa(`${API_USERNAME}:${apiPassword}`),
         },
         body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
         const text = await response.text()
+
+        if (response.status === 401) {
+          sessionStorage.removeItem("apiPassword")
+          throw new Error("Unauthorized. Backend password may have changed after restart. Please update the password and try again.")
+        }
+
         throw new Error(text || `Request failed with status ${response.status}`)
       }
 
@@ -114,8 +161,7 @@ function CreateTicketPage() {
         </h2>
 
         <p style={{ margin: 0, maxWidth: "700px", color: "rgba(255,255,255,0.9)" }}>
-          Report hardware, software, network, or facility issues clearly so the maintenance team
-          can respond faster.
+          Report hardware, software, network, or facility issues clearly so the maintenance team can respond faster.
         </p>
       </div>
 
@@ -149,11 +195,11 @@ function CreateTicketPage() {
               lineHeight: 1.7,
             }}
           >
-            <div>• A temporary dummy user ID is used until session/login is added.</div>
+            <div>• A temporary dummy user ID is used until session/login is implemented.</div>
+            <div>• Later, replace the dummy user ID with the user ID from session.</div>
             <div>• Use the correct resource ID if available.</div>
             <div>• Keep the subject short and clear.</div>
             <div>• Explain the issue properly in description.</div>
-            <div>• Select the correct priority before submitting.</div>
           </div>
 
           <div
@@ -168,8 +214,26 @@ function CreateTicketPage() {
               wordBreak: "break-all",
             }}
           >
-            Dummy user ID: {DUMMY_USER_ID}
+            Temporary user ID: {TEMP_USER_ID}
           </div>
+
+          <button
+            type="button"
+            onClick={handleUpdatePassword}
+            style={{
+              marginTop: "16px",
+              width: "100%",
+              padding: "12px 16px",
+              background: "#e0e7ff",
+              color: "#3730a3",
+              border: "none",
+              borderRadius: "12px",
+              fontWeight: "600",
+              cursor: "pointer",
+            }}
+          >
+            Update Backend Password
+          </button>
         </div>
 
         <div
@@ -235,6 +299,7 @@ function CreateTicketPage() {
                   onChange={handleChange}
                   placeholder="Example: 0771234567"
                   style={inputStyle}
+                  required
                 />
               </div>
             </div>
