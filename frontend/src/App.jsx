@@ -1,18 +1,3 @@
-/*import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
-import { SidebarProvider } from "./components/ui/sidebar";
-import { AppSidebar } from "./components/AppSidebar";
-import MyBookingsPage from "./features/booking/pages/MyBookingsPage";
-import AdminBookingsPage from "./features/booking/pages/AdminBookingsPage";*/
-import AdminResourcesInterface from "./features/resources/AdminResourcesInterface.jsx";
-
-// function Dashboard() {
-//   const navigate = useNavigate();
-
-//   return (
-//     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-//       <div>
-//         <h2 style={{ margin: 0, fontSize: "24px" }}>Dashboard</h2>
-//         <p style={{ marginTop: "8px", color: "#64748b" }}>
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom"
 import { SidebarProvider } from "./components/ui/sidebar"
 import { AppSidebar } from "./components/AppSidebar"
@@ -22,6 +7,8 @@ import LoginPage from "./features/auth/pages/LoginPage"
 import SignupPage from "./features/auth/pages/SignupPage"
 import OAuth2CallbackPage from "./features/auth/pages/OAuth2CallbackPage"
 import ProtectedRoute from "./features/auth/components/ProtectedRoute"
+import AdminResourcesInterface from "./features/resources/AdminResourcesInterface.jsx"
+import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
 
 const quickActions = [
   {
@@ -38,9 +25,14 @@ const quickActions = [
     className:
       "from-slate-800 to-slate-700 shadow-[0_12px_30px_-16px_rgba(15,23,42,0.7)] hover:from-slate-700 hover:to-slate-600",
   },
+  {
+    label: "Resources",
+    icon: "🏫",
+    path: "/resources",
+    className:
+      "from-teal-700 to-teal-600 shadow-[0_12px_30px_-16px_rgba(13,148,136,0.7)] hover:from-teal-600 hover:to-teal-500",
+  },
 ]
-import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
-
 
 function Dashboard() {
   const navigate = useNavigate()
@@ -54,73 +46,6 @@ function Dashboard() {
         </p>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "16px",
-          marginTop: "16px",
-        }}
-      >
-        <button
-          onClick={() => navigate("/my-bookings")}
-          style={{
-            padding: "20px 24px",
-            background: "#2563eb",
-            color: "#fff",
-            border: "none",
-            borderRadius: "12px",
-            fontSize: "16px",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "background 0.2s",
-            boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)",
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.background = "#1d4ed8")}
-          onMouseOut={(e) => (e.currentTarget.style.background = "#2563eb")}
-        >
-          📅 My Bookings
-        </button>
-
-        <button
-          onClick={() => navigate("/admin/bookings")}
-          style={{
-            padding: "20px 24px",
-            background: "#7c3aed",
-            color: "#fff",
-            border: "none",
-            borderRadius: "12px",
-            fontSize: "16px",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "background 0.2s",
-            boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.background = "#6d28d9")}
-          onMouseOut={(e) => (e.currentTarget.style.background = "#7c3aed")}
-        >
-          ⚙️ Admin Bookings
-        </button>
-
-        <button
-          onClick={() => navigate("/resources")}
-          style={{
-            padding: "20px 24px",
-            background: "#0f766e",
-            color: "#fff",
-            border: "none",
-            borderRadius: "12px",
-            fontSize: "16px",
-            fontWeight: "600",
-            cursor: "pointer",
-            transition: "background 0.2s",
-            boxShadow: "0 4px 12px rgba(15, 118, 110, 0.3)",
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.background = "#115e59")}
-          onMouseOut={(e) => (e.currentTarget.style.background = "#0f766e")}
-        >
-          🏫 Resources
-        </button>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {quickActions.map((action) => (
           <button
@@ -137,7 +62,7 @@ function Dashboard() {
         ))}
       </div>
     </div>
-  );
+  )
 }
 
 function ComingSoon({ title }) {
@@ -146,80 +71,39 @@ function ComingSoon({ title }) {
       <h2 className="mb-2 text-2xl font-semibold text-slate-900">{title}</h2>
       <p className="text-sm text-slate-500">Coming soon...</p>
     </div>
-  );
+  )
 }
 
 function AppShell() {
   return (
-    <BrowserRouter>
-      <SidebarProvider>
-        <div
-          style={{
-            display: "flex",
-            minHeight: "100vh",
-            width: "100%",
-            background: "linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)",
-            color: "#0f172a",
-          }}
-        >
-          <AppSidebar />
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-gradient-to-b from-slate-50 to-indigo-50 text-slate-900">
+        <AppSidebar />
+        <div className="flex flex-1 flex-col">
+          <header className="border-b border-slate-200/80 bg-white/80 px-6 py-5 backdrop-blur-sm sm:px-8">
+            <div className="text-xs tracking-[0.16em] text-slate-600 uppercase">UniSlot</div>
+            <h1 className="mt-2 text-3xl leading-tight font-semibold text-slate-900">
+              Smart Campus Operations Hub
+            </h1>
+          </header>
 
-          <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <header
-              style={{
-                padding: "24px 32px",
-                borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
-                background: "rgba(255, 255, 255, 0.75)",
-                backdropFilter: "blur(12px)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "14px",
-                  letterSpacing: "0.16em",
-                  textTransform: "uppercase",
-                  color: "#64748b",
-                }}
-              >
-                UniSlot
-              </div>
-              <h1 style={{ margin: "8px 0 0", fontSize: "32px", lineHeight: 1.1 }}>
-                Smart Campus Operations Hub
-              </h1>
-            </header>
-
-            <main style={{ flex: 1, padding: "32px", overflowY: "auto" }}>
-              <div
-                style={{
-                  maxWidth: "1120px",
-                  margin: "0 auto",
-                  display: "grid",
-                  gap: "24px",
-                }}
-              >
-                <section
-                  style={{
-                    borderRadius: "20px",
-                    background: "#ffffff",
-                    border: "1px solid rgba(15, 23, 42, 0.08)",
-                    padding: "24px",
-                    boxShadow: "0 20px 50px rgba(15, 23, 42, 0.08)",
-                  }}
-                >
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/my-bookings" element={<MyBookingsPage />} />
-                    <Route path="/admin/bookings" element={<AdminBookingsPage />} />
-                    <Route path="/resources" element={<AdminResourcesInterface />} />
-                    <Route path="/tickets" element={<ComingSoon title="My Tickets" />} />
-                    <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
-                    <Route path="/profile" element={<ComingSoon title="My Profile" />} />
-                    <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
-                  </Routes>
-                </section>
-              </div>
-            </main>
-          </div>
+          <main className="flex-1 overflow-y-auto p-6 sm:p-8">
+            <div className="mx-auto grid w-full max-w-6xl gap-6">
+              <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_24px_50px_-24px_rgba(15,23,42,0.22)] sm:p-7">
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/my-bookings" element={<MyBookingsPage />} />
+                  <Route path="/admin/bookings" element={<AdminBookingsPage />} />
+                  <Route path="/resources" element={<AdminResourcesInterface />} />
+                  <Route path="/tickets" element={<CreateTicketPage />} />
+                  <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
+                  <Route path="/profile" element={<ComingSoon title="My Profile" />} />
+                  <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </section>
+            </div>
+          </main>
         </div>
       </div>
     </SidebarProvider>
@@ -245,7 +129,7 @@ function App() {
         />
       </Routes>
     </BrowserRouter>
-  );
+  )
 }
 
 export default App
