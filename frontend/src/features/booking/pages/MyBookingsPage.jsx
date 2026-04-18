@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useBooking } from '@/hooks/useBooking';
+import bookingService from '@/features/booking/Services/BookingService';
 import BookingStatusBadge from '@/components/BookingStatusBadge';
 
 const toArray = (value) => {
@@ -36,7 +37,7 @@ const getResourceLabel = (resource) => {
 };
 
 export default function MyBookingsPage() {
-  const { getMyBookings, cancelBooking, createBooking, getSchedule, loading, error } = useBooking();
+  const { getMyBookings, cancelBooking, createBooking, loading, error } = useBooking();
   const [bookings, setBookings] = useState([]);
   const [resources, setResources] = useState([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
@@ -49,6 +50,8 @@ export default function MyBookingsPage() {
   const [availabilityChecked, setAvailabilityChecked] = useState(false);
   const [availabilityError, setAvailabilityError] = useState('');
   const [availableResources, setAvailableResources] = useState([]);
+  const [selectedResourceSchedule, setSelectedResourceSchedule] = useState([]);
+  const [resourceScheduleLoading, setResourceScheduleLoading] = useState(false);
 
   const [form, setForm] = useState({
     date: todayISO(),
@@ -58,7 +61,7 @@ export default function MyBookingsPage() {
     resourceId: '',
     bookingReason: '',
     purpose: '',
-    expectedAttendees: 1,
+    expectedAttendees: '1',
   });
   const navigate = useNavigate();
 
@@ -125,6 +128,67 @@ export default function MyBookingsPage() {
 
   const displayedResources = availabilityChecked ? availableResources : quickAvailableResources;
 
+  const selectedResource = useMemo(() => {
+    if (form.resourceId) {
+      return resources.find((resource) => resource.id === form.resourceId) || null;
+    }
+    if (selectedCategoryResources.length > 0) return selectedCategoryResources[0];
+    if (displayedResources.length > 0) return displayedResources[0];
+    if (resources.length > 0) return resources[0];
+    return null;
+  }, [displayedResources, form.resourceId, resources, selectedCategoryResources]);
+
+  const daySlots = useMemo(
+    () => [
+      '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
+      '14:00', '15:00', '16:00', '17:00', '18:00', '19:00',
+    ],
+    []
+  );
+
+  const scheduleBlocks = useMemo(() => {
+    return daySlots.map((slot) => {
+      const slotStart = toMinutes(slot);
+      const slotEnd = slotStart + 60;
+      const busy = selectedResourceSchedule.some((item) => {
+        const start = toMinutes(item.startTime);
+        const end = toMinutes(item.endTime);
+        if (start === null || end === null) return false;
+        return overlaps(slotStart, slotEnd, start, end);
+      });
+      return { slot, busy };
+    });
+  }, [daySlots, selectedResourceSchedule]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!showNewBooking || !selectedResource?.id || !form.date) {
+      setSelectedResourceSchedule([]);
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadSchedule = async () => {
+      setResourceScheduleLoading(true);
+      try {
+        const schedule = await bookingService.getSchedule(selectedResource.id, form.date);
+        if (active) setSelectedResourceSchedule(toArray(schedule));
+      } catch (_) {
+        if (active) setSelectedResourceSchedule([]);
+      } finally {
+        if (active) setResourceScheduleLoading(false);
+      }
+    };
+
+    loadSchedule();
+
+    return () => {
+      active = false;
+    };
+  }, [showNewBooking, selectedResource?.id, form.date]);
+
   const resetAvailability = () => {
     setAvailabilityChecked(false);
     setAvailabilityError('');
@@ -164,7 +228,7 @@ export default function MyBookingsPage() {
       const checks = await Promise.all(
         targetResources.map(async (resource) => {
           try {
-            const schedule = toArray(await getSchedule(resource.id, form.date));
+            const schedule = toArray(await bookingService.getSchedule(resource.id, form.date));
             const hasConflict = schedule.some((slot) => {
               const slotStart = toMinutes(slot.startTime);
               const slotEnd = toMinutes(slot.endTime);
@@ -214,9 +278,22 @@ export default function MyBookingsPage() {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'expectedAttendees') {
+      const digitsOnly = value.replace(/\D/g, '');
+      setForm((prev) => ({
+        ...prev,
+        expectedAttendees: digitsOnly,
+      }));
+      setSubmitError('');
+      setSubmitSuccess('');
+      resetAvailability();
+      return;
+    }
+
     setForm((prev) => ({
       ...prev,
-      [name]: name === 'expectedAttendees' ? Number(value || 1) : value,
+      [name]: value,
       ...(name === 'resourceType' ? { resourceId: '' } : {}),
     }));
     setSubmitError('');
@@ -228,6 +305,12 @@ export default function MyBookingsPage() {
     e.preventDefault();
     setSubmitError('');
     setSubmitSuccess('');
+
+    const attendeeCount = Number(form.expectedAttendees);
+    if (!attendeeCount || attendeeCount < 1 || attendeeCount > 1000) {
+      setSubmitError('Expected attendees must be a number between 1 and 1000.');
+      return;
+    }
 
     if (!form.resourceId) {
       setSubmitError('Please select a resource to continue.');
@@ -256,7 +339,7 @@ export default function MyBookingsPage() {
         startTime: form.startTime,
         endTime: form.endTime,
         purpose: form.purpose,
-        expectedAttendees: Number(form.expectedAttendees || 1),
+        expectedAttendees: attendeeCount,
       });
 
       const refreshed = await getMyBookings();
@@ -271,11 +354,17 @@ export default function MyBookingsPage() {
         resourceId: '',
         bookingReason: '',
         purpose: '',
-        expectedAttendees: 1,
+        expectedAttendees: '1',
       });
       resetAvailability();
-    } catch (_) {
-      setSubmitError('Could not submit booking request. Please check the form and try again.');
+    } catch (err) {
+      const backendMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        (typeof err?.response?.data === 'string' ? err.response.data : '') ||
+        err?.message ||
+        'Could not submit booking request. Please check the form and try again.';
+      setSubmitError(backendMessage);
     }
   };
 
@@ -380,20 +469,76 @@ export default function MyBookingsPage() {
       </section>
 
       {showNewBooking && (
-        <section style={styles.newBookingCard}>
-          <h3 style={styles.sectionTitle}>New Booking</h3>
-          <p style={styles.helper}>
-            Fill the form, click "Check Availability", then select an available resource. Already booked resources are automatically excluded.
-          </p>
+        <section style={styles.bookingStudio}>
+          <div style={styles.resourceShowcase}>
+            <div style={styles.resourceImageWrap}>
+              <img
+                src={selectedResource?.imageUrl || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80'}
+                alt={selectedResource?.name || 'Resource preview'}
+                style={styles.resourceImage}
+              />
+              <span style={styles.liveBadge}>Active Status</span>
+            </div>
 
-          {(submitError || availabilityError) && (
-            <div style={styles.error}>{submitError || availabilityError}</div>
-          )}
+            <h3 style={styles.resourceHeading}>{selectedResource?.name || 'Select a resource'}</h3>
+            <p style={styles.resourceDescription}>
+              {selectedResource?.description || 'Choose a category or resource to view full details and request a booking.'}
+            </p>
 
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.row}>
+            <div style={styles.resourceStats}>
+              <div style={styles.statCard}>
+                <div style={styles.statLabel}>Type</div>
+                <div style={styles.statValue}>{selectedResource?.type || '—'}</div>
+              </div>
+              <div style={styles.statCard}>
+                <div style={styles.statLabel}>Capacity</div>
+                <div style={styles.statValue}>{selectedResource?.capacity || 0} seats</div>
+              </div>
+              <div style={styles.statCard}>
+                <div style={styles.statLabel}>Location</div>
+                <div style={styles.statValue}>
+                  {selectedResource?.location
+                    ? [selectedResource.location.building, selectedResource.location.floor, selectedResource.location.room]
+                        .filter(Boolean)
+                        .join(', ') || 'Not set'
+                    : 'Not set'}
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.scheduleBox}>
+              <div style={styles.scheduleTitle}>Today&apos;s Schedule</div>
+              {resourceScheduleLoading ? (
+                <p style={styles.helper}>Loading schedule...</p>
+              ) : (
+                <>
+                  <div style={styles.scheduleLegend}>
+                    <span style={styles.legendItem}><i style={{ ...styles.legendDot, background: '#1d4ed8' }} />Booked</span>
+                    <span style={styles.legendItem}><i style={{ ...styles.legendDot, background: '#e2e8f0' }} />Available</span>
+                  </div>
+                  <div style={styles.scheduleGrid}>
+                    {scheduleBlocks.map((block) => (
+                      <div key={block.slot} style={styles.scheduleCellWrap}>
+                        <div style={{ ...styles.scheduleCell, background: block.busy ? '#1d4ed8' : '#e2e8f0' }} />
+                        <span style={styles.scheduleTime}>{block.slot.slice(0, 5)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div style={styles.requestPanel}>
+            {(submitError || availabilityError) && (
+              <div style={styles.error}>{submitError || availabilityError}</div>
+            )}
+
+            <h3 style={styles.requestTitle}>Request a Booking</h3>
+
+            <form onSubmit={handleSubmit} style={styles.form}>
               <div style={styles.field}>
-                <label style={styles.label}>Date</label>
+                <label style={styles.label}>Select Date</label>
                 <input
                   type="date"
                   name="date"
@@ -405,134 +550,135 @@ export default function MyBookingsPage() {
                 />
               </div>
 
+              <div style={styles.row}>
+                <div style={styles.field}>
+                  <label style={styles.label}>Start Time</label>
+                  <input
+                    type="time"
+                    name="startTime"
+                    value={form.startTime}
+                    onChange={handleFormChange}
+                    required
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.field}>
+                  <label style={styles.label}>End Time</label>
+                  <input
+                    type="time"
+                    name="endTime"
+                    value={form.endTime}
+                    onChange={handleFormChange}
+                    required
+                    style={styles.input}
+                  />
+                </div>
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Category</label>
+                <select
+                  name="resourceType"
+                  value={form.resourceType}
+                  onChange={handleFormChange}
+                  style={styles.input}
+                >
+                  <option value="">All Categories</option>
+                  {typeCounts.map(([type]) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Select Resource</label>
+                <select
+                  name="resourceId"
+                  value={form.resourceId}
+                  onChange={handleFormChange}
+                  required
+                  style={styles.input}
+                >
+                  <option value="">Choose available resource...</option>
+                  {displayedResources.map((resource) => (
+                    <option key={resource.id} value={resource.id}>
+                      {getResourceLabel(resource)}
+                    </option>
+                  ))}
+                </select>
+                <p style={styles.inputHint}>
+                  {availabilityChecked
+                    ? `${displayedResources.length} resources available in this time slot.`
+                    : `${displayedResources.length} currently AVAILABLE resources (status-based).`}
+                </p>
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Purpose of Booking</label>
+                <textarea
+                  name="purpose"
+                  value={form.purpose}
+                  minLength={10}
+                  rows={3}
+                  onChange={handleFormChange}
+                  required
+                  placeholder="Describe why you need this resource"
+                  style={styles.textarea}
+                />
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Booking Reason</label>
+                <input
+                  type="text"
+                  name="bookingReason"
+                  value={form.bookingReason}
+                  maxLength={100}
+                  onChange={handleFormChange}
+                  required
+                  placeholder="e.g. Robotics team meeting"
+                  style={styles.input}
+                />
+              </div>
+
               <div style={styles.field}>
                 <label style={styles.label}>Expected Attendees</label>
                 <input
-                  type="number"
+                  type="text"
                   name="expectedAttendees"
-                  min={1}
-                  max={1000}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={form.expectedAttendees}
                   onChange={handleFormChange}
                   required
-                  style={styles.input}
-                />
-              </div>
-            </div>
-
-            <div style={styles.row}>
-              <div style={styles.field}>
-                <label style={styles.label}>Start Time</label>
-                <input
-                  type="time"
-                  name="startTime"
-                  value={form.startTime}
-                  onChange={handleFormChange}
-                  required
+                  placeholder="e.g. 24"
                   style={styles.input}
                 />
               </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>End Time</label>
-                <input
-                  type="time"
-                  name="endTime"
-                  value={form.endTime}
-                  onChange={handleFormChange}
-                  required
-                  style={styles.input}
-                />
+              <div style={styles.formActions}>
+                <button
+                  type="button"
+                  style={styles.secondaryBtn}
+                  onClick={handleCheckAvailability}
+                  disabled={checkingAvailability || resourcesLoading}
+                >
+                  {checkingAvailability ? 'Checking...' : 'Check Availability'}
+                </button>
+
+                <button
+                  type="submit"
+                  style={styles.primaryActionBtn}
+                  disabled={loading || checkingAvailability || resourcesLoading}
+                >
+                  {loading ? 'Submitting...' : 'Send Booking Request'}
+                </button>
               </div>
-            </div>
-
-            <div style={styles.field}>
-              <label style={styles.label}>Category</label>
-              <select
-                name="resourceType"
-                value={form.resourceType}
-                onChange={handleFormChange}
-                style={styles.input}
-              >
-                <option value="">All Categories</option>
-                {typeCounts.map(([type]) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={styles.field}>
-              <label style={styles.label}>Select Resource</label>
-              <select
-                name="resourceId"
-                value={form.resourceId}
-                onChange={handleFormChange}
-                required
-                style={styles.input}
-              >
-                <option value="">Choose available resource...</option>
-                {displayedResources.map((resource) => (
-                  <option key={resource.id} value={resource.id}>
-                    {getResourceLabel(resource)}
-                  </option>
-                ))}
-              </select>
-              <p style={styles.inputHint}>
-                {availabilityChecked
-                  ? `${displayedResources.length} resources available in this time slot.`
-                  : `${displayedResources.length} currently AVAILABLE resources (status-based).`}
-              </p>
-            </div>
-
-            <div style={styles.field}>
-              <label style={styles.label}>Booking Reason</label>
-              <input
-                type="text"
-                name="bookingReason"
-                value={form.bookingReason}
-                maxLength={100}
-                onChange={handleFormChange}
-                required
-                placeholder="e.g. Robotics team meeting"
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.field}>
-              <label style={styles.label}>Purpose</label>
-              <textarea
-                name="purpose"
-                value={form.purpose}
-                minLength={10}
-                rows={3}
-                onChange={handleFormChange}
-                required
-                placeholder="Describe why you need this resource"
-                style={styles.textarea}
-              />
-            </div>
-
-            <div style={styles.formActions}>
-              <button
-                type="button"
-                style={styles.secondaryBtn}
-                onClick={handleCheckAvailability}
-                disabled={checkingAvailability || resourcesLoading}
-              >
-                {checkingAvailability ? 'Checking...' : 'Check Availability'}
-              </button>
-
-              <button
-                type="submit"
-                style={styles.newBtn}
-                disabled={loading || checkingAvailability || resourcesLoading}
-              >
-                {loading ? 'Submitting...' : 'Submit Booking'}
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </section>
       )}
 
@@ -681,6 +827,150 @@ const styles = {
     boxShadow: '0 1px 8px rgba(0,0,0,.05)',
   },
   form: { display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 },
+  bookingStudio: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gap: 16,
+    marginBottom: 20,
+  },
+  resourceShowcase: {
+    background: '#ffffff',
+    border: '1px solid #e5e7eb',
+    borderRadius: 14,
+    padding: 14,
+    boxShadow: '0 12px 30px -24px rgba(15, 23, 42, 0.35)',
+  },
+  resourceImageWrap: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 14,
+  },
+  resourceImage: {
+    width: '100%',
+    height: 'clamp(210px, 34vw, 300px)',
+    objectFit: 'cover',
+    display: 'block',
+  },
+  liveBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    background: '#dcfce7',
+    border: '1px solid #bbf7d0',
+    color: '#166534',
+    padding: '4px 9px',
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+  },
+  resourceHeading: {
+    margin: '0 0 6px',
+    fontSize: 36,
+    lineHeight: 1.1,
+    color: '#0f172a',
+    fontWeight: 800,
+    letterSpacing: '-0.02em',
+  },
+  resourceDescription: {
+    margin: '0 0 14px',
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 1.5,
+  },
+  resourceStats: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 10,
+    marginBottom: 12,
+  },
+  statCard: {
+    border: '1px solid #e2e8f0',
+    borderRadius: 10,
+    padding: 10,
+    background: '#f8fafc',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: 700,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 13,
+    color: '#0f172a',
+    fontWeight: 700,
+  },
+  scheduleBox: {
+    border: '1px solid #e2e8f0',
+    borderRadius: 10,
+    padding: 10,
+    background: '#ffffff',
+  },
+  scheduleTitle: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: '#0f172a',
+    marginBottom: 8,
+  },
+  scheduleLegend: {
+    display: 'flex',
+    gap: 14,
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 8,
+  },
+  legendItem: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 5,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    display: 'inline-block',
+  },
+  scheduleGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
+    gap: 6,
+  },
+  scheduleCellWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 3,
+  },
+  scheduleCell: {
+    width: '100%',
+    height: 28,
+    borderRadius: 6,
+  },
+  scheduleTime: {
+    fontSize: 10,
+    color: '#94a3b8',
+    fontWeight: 600,
+  },
+  requestPanel: {
+    background: '#ffffff',
+    border: '1px solid #e5e7eb',
+    borderRadius: 14,
+    padding: 16,
+    boxShadow: '0 12px 30px -24px rgba(15, 23, 42, 0.35)',
+    alignSelf: 'start',
+    position: 'relative',
+  },
+  requestTitle: {
+    margin: 0,
+    fontSize: 24,
+    color: '#111827',
+    fontWeight: 800,
+    letterSpacing: '-0.02em',
+  },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
   field: { display: 'flex', flexDirection: 'column', gap: 6 },
   label: { fontSize: 12, color: '#374151', fontWeight: 600 },
@@ -708,6 +998,16 @@ const styles = {
     borderRadius: 8,
     fontSize: 14,
     fontWeight: 600,
+    cursor: 'pointer',
+  },
+  primaryActionBtn: {
+    padding: '10px 16px',
+    background: '#1d4ed8',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 700,
     cursor: 'pointer',
   },
   linkBtn: {
