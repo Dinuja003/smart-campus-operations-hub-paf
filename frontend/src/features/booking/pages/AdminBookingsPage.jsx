@@ -1,5 +1,6 @@
 // frontend/src/features/booking/pages/AdminBookingsPage.jsx
 import { useEffect, useState } from 'react';
+import { CheckCircle, Clock, ShieldCheck, Trash2, XCircle } from 'lucide-react';
 import { useBooking } from '@/hooks/useBooking';
 import BookingStatusBadge from '@/components/BookingStatusBadge';
 
@@ -10,12 +11,14 @@ const toArray = (value) => {
   return [];
 };
 
+const FILTERS = ['', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'];
+
 export default function AdminBookingsPage() {
   const { getAllBookings, reviewBooking, deleteBooking, loading, error } = useBooking();
-  const [bookings, setBookings]       = useState([]);
+  const [bookings, setBookings]         = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
-  const [reviewModal, setReviewModal]  = useState(null); // booking being reviewed
-  const [adminNote, setAdminNote]      = useState('');
+  const [reviewModal, setReviewModal]   = useState(null);
+  const [adminNote, setAdminNote]       = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
   const loadBookings = (filter) => {
@@ -26,10 +29,7 @@ export default function AdminBookingsPage() {
 
   useEffect(() => { loadBookings(statusFilter); }, [statusFilter]);
 
-  const openReview = (booking) => {
-    setReviewModal(booking);
-    setAdminNote('');
-  };
+  const openReview = (booking) => { setReviewModal(booking); setAdminNote(''); };
 
   const submitReview = async (approved) => {
     if (!approved && !adminNote.trim()) {
@@ -53,89 +53,202 @@ export default function AdminBookingsPage() {
     } catch (_) {}
   };
 
-  return (
-    <div style={styles.page}>
-      <h2 style={styles.heading}>Booking Management</h2>
+  const pendingCount = bookings.filter(b => b.status === 'PENDING').length;
 
-      {/* Filter bar */}
-      <div style={styles.filterBar}>
-        {['', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map(s => (
-          <button key={s}
-            style={{ ...styles.filterBtn, ...(statusFilter === s ? styles.filterBtnActive : {}) }}
-            onClick={() => setStatusFilter(s)}>
-            {s || 'All'}
+  return (
+    <div className="space-y-5">
+
+      {/* ── Header ── */}
+      <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand/8 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-[#001d45] px-3 py-0.5 text-[10px] font-semibold tracking-wide text-white">
+              <ShieldCheck className="h-3 w-3" /> Admin Panel
+            </p>
+            <h1 className="mt-1.5 text-2xl font-bold text-navy sm:text-3xl">Booking Management</h1>
+            <p className="mt-0.5 text-sm text-[#5a6b98]">Review, approve and manage all campus resource bookings.</p>
+          </div>
+          <div className="flex gap-3">
+            <div className="rounded-2xl border border-[#001d45]/20 bg-[#001d45] px-5 py-3 text-center">
+              <p className="text-2xl font-bold text-white">{bookings.length}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Total</p>
+            </div>
+            <div className="rounded-2xl border border-brand/30 bg-brand/10 px-5 py-3 text-center">
+              <p className="text-2xl font-bold text-brand">{pendingCount}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-brand/70">Pending</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Filter bar ── */}
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map(s => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setStatusFilter(s)}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
+              statusFilter === s
+                ? 'bg-brand text-white shadow-[0_4px_12px_rgba(244,94,43,0.30)]'
+                : 'border border-slate-200 bg-white text-slate-500 hover:border-brand/30 hover:text-brand'
+            }`}
+          >
+            {s || 'All Bookings'}
           </button>
         ))}
       </div>
 
-      {error && <div style={styles.error}>{error}</div>}
-      {loading && bookings.length === 0 && <p style={styles.msg}>Loading…</p>}
+      {/* ── Error ── */}
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+      )}
 
-      {/* Table */}
-      <div style={styles.tableWrap}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              {['Reason', 'Resource', 'Date', 'Time', 'Requested By', 'Attendees', 'Status', 'Actions']
-                .map(h => <th key={h} style={styles.th}>{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {bookings.map(b => (
-              <tr key={b.id} style={styles.tr}>
-                <td style={styles.td}><strong>{b.bookingReason}</strong><br/>
-                  <span style={styles.small}>{b.purpose?.slice(0,50)}{b.purpose?.length > 50 ? '…' : ''}</span>
-                </td>
-                <td style={styles.td}>{b.resourceType}</td>
-                <td style={styles.td}>{b.date}</td>
-                <td style={styles.td}>{b.startTime} – {b.endTime}</td>
-                <td style={styles.td}>{b.requestedBy}</td>
-                <td style={styles.td}>{b.expectedAttendees}</td>
-                <td style={styles.td}><BookingStatusBadge status={b.status} /></td>
-                <td style={styles.td}>
-                  {b.status === 'PENDING' && (
-                    <button style={styles.reviewBtn} onClick={() => openReview(b)}>
-                      Review
-                    </button>
-                  )}
-                  <button style={styles.deleteBtn} onClick={() => handleDelete(b.id)}>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {bookings.length === 0 && !loading && (
-              <tr><td colSpan={8} style={{ textAlign:'center', padding:32, color:'#999' }}>
-                No bookings found.
-              </td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* ── Loading ── */}
+      {loading && bookings.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-[26px] border border-white/60 bg-white py-16 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand" />
+          <p className="mt-4 text-sm text-[#8494c2]">Loading bookings…</p>
+        </div>
+      )}
 
-      {/* Review modal */}
+      {/* ── Table ── */}
+      {bookings.length > 0 && (
+        <div className="overflow-hidden rounded-[26px] border border-white/60 bg-white shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  {['Reason', 'Resource', 'Date', 'Time', 'Requested By', 'Attendees', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map((b, idx) => (
+                  <tr key={b.id} className={idx < bookings.length - 1 ? 'border-b border-slate-50 hover:bg-slate-50/60 transition-colors' : 'hover:bg-slate-50/60 transition-colors'}>
+                    <td className="px-5 py-3.5">
+                      <p className="font-semibold text-navy">{b.bookingReason}</p>
+                      <p className="mt-0.5 text-[11px] text-[#8494c2]">{b.purpose?.slice(0, 55)}{b.purpose?.length > 55 ? '…' : ''}</p>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="rounded-lg bg-brand/10 px-2.5 py-1 text-[11px] font-semibold text-brand">{b.resourceType || '—'}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-[#6677a4]">{b.date}</td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-[#6677a4]">{b.startTime} – {b.endTime}</td>
+                    <td className="px-5 py-3.5 text-[#6677a4]">{b.requestedBy?.slice(0, 14)}…</td>
+                    <td className="px-5 py-3.5">
+                      <span className="font-semibold text-brand">{b.expectedAttendees}</span>
+                    </td>
+                    <td className="px-5 py-3.5"><BookingStatusBadge status={b.status} /></td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2">
+                        {b.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            onClick={() => openReview(b)}
+                            className="flex items-center gap-1.5 rounded-lg bg-[#001d45] px-3 py-1.5 text-[11px] font-semibold text-white transition-all hover:bg-[#002a66] hover:opacity-90"
+                          >
+                            <Clock className="h-3 w-3" /> Review
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(b.id)}
+                          className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-500 transition-colors hover:bg-red-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Empty state ── */}
+      {bookings.length === 0 && !loading && (
+        <div className="flex flex-col items-center justify-center rounded-[26px] border-2 border-dashed border-slate-200 bg-white py-20 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10">
+            <ShieldCheck className="h-6 w-6 text-brand" />
+          </div>
+          <h3 className="mt-4 text-base font-semibold text-navy">No bookings found</h3>
+          <p className="mt-1 text-sm text-[#8494c2]">No bookings match the selected filter.</p>
+        </div>
+      )}
+
+      {/* ── Review Modal ── */}
       {reviewModal && (
-        <div style={styles.overlay} onClick={() => setReviewModal(null)}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>Review Booking</h3>
-            <p><strong>{reviewModal.bookingReason}</strong></p>
-            <p style={styles.small}>{reviewModal.date} · {reviewModal.startTime}–{reviewModal.endTime}</p>
-            <p>{reviewModal.purpose}</p>
-            <label style={styles.label}>Admin Note (required if rejecting)</label>
-            <textarea rows={3} value={adminNote}
-              onChange={e => setAdminNote(e.target.value)}
-              placeholder="Reason for rejection or approval note…"
-              style={styles.textarea} />
-            <div style={{ display:'flex', gap:10, marginTop:16 }}>
-              <button style={styles.approveBtn} disabled={actionLoading}
-                onClick={() => submitReview(true)}>
-                ✔ Approve
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setReviewModal(null)}
+        >
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-[26px] bg-white shadow-[0_30px_80px_rgba(21,32,85,0.25)]"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Admin Action</p>
+                <h3 className="mt-0.5 text-lg font-bold text-navy">Review Booking</h3>
+              </div>
+              <button type="button" onClick={() => setReviewModal(null)} className="rounded-xl p-2 text-[#8494c2] hover:bg-slate-100 hover:text-navy transition-colors">
+                <XCircle className="h-5 w-5" />
               </button>
-              <button style={styles.rejectBtn} disabled={actionLoading}
-                onClick={() => submitReview(false)}>
-                ✘ Reject
+            </div>
+
+            <div className="space-y-3 px-6 py-5">
+              {[
+                { label: 'Reason', value: reviewModal.bookingReason },
+                { label: 'Date & Time', value: `${reviewModal.date} · ${reviewModal.startTime}–${reviewModal.endTime}` },
+                { label: 'Purpose', value: reviewModal.purpose },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{label}</p>
+                  <p className="mt-0.5 text-sm font-medium text-navy">{value}</p>
+                </div>
+              ))}
+
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">
+                  Admin Note <span className="text-red-400">*required for rejection</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={adminNote}
+                  onChange={e => setAdminNote(e.target.value)}
+                  placeholder="Add your note here…"
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-navy placeholder-slate-400 outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => submitReview(true)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-600 disabled:opacity-60"
+              >
+                <CheckCircle className="h-4 w-4" /> Approve
               </button>
-              <button style={styles.cancelBtn} onClick={() => setReviewModal(null)}>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => submitReview(false)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-2.5 text-sm font-bold text-white transition-all hover:bg-red-600 disabled:opacity-60"
+              >
+                <XCircle className="h-4 w-4" /> Reject
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewModal(null)}
+                className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+              >
                 Cancel
               </button>
             </div>
@@ -145,41 +258,3 @@ export default function AdminBookingsPage() {
     </div>
   );
 }
-
-/* ── styles ─────────────────────────────────────────────────────────────── */
-const styles = {
-  page:     { padding: '32px 24px', maxWidth: 1100, margin: '0 auto' },
-  heading:  { fontSize: 24, fontWeight: 700, color: '#1a1a2e', marginBottom: 20 },
-  filterBar:{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap' },
-  filterBtn:{ padding:'7px 16px', border:'1px solid #d1d5db', borderRadius:20,
-              background:'#fff', cursor:'pointer', fontSize:13 },
-  filterBtnActive:{ background:'#2563eb', color:'#fff', borderColor:'#2563eb' },
-  tableWrap:{ overflowX:'auto' },
-  table:    { width:'100%', borderCollapse:'collapse', fontSize:14 },
-  th:       { background:'#f9fafb', padding:'12px 14px', textAlign:'left',
-              borderBottom:'2px solid #e5e7eb', fontWeight:700, color:'#374151', whiteSpace:'nowrap' },
-  tr:       { borderBottom:'1px solid #f3f4f6' },
-  td:       { padding:'12px 14px', verticalAlign:'top', color:'#374151' },
-  small:    { fontSize:12, color:'#9ca3af' },
-  reviewBtn:{ padding:'5px 12px', background:'#2563eb', color:'#fff',
-              border:'none', borderRadius:6, cursor:'pointer', marginRight:6, fontSize:12 },
-  deleteBtn:{ padding:'5px 12px', background:'#fff', color:'#dc2626',
-              border:'1px solid #dc2626', borderRadius:6, cursor:'pointer', fontSize:12 },
-  msg:      { padding:24, textAlign:'center', color:'#666' },
-  error:    { background:'#fef2f2', color:'#dc2626', padding:'12px 16px',
-              borderRadius:8, marginBottom:16 },
-  // modal
-  overlay:  { position:'fixed', inset:0, background:'rgba(0,0,0,.45)',
-              display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 },
-  modal:    { background:'#fff', borderRadius:12, padding:28, width:'100%', maxWidth:460,
-              boxShadow:'0 8px 40px rgba(0,0,0,.18)' },
-  label:    { fontSize:12, fontWeight:600, color:'#555', display:'block', marginBottom:4 },
-  textarea: { width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid #d1d5db',
-              fontSize:14, fontFamily:'inherit', boxSizing:'border-box', resize:'vertical' },
-  approveBtn:{ flex:1, padding:'10px 0', background:'#16a34a', color:'#fff',
-               border:'none', borderRadius:8, fontWeight:700, cursor:'pointer' },
-  rejectBtn: { flex:1, padding:'10px 0', background:'#dc2626', color:'#fff',
-               border:'none', borderRadius:8, fontWeight:700, cursor:'pointer' },
-  cancelBtn: { flex:1, padding:'10px 0', background:'#f3f4f6', color:'#374151',
-               border:'none', borderRadius:8, fontWeight:700, cursor:'pointer' },
-};

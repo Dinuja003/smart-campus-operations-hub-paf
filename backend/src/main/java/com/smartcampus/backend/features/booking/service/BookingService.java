@@ -1,5 +1,7 @@
 package com.smartcampus.backend.features.booking.service;
 
+import com.smartcampus.backend.features.Resources.Model.Resource;
+import com.smartcampus.backend.features.Resources.Repository.ResourceRepository;
 import com.smartcampus.backend.features.booking.dto.BookingRequestDto;
 import com.smartcampus.backend.features.booking.dto.BookingResponseDto;
 import com.smartcampus.backend.features.booking.dto.BookingReviewDto;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 public class BookingService {
 
     private final BookingRepository bookingRepository;
+    private final ResourceRepository resourceRepository;
 
     // ─── Helper: convert "HH:mm" to total minutes since midnight ───────────────
     private int toMinutes(String time) {
@@ -50,6 +53,20 @@ public class BookingService {
 
     // ─── CREATE booking request ─────────────────────────────────────────────────
     public BookingResponseDto createBooking(BookingRequestDto dto, String userId) {
+        Resource resource = resourceRepository.findById(dto.getResourceId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Resource not found"));
+
+        if (!"AVAILABLE".equalsIgnoreCase(resource.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Selected resource is not available for booking");
+        }
+
+        if (dto.getExpectedAttendees() > resource.getCapacity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Expected attendees exceed resource capacity");
+        }
+
         int startMins = toMinutes(dto.getStartTime());
         int endMins   = toMinutes(dto.getEndTime());
 
@@ -69,6 +86,7 @@ public class BookingService {
 
         Booking booking = Booking.builder()
                 .resourceId(dto.getResourceId())
+            .resourceType(resource.getType())
                 .requestedBy(userId)
                 .bookingReason(dto.getBookingReason())
                 .date(dto.getDate())
@@ -81,11 +99,73 @@ public class BookingService {
                 .status(BookingStatus.PENDING)
                 .build();
 
-        // resourceType will be set by controller after fetching from resource service
         Booking saved = bookingRepository.save(booking);
         log.info("Booking created: {} by user {}", saved.getId(), userId);
         return toDto(saved);
     }
+
+        // ─── UPDATE pending booking ────────────────────────────────────────────────
+        public BookingResponseDto updateBooking(String bookingId, BookingRequestDto dto,
+                           String userId, boolean isAdmin) {
+        Booking existing = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Booking not found"));
+
+        if (!isAdmin && !existing.getRequestedBy().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "You can only edit your own bookings");
+        }
+
+        if (existing.getStatus() != BookingStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Only PENDING bookings can be edited");
+        }
+
+        Resource resource = resourceRepository.findById(dto.getResourceId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Resource not found"));
+
+        if (!"AVAILABLE".equalsIgnoreCase(resource.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Selected resource is not available for booking");
+        }
+
+        if (dto.getExpectedAttendees() > resource.getCapacity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Expected attendees exceed resource capacity");
+        }
+
+        int startMins = toMinutes(dto.getStartTime());
+        int endMins = toMinutes(dto.getEndTime());
+
+        if (endMins <= startMins) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "End time must be after start time");
+        }
+
+        List<Booking> conflicts = bookingRepository.findConflictingBookingsExcludingBookingId(
+            bookingId, dto.getResourceId(), dto.getDate(), startMins, endMins);
+
+        if (!conflicts.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This resource is already booked for the selected time slot");
+        }
+
+        existing.setResourceId(dto.getResourceId());
+        existing.setResourceType(resource.getType());
+        existing.setBookingReason(dto.getBookingReason());
+        existing.setDate(dto.getDate());
+        existing.setStartTime(dto.getStartTime());
+        existing.setEndTime(dto.getEndTime());
+        existing.setStartTimeMinutes(startMins);
+        existing.setEndTimeMinutes(endMins);
+        existing.setPurpose(dto.getPurpose());
+        existing.setExpectedAttendees(dto.getExpectedAttendees());
+
+        Booking saved = bookingRepository.save(existing);
+        log.info("Booking {} updated by user {}", bookingId, userId);
+        return toDto(saved);
+        }
 
     // ─── GET my bookings ────────────────────────────────────────────────────────
     public List<BookingResponseDto> getMyBookings(String userId) {
@@ -152,13 +232,13 @@ public class BookingService {
         return toDto(saved);
     }
 
-    // ─── USER: cancel own booking ────────────────────────────────────────────────
-    public BookingResponseDto cancelBooking(String bookingId, String userId) {
+    // ─── USER / ADMIN: cancel booking ───────────────────────────────────────────
+    public BookingResponseDto cancelBooking(String bookingId, String userId, boolean isAdmin) {
         Booking b = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Booking not found"));
 
-        if (!b.getRequestedBy().equals(userId)) {
+        if (!isAdmin && !b.getRequestedBy().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "You can only cancel your own bookings");
         }

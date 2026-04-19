@@ -26,6 +26,11 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
     List<Booking> findConflictingBookings(String resourceId, String date,
                                           int startMinutes, int endMinutes);
 
+        @Query("{ '_id': { $ne: ?0 }, 'resourceId': ?1, 'date': ?2, 'status': 'APPROVED', " +
+            "'startTimeMinutes': { $lt: ?4 }, 'endTimeMinutes': { $gt: ?3 } }")
+        List<Booking> findConflictingBookingsExcludingBookingId(String bookingId, String resourceId,
+                                        String date, int startMinutes, int endMinutes);
+
     // Admin: filter by status
     List<Booking> findByStatusOrderByCreatedAtDesc(BookingStatus status);
 
