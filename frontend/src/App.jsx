@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from "react"
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom"
+import HomePage from "./pages/HomePage"
 import {
   AlertCircle,
   ArrowRight,
   Bell,
   CalendarCheck2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Database,
   Loader2,
   ShieldCheck,
+  Sparkles,
   Ticket,
   TrendingUp,
   Users,
@@ -35,14 +39,16 @@ const actionConfigByRole = {
       subtitle: "Track and manage only your booking requests",
       icon: CalendarCheck2,
       path: "/my-bookings",
-      className: "from-blue-600 to-blue-500",
+      gradient: "from-orange-500 to-orange-600",
+      light: false,
     },
     {
       label: "My Tickets",
       subtitle: "Create and follow your support tickets",
       icon: Ticket,
       path: "/tickets",
-      className: "from-slate-800 to-slate-700",
+      gradient: "from-slate-700 to-slate-800",
+      light: false,
     },
   ],
   ADMIN: [
@@ -51,28 +57,32 @@ const actionConfigByRole = {
       subtitle: "Review requests submitted by all users",
       icon: ShieldCheck,
       path: "/admin/bookings",
-      className: "from-blue-700 to-indigo-600",
+      gradient: "from-orange-500 to-orange-600",
+      light: false,
     },
     {
       label: "Analytics",
       subtitle: "View peak hours and booking trends",
       icon: TrendingUp,
       path: "/analytics",
-      className: "from-indigo-700 to-blue-700",
+      gradient: "from-blue-600 to-blue-700",
+      light: false,
     },
     {
       label: "Resources",
       subtitle: "Monitor and update campus resources",
       icon: Wrench,
       path: "/resources",
-      className: "from-teal-700 to-teal-600",
+      gradient: "from-teal-600 to-teal-700",
+      light: false,
     },
     {
       label: "My Bookings",
       subtitle: "Open your personal booking workspace",
       icon: CalendarCheck2,
       path: "/my-bookings",
-      className: "from-slate-800 to-slate-700",
+      gradient: "from-slate-700 to-slate-800",
+      light: false,
     },
   ],
   TECHNICIAN: [
@@ -81,14 +91,16 @@ const actionConfigByRole = {
       subtitle: "Inspect status and maintenance readiness",
       icon: Wrench,
       path: "/resources",
-      className: "from-teal-700 to-teal-600",
+      gradient: "from-teal-600 to-teal-700",
+      light: false,
     },
     {
       label: "Tickets",
       subtitle: "Open technical task queue",
       icon: Ticket,
       path: "/tickets",
-      className: "from-slate-800 to-slate-700",
+      gradient: "from-slate-700 to-slate-800",
+      light: false,
     },
   ],
 }
@@ -102,19 +114,14 @@ function normalizeList(payload) {
 
 function formatRelativeTime(value) {
   if (!value) return "No timestamp"
-
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "No timestamp"
-
   const diffMs = Date.now() - date.getTime()
   const diffMinutes = Math.floor(diffMs / 60000)
-
   if (diffMinutes < 1) return "just now"
   if (diffMinutes < 60) return `${diffMinutes} min ago`
-
   const diffHours = Math.floor(diffMinutes / 60)
   if (diffHours < 24) return `${diffHours} hr ago`
-
   const diffDays = Math.floor(diffHours / 24)
   return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`
 }
@@ -127,21 +134,23 @@ function readableStatus(status) {
 function Dashboard() {
   const navigate = useNavigate()
   const role = (localStorage.getItem("role") || "USER").toUpperCase()
-  const userEmail = localStorage.getItem("email") || ""
-  const userId = localStorage.getItem("userId") || ""
+  const email = localStorage.getItem("email") || "operator@smartcampus.local"
 
   const [bookings, setBookings] = useState([])
   const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [liveNow, setLiveNow] = useState(new Date())
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date()
+    return new Date(d.getFullYear(), d.getMonth(), 1)
+  })
 
   useEffect(() => {
     let active = true
-
     async function loadDashboardData() {
       setLoading(true)
       setError("")
-
       try {
         if (role === "ADMIN") {
           const [allBookings, allResources] = await Promise.all([
@@ -153,7 +162,6 @@ function Dashboard() {
           setResources(normalizeList(allResources))
           return
         }
-
         if (role === "USER") {
           const myBookings = await bookingService.getMyBookings()
           if (!active) return
@@ -161,7 +169,6 @@ function Dashboard() {
           setResources([])
           return
         }
-
         const allResources = await resourceService.getAllResources()
         if (!active) return
         setBookings([])
@@ -172,44 +179,53 @@ function Dashboard() {
           requestError?.response?.data?.message ||
             requestError?.response?.data ||
             requestError?.message ||
-            "Failed to load dashboard data from database."
+            "Failed to load dashboard data."
         )
       } finally {
         if (active) setLoading(false)
       }
     }
-
     loadDashboardData()
     return () => {
       active = false
     }
   }, [role])
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setLiveNow(new Date()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
   const bookingStats = useMemo(() => {
     const total = bookings.length
-    const pending = bookings.filter((booking) => readableStatus(booking.status) === "PENDING").length
-    const approved = bookings.filter((booking) => readableStatus(booking.status) === "APPROVED").length
-
+    const pending = bookings.filter((b) => readableStatus(b.status) === "PENDING").length
+    const approved = bookings.filter((b) => readableStatus(b.status) === "APPROVED").length
     const now = new Date()
-    const upcoming = bookings.filter((booking) => {
-      if (!booking.date || !booking.startTime) return false
-      const slot = new Date(`${booking.date}T${booking.startTime}:00`)
+    const upcoming = bookings.filter((b) => {
+      if (!b.date || !b.startTime) return false
+      const slot = new Date(`${b.date}T${b.startTime}:00`)
       return !Number.isNaN(slot.getTime()) && slot >= now
     }).length
-
     return { total, pending, approved, upcoming }
   }, [bookings])
+
+  const tableRowIconStyles = [
+    "bg-brand/10 text-brand",
+    "bg-[#f5b800]/15 text-[#b08800]",
+    "bg-emerald-100 text-emerald-700",
+    "bg-orange-100 text-orange-700",
+    "bg-brand/10 text-brand",
+  ]
 
   const resourceStats = useMemo(() => {
     const totalResources = resources.length
     const availableResources = resources.filter(
-      (resource) => String(resource.status || "").toUpperCase() === "AVAILABLE"
+      (r) => String(r.status || "").toUpperCase() === "AVAILABLE"
     ).length
-    const maintenanceResources = resources.filter((resource) =>
-      String(resource.status || "").toUpperCase().includes("MAINTENANCE")
+    const maintenanceResources = resources.filter((r) =>
+      String(r.status || "").toUpperCase().includes("MAINTENANCE")
     ).length
-    const totalCapacity = resources.reduce((sum, resource) => sum + Number(resource.capacity || 0), 0)
-
+    const totalCapacity = resources.reduce((sum, r) => sum + Number(r.capacity || 0), 0)
     return { totalResources, availableResources, maintenanceResources, totalCapacity }
   }, [resources])
 
@@ -217,28 +233,36 @@ function Dashboard() {
     if (role === "ADMIN") {
       return [
         {
-          title: "All Booking Requests",
+          title: "Total Bookings",
           value: String(bookingStats.total),
-          trend: `${bookingStats.pending} pending review`,
+          sub: "All time",
           icon: Users,
-          color: "text-blue-700",
-          bg: "bg-blue-50",
+          iconColor: "text-white",
+          iconBg: "bg-brand",
         },
         {
-          title: "Approved Bookings",
-          value: String(bookingStats.approved),
-          trend: `${bookingStats.upcoming} upcoming`,
+          title: "Upcoming",
+          value: String(bookingStats.upcoming),
+          sub: "This week",
           icon: CalendarCheck2,
-          color: "text-emerald-700",
-          bg: "bg-emerald-50",
+          iconColor: "text-white",
+          iconBg: "bg-emerald-500",
+        },
+        {
+          title: "Pending Review",
+          value: String(bookingStats.pending),
+          sub: "Awaiting",
+          icon: Clock3,
+          iconColor: "text-white",
+          iconBg: "bg-[#f5b800]",
         },
         {
           title: "Campus Resources",
           value: String(resourceStats.totalResources),
-          trend: `${resourceStats.availableResources} available now`,
+          sub: `${resourceStats.availableResources} available`,
           icon: Database,
-          color: "text-teal-700",
-          bg: "bg-teal-50",
+          iconColor: "text-white",
+          iconBg: "bg-[#152055]",
         },
       ]
     }
@@ -246,28 +270,36 @@ function Dashboard() {
     if (role === "USER") {
       return [
         {
-          title: "My Bookings",
+          title: "Total Bookings",
           value: String(bookingStats.total),
-          trend: `${bookingStats.upcoming} upcoming`,
+          sub: "All time",
           icon: CalendarCheck2,
-          color: "text-blue-700",
-          bg: "bg-blue-50",
+          iconColor: "text-white",
+          iconBg: "bg-brand",
         },
         {
-          title: "Pending Requests",
-          value: String(bookingStats.pending),
-          trend: "Waiting for admin review",
+          title: "Upcoming",
+          value: String(bookingStats.upcoming),
+          sub: "This week",
           icon: Clock3,
-          color: "text-amber-700",
-          bg: "bg-amber-50",
+          iconColor: "text-white",
+          iconBg: "bg-emerald-500",
+        },
+        {
+          title: "Pending Review",
+          value: String(bookingStats.pending),
+          sub: "Awaiting",
+          icon: AlertCircle,
+          iconColor: "text-white",
+          iconBg: "bg-[#f5b800]",
         },
         {
           title: "Approved",
           value: String(bookingStats.approved),
-          trend: "Ready to use",
+          sub: "Ready to use",
           icon: ShieldCheck,
-          color: "text-emerald-700",
-          bg: "bg-emerald-50",
+          iconColor: "text-white",
+          iconBg: "bg-emerald-500",
         },
       ]
     }
@@ -276,57 +308,68 @@ function Dashboard() {
       {
         title: "Resources",
         value: String(resourceStats.totalResources),
-        trend: `${resourceStats.availableResources} available`,
+        sub: `${resourceStats.availableResources} available`,
         icon: Database,
-        color: "text-teal-700",
-        bg: "bg-teal-50",
+        iconColor: "text-white",
+        iconBg: "bg-brand",
       },
       {
         title: "Maintenance",
         value: String(resourceStats.maintenanceResources),
-        trend: "Require technical attention",
+        sub: "Need attention",
         icon: Wrench,
-        color: "text-amber-700",
-        bg: "bg-amber-50",
+        iconColor: "text-white",
+        iconBg: "bg-[#f5b800]",
       },
       {
         title: "Total Capacity",
         value: String(resourceStats.totalCapacity),
-        trend: "Across all resources",
+        sub: "Across all resources",
         icon: Users,
-        color: "text-blue-700",
-        bg: "bg-blue-50",
+        iconColor: "text-white",
+        iconBg: "bg-emerald-500",
+      },
+      {
+        title: "Available",
+        value: String(resourceStats.availableResources),
+        sub: "Ready now",
+        icon: ShieldCheck,
+        iconColor: "text-white",
+        iconBg: "bg-[#152055]",
       },
     ]
-  }, [bookingStats.approved, bookingStats.pending, bookingStats.total, bookingStats.upcoming, resourceStats.availableResources, resourceStats.maintenanceResources, resourceStats.totalCapacity, resourceStats.totalResources, role])
+  }, [bookingStats, resourceStats, role])
 
   const quickActions = actionConfigByRole[role] || actionConfigByRole.USER
 
   const recentActivity = useMemo(() => {
     if (bookings.length === 0) return []
-
     return bookings.slice(0, 5).map((booking) => {
       const status = readableStatus(booking.status)
-      const title = booking.resourceType
-        ? `${booking.resourceType} booking ${status.toLowerCase()}`
-        : `Booking ${status.toLowerCase()}`
-      const ownerLabel = role === "ADMIN" ? ` by user ${booking.requestedBy || "unknown"}` : ""
-
+      const resourceLabel = booking.resourceType || "Resource"
+      const ownerLabel = role === "ADMIN" ? booking.requestedBy || "unknown" : ""
       return {
         id: booking.id,
-        title,
-        note: `${booking.date || "No date"} ${booking.startTime || ""}-${booking.endTime || ""}${ownerLabel}`.trim(),
-        time: formatRelativeTime(booking.updatedAt || booking.createdAt),
+        title: resourceLabel,
+        owner: ownerLabel,
+        date: booking.date || "-",
+        time: booking.startTime && booking.endTime ? `${booking.startTime}-${booking.endTime}` : "-",
+        relativeTime: formatRelativeTime(booking.updatedAt || booking.createdAt),
+        status,
       }
     })
   }, [bookings, role])
 
-  const hour = new Date().getHours()
+  const hour = liveNow.getHours()
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
-  const roleLabel = role === "ADMIN" ? "Admin Workspace" : role === "USER" ? "User Workspace" : "Technician Workspace"
-
-  const pendingAlerts = role === "ADMIN" ? bookingStats.pending : role === "USER" ? bookingStats.pending : resourceStats.maintenanceResources
-
+  const roleLabel =
+    role === "ADMIN" ? "Admin Workspace" : role === "USER" ? "User Workspace" : "Technician Workspace"
+  const pendingAlerts =
+    role === "ADMIN"
+      ? bookingStats.pending
+      : role === "USER"
+        ? bookingStats.pending
+        : resourceStats.maintenanceResources
   const subtitleByRole =
     role === "ADMIN"
       ? "Live data from all users and resources across the campus."
@@ -334,227 +377,402 @@ function Dashboard() {
         ? "Only your booking data is shown here from the database."
         : "Technical operations summary from campus resources."
 
-  return (
-    <div className="space-y-8">
-      <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 p-6 text-white shadow-[0_24px_60px_-30px_rgba(2,6,23,0.85)] sm:p-7">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-3">
-            <p className="text-xs tracking-[0.18em] text-blue-200 uppercase">{roleLabel}</p>
-            <h2 className="m-0 text-2xl font-semibold sm:text-3xl">{greeting}, welcome back to UniSlot.</h2>
-            <p className="max-w-2xl text-sm text-slate-200 sm:text-base">
-              {subtitleByRole}
-            </p>
-            {role === "USER" && userEmail ? <p className="text-xs text-blue-100">Signed in as {userEmail}</p> : null}
-          </div>
+  const statusColors = {
+    PENDING: "bg-orange-100 text-orange-700",
+    APPROVED: "bg-emerald-100 text-emerald-700",
+    REJECTED: "bg-red-100 text-red-700",
+    CANCELLED: "bg-slate-100 text-slate-600",
+  }
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
-              <p className="text-xs tracking-[0.12em] text-slate-200 uppercase">Database Sync</p>
-              <div className="mt-1 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-300" />
-                <span className="text-sm font-semibold text-white">{loading ? "Loading..." : "Live"}</span>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
-              <p className="text-xs tracking-[0.12em] text-slate-200 uppercase">Pending Alerts</p>
-              <div className="mt-1 flex items-center gap-2">
-                <Bell className="h-4 w-4 text-amber-300" />
-                <span className="text-sm font-semibold text-white">{pendingAlerts} items</span>
-              </div>
-            </div>
+  const displayName =
+    email
+      .split("@")[0]
+      .split(/[._-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ") || "Campus Operator"
+
+  const clockLabel = liveNow.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  })
+  const dateLabel = liveNow.toLocaleDateString([], {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })
+
+  // Calendar computed values
+  const calYear = calendarMonth.getFullYear()
+  const calMonthIdx = calendarMonth.getMonth()
+  const calDaysInMonth = new Date(calYear, calMonthIdx + 1, 0).getDate()
+  const calStartDay = new Date(calYear, calMonthIdx, 1).getDay()
+  const calMonthShort = calendarMonth.toLocaleDateString([], { month: "short" }).toUpperCase()
+  const calMonthFull = calendarMonth.toLocaleDateString([], { month: "long", year: "numeric" })
+  const todayStr = liveNow.toISOString().split("T")[0]
+  const todayCalBookings = recentActivity.filter((b) => b.date === todayStr)
+  const prevCalMonth = () => setCalendarMonth(new Date(calYear, calMonthIdx - 1, 1))
+  const nextCalMonth = () => setCalendarMonth(new Date(calYear, calMonthIdx + 1, 1))
+
+  return (
+    <div className="space-y-4">
+
+
+      {/* ── Promo Banner ── */}
+      <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-brand to-[#152055] px-7 py-6 shadow-[0_14px_40px_rgba(21,32,85,0.20)]">
+        {/* Decorative dots */}
+        <div className="pointer-events-none absolute right-24 top-4 h-3 w-3 rounded-full bg-emerald-400 opacity-70" />
+        <div className="pointer-events-none absolute right-44 top-8 h-2 w-2 rounded-full bg-[#f5b800] opacity-80" />
+        <div className="pointer-events-none absolute right-36 bottom-4 h-4 w-4 rounded-full bg-red-400/70 opacity-60" />
+        {/* Decorative card mockups */}
+        <div className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 flex-col gap-3 xl:flex">
+          <div className="w-44 rounded-xl bg-white/15 p-3 backdrop-blur-sm">
+            <div className="mb-2 h-2 w-20 rounded bg-white/40" />
+            <div className="h-6 w-28 rounded bg-white/20" />
           </div>
+          <div className="ml-8 w-44 rounded-xl bg-white/10 p-3 backdrop-blur-sm">
+            <div className="mb-2 h-2 w-16 rounded bg-white/40" />
+            <div className="mb-1 h-2.5 w-24 rounded bg-orange-400/50" />
+            <div className="h-2.5 w-16 rounded bg-emerald-400/50" />
+          </div>
+        </div>
+        <div className="relative max-w-lg">
+          <p className="mb-1.5 text-[10px] font-bold tracking-widest text-white/50 uppercase">
+            {greeting.toUpperCase()}
+          </p>
+          <p className="text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+            Need a space?<br />Book it in a tap.
+          </p>
+          <p className="mt-2 text-sm text-white/65">
+            {bookingStats.approved > 0
+              ? `You have ${bookingStats.approved} confirmed booking${bookingStats.approved !== 1 ? "s" : ""}`
+              : "No confirmed bookings yet"}
+            {bookingStats.pending > 0 ? ` and ${bookingStats.pending} pending review.` : "."}
+          </p>
         </div>
       </section>
 
-      {error ? (
-        <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700 sm:px-5">
+      {/* ── Hero + Calendar ── */}
+      <div className="grid gap-4 xl:grid-cols-[1.99fr_0.6fr]">
+
+        
+
+        {/* Greeting + metric cards */}
+        <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-4 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-5">
+          <div className="pointer-events-none absolute -left-16 top-10 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
+          <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#f5b800]/10 blur-3xl" />
+
+          <div className="relative flex flex-wrap items-start justify-between gap-2">
+            <div className="space-y-1">
+              <p className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-0.5 text-[10px] font-semibold tracking-wide text-brand">
+                <Sparkles className="h-3 w-3" />
+                Campus Command Center
+              </p>
+              <h1 className="m-0 text-2xl font-bold leading-tight text-navy sm:text-3xl">
+                {greeting}, {displayName}
+              </h1>
+              <p className="text-xs text-[#5a6b98]">{subtitleByRole}</p>
+            </div>
+            <div className="rounded-xl border border-brand/15 bg-white/80 px-3 py-2 backdrop-blur-sm">
+              <p className="text-[10px] font-medium text-[#6c79a3]">{dateLabel}</p>
+              <p className="mt-0.5 font-mono text-lg font-semibold tracking-tight text-navy">{clockLabel}</p>
+            </div>
+          </div>
+
+          <div className="relative mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+            {metricCards.map((card) => {
+              const Icon = card.icon
+              return (
+                <article key={card.title} className="rounded-2xl border border-white/70 bg-white p-3.5 shadow-[0_4px_16px_rgba(21,32,85,0.06)]">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] font-bold tracking-widest text-[#8494c2] uppercase">{card.title}</p>
+                      <p className="mt-1.5 text-2xl font-semibold leading-none text-navy">{loading ? "—" : card.value}</p>
+                      <p className="mt-1 text-[11px] text-[#8494c2]">{card.sub}</p>
+                    </div>
+                    <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${card.iconBg}`}>
+                      <Icon className={`h-3.5 w-3.5 ${card.iconColor}`} />
+                    </span>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* Calendar */}
+        <section className="rounded-[26px] border border-white/60 bg-white p-4 shadow-[0_14px_40px_rgba(21,32,85,0.10)]">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-navy">My Calendar</h3>
+            <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold tracking-widest text-brand uppercase">
+              {calMonthShort}
+            </span>
+          </div>
+
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-xs font-medium text-[#3a4b7c]">{calMonthFull}</p>
+            <div className="flex gap-0.5">
+              <button type="button" onClick={prevCalMonth} className="rounded-md p-1 text-[#8494c2] hover:bg-slate-50 hover:text-navy transition-colors">
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" onClick={nextCalMonth} className="rounded-md p-1 text-[#8494c2] hover:bg-slate-50 hover:text-navy transition-colors">
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Day headers */}
+          <div className="mt-2 grid grid-cols-7">
+            {["S","M","T","W","T","F","S"].map((d, i) => (
+              <div key={i} className="py-0.5 text-center text-[9px] font-bold tracking-wide text-[#8494c2]">{d}</div>
+            ))}
+          </div>
+
+          {/* Calendar grid */}
+          <div className="grid grid-cols-7">
+            {Array.from({ length: calStartDay }, (_, i) => <div key={`e${i}`} />)}
+            {Array.from({ length: calDaysInMonth }, (_, i) => {
+              const day = i + 1
+              const dateStr = `${calYear}-${String(calMonthIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+              const isToday = dateStr === todayStr
+              const hasBooking = recentActivity.some((b) => b.date === dateStr)
+              return (
+                <div key={day} className={`relative flex aspect-square flex-col items-center justify-center rounded-md text-xs transition-colors
+                  ${isToday ? "bg-brand font-semibold text-white shadow-sm" : "text-[#3a4b7c] hover:bg-slate-50"}`}>
+                  {day}
+                  {hasBooking && !isToday && (
+                    <span className="absolute bottom-0 h-1 w-1 rounded-full bg-[#f5b800]" />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Today's bookings */}
+          <div className="mt-3 border-t border-slate-100 pt-3">
+            <p className="mb-1.5 text-[9px] font-bold tracking-widest text-[#8494c2] uppercase">Today&apos;s Bookings</p>
+            {loading ? (
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <Loader2 className="h-3 w-3 animate-spin text-brand" /> Loading...
+              </div>
+            ) : todayCalBookings.length === 0 ? (
+              <p className="text-xs text-slate-400">No bookings today</p>
+            ) : (
+              <div className="space-y-1">
+                {todayCalBookings.map((b) => (
+                  <div key={b.id} className="flex items-center gap-2 rounded-lg bg-brand/8 px-2.5 py-1.5">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                    <div>
+                      <p className="text-[11px] font-semibold text-brand">{b.title}</p>
+                      <p className="text-[10px] text-[#8494c2]">{b.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate("/my-bookings")}
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-2 text-xs font-medium text-[#3a4b7c] transition-colors hover:border-brand/30 hover:bg-brand/5 hover:text-brand"
+          >
+            + New Booking
+          </button>
+        </section>
+      </div>
+
+
+      {/* ── Error ── */}
+      {error && (
+        <section className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-600">
           <div className="flex items-start gap-2">
-            <AlertCircle className="mt-0.5 h-4 w-4" />
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <p className="text-sm">{error}</p>
           </div>
         </section>
-      ) : null}
+      )}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {metricCards.map((card) => {
-          const Icon = card.icon
-
-          return (
-            <article
-              key={card.title}
-              className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_22px_45px_-34px_rgba(15,23,42,0.55)]"
+      {/* ── Bookings Table + Quick Actions ── */}
+      <section className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
+        <div className="overflow-hidden rounded-[26px] border border-white/60 bg-white shadow-[0_18px_50px_rgba(21,32,85,0.10)]">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <div>
+              <h3 className="text-base font-semibold text-navy">Upcoming Operations</h3>
+              <p className="mt-0.5 text-xs text-[#8494c2]">Bookings, schedules and occupancy windows</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(role === "ADMIN" ? "/admin/bookings" : "/my-bookings")}
+              className="text-sm font-medium text-brand hover:underline"
             >
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-600">{card.title}</p>
-                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${card.bg}`}>
-                  <Icon className={`h-5 w-5 ${card.color}`} />
-                </span>
-              </div>
-              <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">{card.value}</p>
-              <p className="mt-2 text-xs font-medium text-slate-500 uppercase tracking-[0.12em]">{card.trend}</p>
-            </article>
-          )
-        })}
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1.25fr_1fr]">
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_20px_42px_-32px_rgba(15,23,42,0.45)] sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900">Quick Actions</h3>
-            <span className="text-xs text-slate-500 uppercase tracking-[0.12em]">Role-based access</span>
+              View all
+            </button>
           </div>
 
-          <div className="grid gap-3">
+          {loading ? (
+            <div className="flex items-center gap-2.5 p-5 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-brand" />
+              Loading bookings...
+            </div>
+          ) : recentActivity.length === 0 ? (
+            <div className="p-5 text-sm text-slate-400">No booking records yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="px-5 py-3 text-left text-[10px] font-bold tracking-widest text-[#8494c2] uppercase">
+                      {role === "ADMIN" ? "Resource / User" : "Resource"}
+                    </th>
+                    <th className="px-3 py-3 text-left text-[10px] font-bold tracking-widest text-[#8494c2] uppercase">Date</th>
+                    <th className="px-3 py-3 text-left text-[10px] font-bold tracking-widest text-[#8494c2] uppercase">Time</th>
+                    <th className="px-3 py-3 text-left text-[10px] font-bold tracking-widest text-[#8494c2] uppercase">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentActivity.map((item, idx) => (
+                    <tr key={item.id} className={idx < recentActivity.length - 1 ? "border-b border-slate-50" : ""}>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${tableRowIconStyles[idx % tableRowIconStyles.length]}`}>
+                            {item.title.slice(0, 2).toUpperCase()}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-navy">{item.title}</p>
+                            {item.owner && <p className="truncate text-xs text-[#8494c2]">{item.owner}</p>}
+                            <p className="text-[11px] text-[#a0aec0]">{item.relativeTime}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap text-[#6677a4]">{item.date}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-[#6677a4]">{item.time}</td>
+                      <td className="px-3 py-3">
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusColors[item.status] ?? "bg-slate-100 text-slate-600"}`}>
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="rounded-[26px] border border-white/60 bg-white p-5 shadow-[0_18px_50px_rgba(21,32,85,0.10)]">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-base font-semibold text-navy">Smart Shortcuts</h3>
+            <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-brand uppercase">
+              {roleLabel}
+            </span>
+          </div>
+
+          <div className="grid gap-2.5">
             {quickActions.map((action) => {
               const Icon = action.icon
-
               return (
                 <button
                   key={action.path}
                   type="button"
                   onClick={() => navigate(action.path)}
-                  className={`group flex items-center justify-between gap-4 rounded-2xl bg-gradient-to-r px-4 py-4 text-left text-white shadow-[0_18px_38px_-24px_rgba(15,23,42,0.75)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 ${action.className}`}
+                  className="group flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/20 hover:bg-brand/5 hover:shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
-                      <Icon className="h-5 w-5" />
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-navy text-white">
+                      <Icon className="h-4 w-4" />
                     </span>
                     <div>
-                      <p className="text-sm font-semibold">{action.label}</p>
-                      <p className="mt-0.5 text-xs text-white/80">{action.subtitle}</p>
+                      <p className="text-sm font-semibold text-navy">{action.label}</p>
+                      <p className="mt-0.5 text-xs text-[#8494c2]">{action.subtitle}</p>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 opacity-80 transition-transform group-hover:translate-x-0.5" />
+                  <ArrowRight className="h-4 w-4 shrink-0 text-[#8494c2] transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
                 </button>
               )
             })}
           </div>
-        </div>
 
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_20px_42px_-32px_rgba(15,23,42,0.45)] sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900">Recent Activity</h3>
-            <Ticket className="h-4 w-4 text-slate-400" />
+          {/* Pending summary */}
+          <div className="mt-4 rounded-2xl bg-navy p-4 text-white">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold tracking-widest text-white/60 uppercase">Pending Alerts</p>
+              <Bell className="h-4 w-4 text-[#f5b800]" />
+            </div>
+            <p className="mt-2 text-3xl font-semibold">{pendingAlerts}</p>
+            <p className="mt-0.5 text-xs text-white/50">items awaiting review</p>
+            <div className="mt-3 h-1.5 rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-[#f5b800] transition-all" style={{ width: `${Math.min(100, pendingAlerts * 10 + 5)}%` }} />
+            </div>
           </div>
-
-          {loading ? (
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading real-time dashboard activity...
-            </div>
-          ) : recentActivity.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              No activity records available yet for this role.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {recentActivity.map((item) => (
-                <article key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-                  <p className="text-sm font-medium text-slate-900">{item.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">{item.note}</p>
-                  <p className="mt-2 text-[11px] font-medium tracking-[0.1em] text-slate-500 uppercase">{item.time}</p>
-                </article>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200/80 bg-slate-50 px-5 py-4 sm:px-6">
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-slate-600">
-            {role === "ADMIN"
-              ? "You are viewing organization-wide data from all users and resources."
-              : role === "USER"
-                ? `You are viewing bookings linked to your account${userId ? ` (${userId})` : ""}.`
-                : "Use this workspace to monitor technical operations and resource readiness."}
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate(role === "ADMIN" ? "/admin/bookings" : "/my-bookings")}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
-          >
-            {role === "ADMIN" ? "Open All Bookings" : "Open My Bookings"}
-            <ArrowRight className="h-4 w-4" />
-          </button>
         </div>
       </section>
     </div>
   )
 }
-
 function ComingSoon({ title }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
-      <h2 className="mb-2 text-2xl font-semibold text-slate-900">{title}</h2>
-      <p className="text-sm text-slate-500">Coming soon...</p>
+    <div className="flex flex-col items-center justify-center rounded-[26px] border border-white/60 bg-white py-24 shadow-[0_14px_40px_rgba(21,32,85,0.08)] text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10">
+        <Sparkles className="h-6 w-6 text-brand" />
+      </div>
+      <p className="mt-4 text-lg font-bold text-navy">{title}</p>
+      <p className="mt-1 text-sm text-[#8494c2]">This screen is coming soon.</p>
     </div>
   )
 }
 
 function RoleRoute({ allowedRoles, children }) {
   const role = (localStorage.getItem("role") || "").toUpperCase()
-
-  if (!allowedRoles.includes(role)) {
-    return <Navigate to="/" replace />
-  }
-
+  if (!allowedRoles.includes(role)) return <Navigate to="/" replace />
   return children
 }
 
 function AppShell() {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-gradient-to-b from-slate-50 to-indigo-50 text-slate-900">
+      <div className="flex min-h-screen w-full bg-[#eef2fb]">
         <AppSidebar />
-        <div className="flex flex-1 flex-col">
-          <header className="border-b border-slate-200/80 bg-white/80 px-6 py-5 backdrop-blur-sm sm:px-8">
-            <div className="text-xs tracking-[0.16em] text-slate-600 uppercase">UniSlot</div>
-            <h1 className="mt-2 text-3xl leading-tight font-semibold text-slate-900">
-              Smart Campus Operations Hub
-            </h1>
-          </header>
-
-          <main className="flex-1 overflow-y-auto p-6 sm:p-8">
-            <div className="mx-auto grid w-full max-w-6xl gap-6">
-              <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_24px_50px_-24px_rgba(15,23,42,0.22)] sm:p-7">
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/my-bookings" element={<MyBookingsPage />} />
-                  <Route
-                    path="/admin/bookings"
-                    element={
-                      <RoleRoute allowedRoles={["ADMIN"]}>
-                        <AdminBookingsPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route
-                    path="/analytics"
-                    element={
-                      <RoleRoute allowedRoles={["ADMIN"]}>
-                        <AnalyticsPage />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route
-                    path="/resources"
-                    element={
-                      <RoleRoute allowedRoles={["ADMIN", "TECHNICIAN"]}>
-                        <AdminResourcesInterface />
-                      </RoleRoute>
-                    }
-                  />
-                  <Route path="/tickets" element={<CreateTicketPage />} />
-                  <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
-                  <Route path="/profile" element={<ComingSoon title="My Profile" />} />
-                  <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </section>
-            </div>
-          </main>
-        </div>
+        <main className="flex-1 overflow-y-auto p-6 sm:p-8">
+          <div className="mx-auto w-full max-w-6xl">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/my-bookings" element={<MyBookingsPage />} />
+              <Route
+                path="/admin/bookings"
+                element={
+                  <RoleRoute allowedRoles={["ADMIN"]}>
+                    <AdminBookingsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <RoleRoute allowedRoles={["ADMIN"]}>
+                    <AnalyticsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/resources"
+                element={
+                  <RoleRoute allowedRoles={["ADMIN", "TECHNICIAN"]}>
+                    <AdminResourcesInterface />
+                  </RoleRoute>
+                }
+              />
+              <Route path="/tickets" element={<CreateTicketPage />} />
+              <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
+              <Route path="/profile" element={<ComingSoon title="My Profile" />} />
+              <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        </main>
       </div>
     </SidebarProvider>
   )
@@ -566,6 +784,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/home" element={<HomePage />} />
         <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
         <Route path="/signup" element={token ? <Navigate to="/" replace /> : <SignupPage />} />
         <Route path="/oauth2/callback" element={<OAuth2CallbackPage />} />

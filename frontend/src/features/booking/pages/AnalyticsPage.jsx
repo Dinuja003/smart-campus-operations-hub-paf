@@ -17,7 +17,8 @@ import {
 } from "recharts"
 import analyticsService from "../Services/AnalyticsService"
 
-const PIE_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"]
+const PIE_COLORS = ["oklch(62.667%_0.14048_250.176)", "#10b981", "#f5b800", "#ef4444", "#152055", "#06b6d4"]
+  .map((c, i) => ["#5578d2", "#10b981", "#f5b800", "#ef4444", "#152055", "#06b6d4"][i])
 
 export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState(null)
@@ -94,154 +95,128 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-8">
-        <div className="flex items-center gap-3 text-slate-600">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading booking analytics...
-        </div>
+      <div className="flex items-center gap-3 rounded-[26px] border border-white/60 bg-white p-8 text-sm text-[#8494c2] shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+        <Loader2 className="h-4 w-4 animate-spin text-brand" /> Loading booking analytics…
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">
-        <div className="flex items-start gap-2">
-          <AlertCircle className="mt-0.5 h-4 w-4" />
-          <p className="text-sm">{error}</p>
-        </div>
+      <div className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}
       </div>
     )
   }
 
+  const statCards = [
+    { label: "Total Bookings", value: analytics?.totalBookings || 0, icon: BarChart3, iconBg: "bg-brand", sub: "All time" },
+    { label: "Unique Bookers", value: analytics?.uniqueBookers || 0, icon: Users, iconBg: "bg-emerald-500", sub: "Distinct users" },
+    { label: "Avg Duration", value: `${analytics?.averageBookingDurationHours || 0}h`, icon: Clock3, iconBg: "bg-[#f5b800]", sub: "Per booking" },
+    { label: "Peak Hour", value: maxHourlyCount, icon: TrendingUp, iconBg: "bg-[#152055]", sub: "Max bookings/hr" },
+  ]
+
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-        <h2 className="text-2xl font-semibold text-slate-900">Booking Analytics</h2>
-        <p className="mt-1 text-sm text-slate-500">Understand booking demand, peak hours and resource utilization.</p>
+    <div className="space-y-5">
+
+      {/* Header */}
+      <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand/8 blur-3xl" />
+        <div className="relative">
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-0.5 text-[10px] font-semibold tracking-wide text-brand">
+            <BarChart3 className="h-3 w-3" /> Analytics
+          </p>
+          <h1 className="mt-1.5 text-2xl font-bold text-navy sm:text-3xl">Booking Analytics</h1>
+          <p className="mt-0.5 text-sm text-[#5a6b98]">Understand booking demand, peak hours and resource utilization.</p>
+        </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-600">Total Bookings</p>
-            <BarChart3 className="h-5 w-5 text-blue-600" />
-          </div>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{analytics?.totalBookings || 0}</p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-600">Unique Bookers</p>
-            <Users className="h-5 w-5 text-teal-600" />
-          </div>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{analytics?.uniqueBookers || 0}</p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-600">Avg Duration</p>
-            <Clock3 className="h-5 w-5 text-amber-600" />
-          </div>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{analytics?.averageBookingDurationHours || 0}h</p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-600">Peak Hour Bookings</p>
-            <TrendingUp className="h-5 w-5 text-indigo-600" />
-          </div>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{maxHourlyCount}</p>
-        </article>
+      {/* Stat cards */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {statCards.map(({ label, value, icon: Icon, iconBg, sub }) => (
+          <article key={label} className="rounded-[22px] border border-white/60 bg-white p-4 shadow-[0_8px_30px_rgba(21,32,85,0.07)]">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{label}</p>
+                <p className="mt-1.5 text-2xl font-bold text-navy">{value}</p>
+                <p className="mt-0.5 text-[11px] text-[#8494c2]">{sub}</p>
+              </div>
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
+                <Icon className="h-3.5 w-3.5 text-white" />
+              </span>
+            </div>
+          </article>
+        ))}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-          <h3 className="text-lg font-semibold text-slate-900">Peak Hours</h3>
-          <p className="mt-1 text-sm text-slate-500">Bookings by start time.</p>
-
-          <div className="mt-5 h-72 w-full">
+      {/* Charts row 1 */}
+      <section className="grid gap-5 xl:grid-cols-[1.2fr_1fr]">
+        <article className="rounded-[26px] border border-white/60 bg-white p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+          <h3 className="text-sm font-bold text-navy">Peak Hours</h3>
+          <p className="mt-0.5 text-xs text-[#8494c2]">Bookings by start time.</p>
+          <div className="mt-4 h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={hourlyChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="hour" tick={{ fontSize: 11 }} interval={2} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="count" name="Bookings" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#eef2fb" />
+                <XAxis dataKey="hour" tick={{ fontSize: 10, fill: "#8494c2" }} interval={2} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#8494c2" }} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                <Bar dataKey="count" name="Bookings" fill="#5578d2" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-          <h3 className="text-lg font-semibold text-slate-900">Booking Status</h3>
-          <p className="mt-1 text-sm text-slate-500">Distribution across workflow states.</p>
-
-          <div className="mt-5 h-72 w-full">
+        <article className="rounded-[26px] border border-white/60 bg-white p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+          <h3 className="text-sm font-bold text-navy">Booking Status</h3>
+          <p className="mt-0.5 text-xs text-[#8494c2]">Distribution across workflow states.</p>
+          <div className="mt-4 h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={statusChartData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={56}
-                  outerRadius={96}
-                  paddingAngle={3}
-                >
-                  {statusChartData.map((entry, index) => (
-                    <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                  ))}
+                <Pie data={statusChartData} dataKey="value" nameKey="name" innerRadius={52} outerRadius={90} paddingAngle={3}>
+                  {statusChartData.map((entry, i) => <Cell key={entry.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </article>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-          <h3 className="text-lg font-semibold text-slate-900">Top Resources</h3>
-          <p className="mt-1 text-sm text-slate-500">Most frequently booked resources.</p>
-
-          <div className="mt-5 space-y-3">
-            {(analytics?.topResources || []).map(resource => (
-              <div key={resource.resourceId} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5">
-                <div>
-                  <p className="text-sm font-medium text-slate-800">{resource.resourceName}</p>
-                  <p className="text-xs text-slate-500">{resource.resourceId}</p>
+      {/* Charts row 2 */}
+      <section className="grid gap-5 xl:grid-cols-2">
+        <article className="rounded-[26px] border border-white/60 bg-white p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+          <h3 className="text-sm font-bold text-navy">Top Resources</h3>
+          <p className="mt-0.5 text-xs text-[#8494c2]">Most frequently booked resources.</p>
+          <div className="mt-4 space-y-2.5">
+            {(analytics?.topResources || []).map((r, i) => (
+              <div key={r.resourceId} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-[10px] font-bold text-brand">{i + 1}</span>
+                  <div>
+                    <p className="text-xs font-semibold text-navy">{r.resourceName}</p>
+                    <p className="text-[10px] text-[#8494c2]">{r.resourceId?.slice(0, 16)}…</p>
+                  </div>
                 </div>
-                <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                  {resource.bookingCount}
-                </span>
+                <span className="rounded-lg bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand">{r.bookingCount}</span>
               </div>
             ))}
+            {!(analytics?.topResources?.length) && <p className="text-xs text-[#8494c2]">No resource data yet.</p>}
           </div>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-          <h3 className="text-lg font-semibold text-slate-900">Daily Trend</h3>
-          <p className="mt-1 text-sm text-slate-500">Recent bookings by date.</p>
-
-          <div className="mt-5 h-72 w-full">
+        <article className="rounded-[26px] border border-white/60 bg-white p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+          <h3 className="text-sm font-bold text-navy">Daily Trend</h3>
+          <p className="mt-0.5 text-xs text-[#8494c2]">Recent bookings by date.</p>
+          <div className="mt-4 h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={dailyTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  name="Bookings"
-                  stroke="#10b981"
-                  strokeWidth={2.5}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="#eef2fb" />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#8494c2" }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#8494c2" }} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                <Line type="monotone" dataKey="count" name="Bookings" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
