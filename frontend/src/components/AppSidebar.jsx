@@ -1,10 +1,15 @@
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import {
+  BarChart3,
+  Bell,
+  Building2,
+  CalendarCheck2,
   LayoutDashboard,
-  TriangleAlert,
-  ReceiptText,
-  User,
   LogOut,
+  ShieldCheck,
+  Ticket,
+  User,
+  Wrench,
 } from "lucide-react"
 import {
   Sidebar,
@@ -12,7 +17,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -27,16 +31,74 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { clearAuth } from "@/features/auth/services/authService"
-import logo from "../assets/vite.svg"
+
+const navSectionsByRole = {
+  USER: [
+    {
+      section: "MAIN MENU",
+      items: [
+        { label: "Dashboard", path: "/", icon: LayoutDashboard },
+        { label: "My Bookings", path: "/my-bookings", icon: CalendarCheck2 },
+      ],
+    },
+    {
+      section: "WORKSPACE",
+      items: [
+        { label: "My Tickets", path: "/tickets", icon: Ticket },
+        { label: "Notifications", path: "/notifications", icon: Bell },
+        { label: "My Profile", path: "/profile", icon: User },
+      ],
+    },
+  ],
+  ADMIN: [
+    {
+      section: "MAIN MENU",
+      items: [
+        { label: "Dashboard", path: "/", icon: LayoutDashboard },
+        { label: "All Bookings", path: "/admin/bookings", icon: ShieldCheck },
+        { label: "Analytics", path: "/analytics", icon: BarChart3 },
+        { label: "My Bookings", path: "/my-bookings", icon: CalendarCheck2 },
+        { label: "Resources", path: "/resources", icon: Wrench },
+      ],
+    },
+    {
+      section: "WORKSPACE",
+      items: [
+        { label: "Tickets", path: "/tickets", icon: Ticket },
+        { label: "Notifications", path: "/notifications", icon: Bell },
+        { label: "My Profile", path: "/profile", icon: User },
+      ],
+    },
+  ],
+  TECHNICIAN: [
+    {
+      section: "MAIN MENU",
+      items: [
+        { label: "Dashboard", path: "/", icon: LayoutDashboard },
+        { label: "Resources", path: "/resources", icon: Wrench },
+      ],
+    },
+    {
+      section: "WORKSPACE",
+      items: [
+        { label: "Tickets", path: "/tickets", icon: Ticket },
+        { label: "Notifications", path: "/notifications", icon: Bell },
+        { label: "My Profile", path: "/profile", icon: User },
+      ],
+    },
+  ],
+}
 
 function deriveDisplayName(email) {
   if (!email) return "My Account"
   const local = email.split("@")[0] || ""
-  return local
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ") || "My Account"
+  return (
+    local
+      .split(/[._-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ") || "My Account"
+  )
 }
 
 function deriveInitials(displayName) {
@@ -48,113 +110,107 @@ function deriveInitials(displayName) {
 
 export function AppSidebar() {
   const navigate = useNavigate()
+  const location = useLocation()
   const email = localStorage.getItem("email") || ""
-  const role = (localStorage.getItem("role") || "").toUpperCase()
+  const role = (localStorage.getItem("role") || "USER").toUpperCase()
   const displayName = deriveDisplayName(email)
   const initials = deriveInitials(displayName)
-  const subtitle = email || role || "Signed in user"
+  const navSections = navSectionsByRole[role] || navSectionsByRole.USER
 
   return (
-    <Sidebar className="[--sidebar-accent:#e0f2fe] [--sidebar-accent-foreground:#0f172a]">
-      <SidebarContent className="pt-8 bg-white/50 backdrop-blur-lg border-r border-white/30 shadow-lg">
-        <SidebarGroup>
-          <SidebarGroupLabel className="mb-4 text-2xl font-bold text-foreground">
-            <div className="inline-flex items-center">
-              <img
-                src={logo}
-                alt="Logo"
-                className="h-12 w-12"
-              />
-              UniSlot Smart Campus
+    <Sidebar>
+      {/* Azul Brant dark navy */}
+      <SidebarContent className="bg-[#001d45] border-r border-white/10">
+
+        {/* Brand */}
+        <div className="px-4 pt-6 pb-5">
+          <button
+            type="button"
+            onClick={() => navigate("/home")}
+            className="flex items-center gap-2.5 w-full"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand shadow-[0_6px_16px_rgba(244,94,43,0.40)]">
+              <Building2 className="h-4 w-4 text-white" />
             </div>
-          </SidebarGroupLabel>
+            <div>
+              <p className="text-sm font-bold leading-none text-white">UniSlot</p>
+              <p className="mt-0.5 text-[10px] font-medium tracking-widest text-white/45 uppercase">Smart Campus</p>
+            </div>
+          </button>
+        </div>
 
-          <SidebarGroupContent>
-            <SidebarMenu className="mt-4 space-y-2">
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/")}>
-                  <LayoutDashboard />
-                  <span>Dashboard</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-  <SidebarMenuButton onClick={() => navigate("/resources")}>
-    <LayoutDashboard />
-    <span>Resources</span>
-  </SidebarMenuButton>
-</SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/my-bookings")}>
-                  <LayoutDashboard />
-                  <span>My Bookings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/admin/bookings")}>
-                  <LayoutDashboard />
-                  <span>All Bookings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/tickets")}>
-                  <LayoutDashboard />
-                  <span>My Tickets</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/notifications")}>
-                  <LayoutDashboard />
-                  <span>Notifications</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/profile")}>
-                  <TriangleAlert />
-                  <span>My Profile</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+        {/* Divider */}
+        <div className="mx-4 mb-2 h-px bg-white/10" />
 
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/invoices")}>
-                  <ReceiptText />
-                  <span>Invoices</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Nav sections */}
+        {navSections.map(({ section, items }) => (
+          <SidebarGroup key={section} className="mb-1 px-3">
+            <p className="mb-1 px-3 text-[9px] font-bold tracking-widest text-white/35 uppercase">
+              {section}
+            </p>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-0.5">
+                {items.map((item) => {
+                  const Icon = item.icon
+                  const isActive = location.pathname === item.path
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        onClick={() => navigate(item.path)}
+                        className={`w-full cursor-pointer rounded-xl px-3 py-2.5 transition-all
+                          ${isActive
+                            ? "bg-brand text-white shadow-[0_4px_12px_rgba(244,94,43,0.25)] hover:bg-brand hover:text-white"
+                            : "text-white/55 hover:bg-white/10 hover:text-white"
+                          }`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="text-sm font-medium">{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-white/20 bg-white/30 p-3 backdrop-blur-md">
+      <SidebarFooter className="border-t border-white/10 bg-[#001030] p-3">
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg p-2 text-left transition hover:bg-white/60">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-semibold text-white">
+          <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left outline-none transition-colors hover:bg-white/10">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f45e2b] to-[#f45e2b]/60 text-sm font-bold text-white shadow-sm">
               {initials}
             </div>
-            <div className="flex-1">
-              <div className="text-sm font-semibold text-gray-900">{displayName}</div>
-              <div className="truncate text-xs text-gray-600">{subtitle}</div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold text-white">{displayName}</div>
+              <div className="truncate text-xs text-white/50">{email || role}</div>
             </div>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent side="top" align="start" className="min-w-48 w-auto">
+          <DropdownMenuContent
+            side="top"
+            align="start"
+            className="min-w-48 w-auto bg-white border border-slate-200 text-slate-700 shadow-xl"
+          >
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-sm font-semibold">My Account</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-sm font-semibold text-navy">My Account</DropdownMenuLabel>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-slate-200" />
             <DropdownMenuItem
-              className="focus:bg-sky-100 focus:text-slate-900"
-              onClick={() => navigate("/profile")}>
+              className="text-brand focus:bg-brand/8 focus:text-brand cursor-pointer"
+              onClick={() => navigate("/profile")}
+            >
               <User className="h-4 w-4" />
               My Profile
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-slate-200" />
             <DropdownMenuItem
-              className="text-red-600 focus:bg-sky-100 focus:text-red-700"
+              className="text-red-500 focus:bg-red-50 focus:text-red-500 cursor-pointer"
               onClick={() => {
                 clearAuth()
                 navigate("/login", { replace: true })
-              }}>
+              }}
+            >
               <LogOut className="h-4 w-4" />
               Log out
             </DropdownMenuItem>

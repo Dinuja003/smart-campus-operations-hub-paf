@@ -2,578 +2,328 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { AlertCircle, CalendarCheck2, CheckCircle2, ChevronRight, Clock3, Loader2, Pencil, Plus, X } from 'lucide-react';
 import { useBooking } from '@/hooks/useBooking';
 import bookingService from '@/features/booking/Services/BookingService';
 import BookingStatusBadge from '@/components/BookingStatusBadge';
 
-const toArray = (value) => {
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.data)) return value.data;
-  if (Array.isArray(value?.items)) return value.items;
-  return [];
+const toArray = (v) => { if (Array.isArray(v)) return v; if (Array.isArray(v?.data)) return v.data; if (Array.isArray(v?.items)) return v.items; return []; };
+const todayISO  = () => new Date().toISOString().split('T')[0];
+const toMinutes = (t = '') => { const [h, m] = String(t).split(':').map(Number); if (Number.isNaN(h) || Number.isNaN(m)) return null; return h * 60 + m; };
+const overlaps  = (sA, eA, sB, eB) => sA < eB && eA > sB;
+const isAvailable = (s) => String(s || '').toUpperCase() === 'AVAILABLE';
+const getTypeLabel = (t) => t || 'Uncategorized';
+const getResourceLabel = (r) => {
+  const loc = r?.location;
+  const locTxt = loc ? [loc.building, loc.floor, loc.room].filter(Boolean).join(' / ') : null;
+  return `${r?.name || 'Unnamed'}${r?.capacity ? ` (cap: ${r.capacity})` : ''}${locTxt ? ` – ${locTxt}` : ''}`;
 };
+const createEmpty = () => ({ date: todayISO(), startTime: '09:00', endTime: '10:00', resourceType: '', resourceId: '', bookingReason: '', purpose: '', expectedAttendees: '1' });
 
-const todayISO = () => new Date().toISOString().split('T')[0];
+const inputCls = "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm text-navy outline-none placeholder-slate-400 transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10";
+const labelCls = "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]";
 
-const toMinutes = (time = '') => {
-  const [h, m] = String(time).split(':').map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return null;
-  return h * 60 + m;
-};
-
-const overlaps = (startA, endA, startB, endB) => startA < endB && endA > startB;
-
-const isResourceStatusAvailable = (status) => String(status || '').toUpperCase() === 'AVAILABLE';
-
-const getTypeLabel = (type) => type || 'Uncategorized';
-
-const getResourceLabel = (resource) => {
-  const loc = resource?.location;
-  const locationText = loc
-    ? [loc.building, loc.floor, loc.room].filter(Boolean).join(' / ')
-    : null;
-
-  return `${resource?.name || 'Unnamed Resource'}${resource?.capacity ? ` (cap: ${resource.capacity})` : ''}${locationText ? ` - ${locationText}` : ''}`;
-};
-
-const createEmptyForm = () => ({
-  date: todayISO(),
-  startTime: '09:00',
-  endTime: '10:00',
-  resourceType: '',
-  resourceId: '',
-  bookingReason: '',
-  purpose: '',
-  expectedAttendees: '1',
-});
+const typeIcons = { LAB: '🔬', MEETING_ROOM: '💼', LECTURE_HALL: '🏛️', AUDITORIUM: '🎭', EQUIPMENT: '⚙️' };
 
 export default function MyBookingsPage() {
   const { getMyBookings, cancelBooking, createBooking, updateBooking, loading, error } = useBooking();
-  const [bookings, setBookings] = useState([]);
-  const [resources, setResources] = useState([]);
+  const [bookings, setBookings]         = useState([]);
+  const [resources, setResources]       = useState([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
-  const [resourcesError, setResourcesError] = useState('');
-  const [cancelling, setCancelling] = useState(null);
-  const [showNewBooking, setShowNewBooking] = useState(false);
-  const [submitError, setSubmitError] = useState('');
+  const [resourcesError, setResourcesError]     = useState('');
+  const [cancelling, setCancelling]     = useState(null);
+  const [showForm, setShowForm]         = useState(false);
+  const [submitError, setSubmitError]   = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
-  const [checkingAvailability, setCheckingAvailability] = useState(false);
-  const [availabilityChecked, setAvailabilityChecked] = useState(false);
-  const [availabilityError, setAvailabilityError] = useState('');
-  const [availableResources, setAvailableResources] = useState([]);
-  const [selectedResourceSchedule, setSelectedResourceSchedule] = useState([]);
-  const [resourceScheduleLoading, setResourceScheduleLoading] = useState(false);
-  const [editingBookingId, setEditingBookingId] = useState(null);
-
-  const [form, setForm] = useState(() => createEmptyForm());
+  const [checkingAvail, setCheckingAvail] = useState(false);
+  const [availChecked, setAvailChecked] = useState(false);
+  const [availError, setAvailError]     = useState('');
+  const [availResources, setAvailResources] = useState([]);
+  const [scheduleItems, setScheduleItems]   = useState([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [editingId, setEditingId]       = useState(null);
+  const [form, setForm]                 = useState(() => createEmpty());
   const navigate = useNavigate();
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadData = async () => {
-      setResourcesLoading(true);
-      setResourcesError('');
-
+    let m = true;
+    (async () => {
+      setResourcesLoading(true); setResourcesError('');
       try {
         const token = localStorage.getItem('token');
-        const [myBookings, allResources] = await Promise.all([
+        const [myB, allR] = await Promise.all([
           getMyBookings(),
-          axios.get('/api/resources', {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }),
+          axios.get('/api/resources', { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
         ]);
-
-        if (!mounted) return;
-        setBookings(toArray(myBookings));
-        setResources(toArray(allResources?.data));
-      } catch (_) {
-        if (!mounted) return;
-        setBookings([]);
-        setResources([]);
-        setResourcesError('Unable to load resource categories right now.');
-      } finally {
-        if (mounted) setResourcesLoading(false);
-      }
-    };
-
-    loadData();
-
-    return () => {
-      mounted = false;
-    };
+        if (!m) return;
+        setBookings(toArray(myB));
+        setResources(toArray(allR?.data));
+      } catch (_) { if (m) { setBookings([]); setResources([]); setResourcesError('Unable to load resources.'); } }
+      finally { if (m) setResourcesLoading(false); }
+    })();
+    return () => { m = false; };
   }, []);
 
   const typeCounts = useMemo(() => {
-    const counts = {};
-    resources.forEach((resource) => {
-      const key = getTypeLabel(resource.type);
-      counts[key] = (counts[key] || 0) + 1;
-    });
-    return Object.entries(counts).sort(([a], [b]) => a.localeCompare(b));
+    const c = {}; resources.forEach(r => { const k = getTypeLabel(r.type); c[k] = (c[k] || 0) + 1; });
+    return Object.entries(c).sort(([a], [b]) => a.localeCompare(b));
   }, [resources]);
 
-  const quickAvailableResources = useMemo(() => {
-    const attendeeCount = Number(form.expectedAttendees || 1);
-    return resources.filter((resource) => {
-      if (!isResourceStatusAvailable(resource.status)) return false;
-      if (form.resourceType && getTypeLabel(resource.type) !== form.resourceType) return false;
-      return Number(resource.capacity || 0) >= attendeeCount;
-    });
+  const quickAvail = useMemo(() => {
+    const n = Number(form.expectedAttendees || 1);
+    return resources.filter(r => isAvailable(r.status) && (!form.resourceType || getTypeLabel(r.type) === form.resourceType) && Number(r.capacity || 0) >= n);
   }, [resources, form.expectedAttendees, form.resourceType]);
 
-  const selectedCategoryResources = useMemo(() => {
-    if (!form.resourceType) return [];
-    return resources
-      .filter((resource) => getTypeLabel(resource.type) === form.resourceType)
-      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
-  }, [resources, form.resourceType]);
+  const catResources = useMemo(() => !form.resourceType ? [] : resources.filter(r => getTypeLabel(r.type) === form.resourceType).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))), [resources, form.resourceType]);
 
-  const displayedResources = availabilityChecked ? availableResources : quickAvailableResources;
+  const displayed = availChecked ? availResources : quickAvail;
 
   const selectedResource = useMemo(() => {
-    if (form.resourceId) {
-      return resources.find((resource) => resource.id === form.resourceId) || null;
-    }
-    if (selectedCategoryResources.length > 0) return selectedCategoryResources[0];
-    if (displayedResources.length > 0) return displayedResources[0];
-    if (resources.length > 0) return resources[0];
+    if (form.resourceId) return resources.find(r => r.id === form.resourceId) || null;
+    if (catResources.length) return catResources[0];
+    if (displayed.length)   return displayed[0];
+    if (resources.length)   return resources[0];
     return null;
-  }, [displayedResources, form.resourceId, resources, selectedCategoryResources]);
+  }, [displayed, form.resourceId, resources, catResources]);
 
-  const editingBooking = useMemo(
-    () => bookings.find((booking) => booking.id === editingBookingId) || null,
-    [bookings, editingBookingId]
-  );
+  const editingBooking = useMemo(() => bookings.find(b => b.id === editingId) || null, [bookings, editingId]);
 
-  const daySlots = useMemo(
-    () => [
-      '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
-      '14:00', '15:00', '16:00', '17:00', '18:00', '19:00',
-    ],
-    []
-  );
+  const daySlots = useMemo(() => ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'], []);
 
-  const scheduleBlocks = useMemo(() => {
-    return daySlots.map((slot) => {
-      const slotStart = toMinutes(slot);
-      const slotEnd = slotStart + 60;
-      const busy = selectedResourceSchedule.some((item) => {
-        if (editingBookingId && item.id === editingBookingId) return false;
-        const start = toMinutes(item.startTime);
-        const end = toMinutes(item.endTime);
-        if (start === null || end === null) return false;
-        return overlaps(slotStart, slotEnd, start, end);
-      });
-      return { slot, busy };
+  const scheduleBlocks = useMemo(() => daySlots.map(slot => {
+    const sS = toMinutes(slot), sE = sS + 60;
+    const busy = scheduleItems.some(i => {
+      if (editingId && i.id === editingId) return false;
+      const s = toMinutes(i.startTime), e = toMinutes(i.endTime);
+      return s !== null && e !== null && overlaps(sS, sE, s, e);
     });
-  }, [daySlots, selectedResourceSchedule]);
+    return { slot, busy };
+  }), [daySlots, scheduleItems, editingId]);
 
   useEffect(() => {
-    let active = true;
-
-    if (!showNewBooking || !selectedResource?.id || !form.date) {
-      setSelectedResourceSchedule([]);
-      return () => {
-        active = false;
-      };
-    }
-
-    const loadSchedule = async () => {
-      setResourceScheduleLoading(true);
+    let a = true;
+    if (!showForm || !selectedResource?.id || !form.date) { setScheduleItems([]); return () => { a = false; }; }
+    (async () => {
+      setScheduleLoading(true);
       try {
-        const schedule = await bookingService.getSchedule(selectedResource.id, form.date);
-        if (active) {
-          setSelectedResourceSchedule(
-            toArray(schedule).filter((item) => !editingBookingId || item.id !== editingBookingId)
-          );
-        }
-      } catch (_) {
-        if (active) setSelectedResourceSchedule([]);
-      } finally {
-        if (active) setResourceScheduleLoading(false);
-      }
-    };
+        const s = await bookingService.getSchedule(selectedResource.id, form.date);
+        if (a) setScheduleItems(toArray(s).filter(i => !editingId || i.id !== editingId));
+      } catch (_) { if (a) setScheduleItems([]); }
+      finally { if (a) setScheduleLoading(false); }
+    })();
+    return () => { a = false; };
+  }, [showForm, selectedResource?.id, form.date, editingId]);
 
-    loadSchedule();
-
-    return () => {
-      active = false;
-    };
-  }, [showNewBooking, selectedResource?.id, form.date, editingBookingId]);
-
-  const resetAvailability = () => {
-    setAvailabilityChecked(false);
-    setAvailabilityError('');
-    setAvailableResources([]);
-  };
-
-  const isTimeRangeValid = () => {
-    const start = toMinutes(form.startTime);
-    const end = toMinutes(form.endTime);
-    return start !== null && end !== null && end > start;
-  };
+  const resetAvail = () => { setAvailChecked(false); setAvailError(''); setAvailResources([]); };
+  const isTimeValid = () => { const s = toMinutes(form.startTime), e = toMinutes(form.endTime); return s !== null && e !== null && e > s; };
 
   const checkAvailability = async ({ silent = false } = {}) => {
-    if (!isTimeRangeValid()) {
-      const msg = 'End time must be later than start time.';
-      if (!silent) setAvailabilityError(msg);
-      return [];
-    }
-
-    const targetResources = quickAvailableResources;
-    if (targetResources.length === 0) {
-      if (!silent) {
-        setAvailabilityError('No resources match this category/capacity filter.');
-      }
-      setAvailabilityChecked(true);
-      setAvailableResources([]);
-      return [];
-    }
-
-    const start = toMinutes(form.startTime);
-    const end = toMinutes(form.endTime);
-
-    setCheckingAvailability(true);
-    if (!silent) setAvailabilityError('');
-
+    if (!isTimeValid()) { if (!silent) setAvailError('End time must be after start time.'); return []; }
+    if (!quickAvail.length) { if (!silent) setAvailError('No resources match this filter.'); setAvailChecked(true); setAvailResources([]); return []; }
+    const s = toMinutes(form.startTime), e = toMinutes(form.endTime);
+    setCheckingAvail(true); if (!silent) setAvailError('');
     try {
-      const checks = await Promise.all(
-        targetResources.map(async (resource) => {
-          try {
-            const schedule = toArray(await bookingService.getSchedule(resource.id, form.date))
-              .filter((item) => !editingBookingId || item.id !== editingBookingId);
-            const hasConflict = schedule.some((slot) => {
-              const slotStart = toMinutes(slot.startTime);
-              const slotEnd = toMinutes(slot.endTime);
-              if (slotStart === null || slotEnd === null) return false;
-              return overlaps(start, end, slotStart, slotEnd);
-            });
-
-            return { resource, hasConflict };
-          } catch (_) {
-            // If a schedule request fails for one resource, keep it out of selectable set.
-            return { resource, hasConflict: true };
-          }
-        })
-      );
-
-      const available = checks.filter((r) => !r.hasConflict).map((r) => r.resource);
-      setAvailabilityChecked(true);
-      setAvailableResources(available);
-
-      if (form.resourceId && !available.some((r) => r.id === form.resourceId)) {
-        setForm((prev) => ({ ...prev, resourceId: '' }));
-      }
-
-      if (!silent && available.length === 0) {
-        setAvailabilityError('All matching resources are already booked for this time slot.');
-      }
-
-      return available;
-    } finally {
-      setCheckingAvailability(false);
-    }
+      const checks = await Promise.all(quickAvail.map(async r => {
+        try {
+          const sched = toArray(await bookingService.getSchedule(r.id, form.date)).filter(i => !editingId || i.id !== editingId);
+          return { r, conflict: sched.some(sl => { const ss = toMinutes(sl.startTime), se = toMinutes(sl.endTime); return ss !== null && se !== null && overlaps(s, e, ss, se); }) };
+        } catch (_) { return { r, conflict: true }; }
+      }));
+      const avail = checks.filter(c => !c.conflict).map(c => c.r);
+      setAvailChecked(true); setAvailResources(avail);
+      if (form.resourceId && !avail.some(r => r.id === form.resourceId)) setForm(p => ({ ...p, resourceId: '' }));
+      if (!silent && !avail.length) setAvailError('All matching resources are booked for this slot.');
+      return avail;
+    } finally { setCheckingAvail(false); }
   };
 
-  const handleCheckAvailability = async () => {
-    await checkAvailability();
+  const startNew = () => { setEditingId(null); setForm(createEmpty()); resetAvail(); setShowForm(true); };
+  const startEdit = (b) => {
+    const r = resources.find(r => r.id === b.resourceId);
+    setEditingId(b.id);
+    setForm({ date: b.date || todayISO(), startTime: b.startTime || '09:00', endTime: b.endTime || '10:00', resourceType: r?.type || b.resourceType || '', resourceId: b.resourceId || '', bookingReason: b.bookingReason || '', purpose: b.purpose || '', expectedAttendees: String(b.expectedAttendees || 1) });
+    setShowForm(true); resetAvail();
   };
-
-  const startNewBooking = () => {
-    setEditingBookingId(null);
-    setForm(createEmptyForm());
-    resetAvailability();
-    setShowNewBooking(true);
-  };
-
-  const startEditBooking = (booking) => {
-    const resource = resources.find((item) => item.id === booking.resourceId);
-
-    setEditingBookingId(booking.id);
-    setForm({
-      date: booking.date || todayISO(),
-      startTime: booking.startTime || '09:00',
-      endTime: booking.endTime || '10:00',
-      resourceType: resource?.type || booking.resourceType || '',
-      resourceId: booking.resourceId || '',
-      bookingReason: booking.bookingReason || '',
-      purpose: booking.purpose || '',
-      expectedAttendees: String(booking.expectedAttendees || 1),
-    });
-    setShowNewBooking(true);
-    resetAvailability();
-  };
-
-  const cancelEditMode = () => {
-    setEditingBookingId(null);
-    setForm(createEmptyForm());
-    resetAvailability();
-  };
+  const cancelEdit = () => { setEditingId(null); setForm(createEmpty()); resetAvail(); };
 
   const handleCancel = async (id) => {
     if (!window.confirm('Cancel this booking?')) return;
     setCancelling(id);
-    try {
-      const updated = await cancelBooking(id);
-      setBookings((prev) => toArray(prev).map((b) => (b.id === id ? updated : b)));
-    } catch (_) {}
+    try { const u = await cancelBooking(id); setBookings(p => toArray(p).map(b => b.id === id ? u : b)); } catch (_) {}
     setCancelling(null);
   };
 
-  const handleFormChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-
-    if (name === 'expectedAttendees') {
-      const digitsOnly = value.replace(/\D/g, '');
-      setForm((prev) => ({
-        ...prev,
-        expectedAttendees: digitsOnly,
-      }));
-      setSubmitError('');
-      setSubmitSuccess('');
-      resetAvailability();
-      return;
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === 'resourceType' ? { resourceId: '' } : {}),
-    }));
-    setSubmitError('');
-    setSubmitSuccess('');
-    resetAvailability();
+    if (name === 'expectedAttendees') { setForm(p => ({ ...p, expectedAttendees: value.replace(/\D/g, '') })); resetAvail(); return; }
+    setForm(p => ({ ...p, [name]: value, ...(name === 'resourceType' ? { resourceId: '' } : {}) }));
+    setSubmitError(''); setSubmitSuccess(''); resetAvail();
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitError('');
-    setSubmitSuccess('');
-
-    const attendeeCount = Number(form.expectedAttendees);
-    if (!attendeeCount || attendeeCount < 1 || attendeeCount > 1000) {
-      setSubmitError('Expected attendees must be a number between 1 and 1000.');
-      return;
-    }
-
-    if (!form.resourceId) {
-      setSubmitError('Please select a resource to continue.');
-      return;
-    }
-
-    if (!isTimeRangeValid()) {
-      setSubmitError('End time must be later than start time.');
-      return;
-    }
-
-    const latestAvailable = await checkAvailability({ silent: true });
-    const stillAvailable = latestAvailable.some((resource) => resource.id === form.resourceId);
-    if (!stillAvailable) {
-      setSubmitError('Selected resource is already booked for the selected slot. Choose another resource.');
-      setAvailabilityChecked(true);
-      setAvailableResources(latestAvailable);
-      return;
-    }
-
+    e.preventDefault(); setSubmitError(''); setSubmitSuccess('');
+    const n = Number(form.expectedAttendees);
+    if (!n || n < 1 || n > 1000) { setSubmitError('Expected attendees must be 1–1000.'); return; }
+    if (!form.resourceId) { setSubmitError('Please select a resource.'); return; }
+    if (!isTimeValid())   { setSubmitError('End time must be after start time.'); return; }
+    const latest = await checkAvailability({ silent: true });
+    if (!latest.some(r => r.id === form.resourceId)) { setSubmitError('Resource is now booked. Choose another.'); setAvailChecked(true); setAvailResources(latest); return; }
     try {
-      const payload = {
-        resourceId: form.resourceId,
-        bookingReason: form.bookingReason,
-        date: form.date,
-        startTime: form.startTime,
-        endTime: form.endTime,
-        purpose: form.purpose,
-        expectedAttendees: attendeeCount,
-      };
-
-      if (editingBookingId) {
-        await updateBooking(editingBookingId, payload);
-      } else {
-        await createBooking(payload);
-      }
-
-      const refreshed = await getMyBookings();
-      setBookings(toArray(refreshed));
-      setSubmitSuccess(editingBookingId ? 'Booking updated successfully.' : 'Booking request submitted successfully.');
-      setShowNewBooking(false);
-      setEditingBookingId(null);
-      setForm(createEmptyForm());
-      resetAvailability();
+      const payload = { resourceId: form.resourceId, bookingReason: form.bookingReason, date: form.date, startTime: form.startTime, endTime: form.endTime, purpose: form.purpose, expectedAttendees: n };
+      if (editingId) await updateBooking(editingId, payload); else await createBooking(payload);
+      const r = await getMyBookings(); setBookings(toArray(r));
+      setSubmitSuccess(editingId ? 'Booking updated.' : 'Booking request submitted.');
+      setShowForm(false); setEditingId(null); setForm(createEmpty()); resetAvail();
     } catch (err) {
-      const backendMessage =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        (typeof err?.response?.data === 'string' ? err.response.data : '') ||
-        err?.message ||
-        'Could not submit booking request. Please check the form and try again.';
-      setSubmitError(backendMessage);
+      setSubmitError(err?.response?.data?.message || err?.response?.data?.error || (typeof err?.response?.data === 'string' ? err.response.data : '') || err?.message || 'Could not submit. Please try again.');
     }
   };
 
-  if (loading && bookings.length === 0) return <p style={styles.msg}>Loading bookings…</p>;
+  if (loading && !bookings.length) {
+    return (
+      <div className="flex items-center gap-2 rounded-2xl border border-white/60 bg-white p-8 text-sm text-[#8494c2]">
+        <Loader2 className="h-4 w-4 animate-spin text-brand" /> Loading bookings…
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <h2 style={styles.heading}>My Bookings</h2>
-        <button
-          style={styles.newBtn}
-          onClick={() => {
-            if (showNewBooking) {
-              setShowNewBooking(false);
-              cancelEditMode();
-              return;
-            }
-            startNewBooking();
-          }}
-        >
-          {showNewBooking ? 'Close Booking Form' : '+ New Booking'}
-        </button>
-      </div>
+    <div className="space-y-5">
 
-      {error && <div style={styles.error}>{error}</div>}
-      {resourcesError && <div style={styles.error}>{resourcesError}</div>}
-      {submitSuccess && <div style={styles.success}>{submitSuccess}</div>}
+      {/* ── Header ── */}
+      <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-6">
+        <div className="pointer-events-none absolute -left-10 top-6 h-36 w-36 rounded-full bg-[#001d45]/12 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-0.5 text-[10px] font-semibold tracking-wide text-brand">
+              <CalendarCheck2 className="h-3 w-3" /> Booking Workspace
+            </p>
+            <h1 className="mt-1.5 text-2xl font-bold text-navy sm:text-3xl">My Bookings</h1>
+            <p className="mt-0.5 text-sm text-[#5a6b98]">Review requests, edit pending bookings, and schedule campus resources.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { if (showForm) { setShowForm(false); cancelEdit(); } else startNew(); }}
+            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${showForm ? 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' : 'bg-brand text-white shadow-[0_4px_12px_rgba(244,94,43,0.30)] hover:opacity-90'}`}
+          >
+            {showForm ? <><X className="h-4 w-4" /> Close Form</> : <><Plus className="h-4 w-4" /> New Booking</>}
+          </button>
+        </div>
+      </section>
 
-      <section style={styles.categorySection}>
-        <div style={styles.sectionHeader}>
-          <h3 style={styles.sectionTitle}>Booking Categories & Resources</h3>
-          <button style={styles.linkBtn} onClick={() => navigate('/resources')}>
-            Open Full Resources View
+      {/* ── Alerts ── */}
+      {(error || resourcesError) && (
+        <div className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error || resourcesError}
+        </div>
+      )}
+      {submitSuccess && (
+        <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />{submitSuccess}
+        </div>
+      )}
+
+      {/* ── Category Cards ── */}
+      <section className="rounded-[26px] border border-white/60 bg-white p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-navy">Resource Categories</h3>
+          <button type="button" onClick={() => navigate('/resources')} className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+            Full View <ChevronRight className="h-3 w-3" />
           </button>
         </div>
 
         {resourcesLoading ? (
-          <p style={styles.helper}>Loading categories...</p>
+          <div className="flex items-center gap-2 text-xs text-[#8494c2]"><Loader2 className="h-3.5 w-3.5 animate-spin text-brand" />Loading categories…</div>
         ) : typeCounts.length === 0 ? (
-          <p style={styles.helper}>No resource categories found.</p>
+          <p className="text-xs text-[#8494c2]">No resource categories found.</p>
         ) : (
           <>
-            <div style={styles.typeGrid}>
+            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
               {typeCounts.map(([type, count]) => (
                 <button
                   key={type}
                   type="button"
-                  style={{
-                    ...styles.typeCard,
-                    ...(form.resourceType === type ? styles.typeCardActive : {}),
-                  }}
-                  onClick={() => {
-                    setForm((prev) => ({
-                      ...prev,
-                      resourceType: prev.resourceType === type ? '' : type,
-                      resourceId: '',
-                    }));
-                    resetAvailability();
-                  }}
+                  onClick={() => { setForm(p => ({ ...p, resourceType: p.resourceType === type ? '' : type, resourceId: '' })); resetAvail(); }}
+                  className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${form.resourceType === type ? 'border-brand/30 bg-brand/8 shadow-sm' : 'border-slate-200 bg-slate-50/60 hover:border-brand/20 hover:bg-brand/5'}`}
                 >
-                  <strong>{type}</strong>
-                  <span style={styles.typeCount}>{count} resources</span>
+                  <span className="text-xl">{typeIcons[type] || '📦'}</span>
+                  <div>
+                    <p className={`text-xs font-bold ${form.resourceType === type ? 'text-brand' : 'text-navy'}`}>{type}</p>
+                    <p className="text-[10px] text-[#8494c2]">{count} resource{count !== 1 ? 's' : ''}</p>
+                  </div>
                 </button>
               ))}
             </div>
 
-            {!form.resourceType ? (
-              <p style={{ ...styles.helper, marginTop: 12 }}>Click any category to list its resources.</p>
-            ) : selectedCategoryResources.length === 0 ? (
-              <p style={{ ...styles.helper, marginTop: 12 }}>No resources found in this category.</p>
-            ) : (
-              <div style={styles.categoryResourceList}>
-                <div style={styles.categoryResourceHeader}>
-                  <strong>{form.resourceType}</strong>
-                  <span style={styles.typeCount}>{selectedCategoryResources.length} resources</span>
+            {form.resourceType && catResources.length > 0 && (
+              <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-2.5">
+                  <p className="text-xs font-bold text-navy">{form.resourceType}</p>
+                  <span className="text-[10px] text-[#8494c2]">{catResources.length} resources</span>
                 </div>
-
-                {selectedCategoryResources.map((resource) => {
-                  const isAvailable = isResourceStatusAvailable(resource.status);
-                  return (
-                    <div key={resource.id} style={styles.categoryResourceItem}>
-                      <div style={styles.categoryResourceMain}>
-                        <div style={styles.categoryResourceName}>{resource.name || 'Unnamed Resource'}</div>
-                        <div style={styles.categoryResourceMeta}>
-                          Capacity: {resource.capacity || 0}
-                          {resource?.location && (
-                            <>
-                              {' '}·{' '}
-                              {[resource.location.building, resource.location.floor, resource.location.room]
-                                .filter(Boolean)
-                                .join(' / ') || 'Location not set'}
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <span
-                        style={{
-                          ...styles.resourceStatus,
-                          ...(isAvailable ? styles.resourceStatusAvailable : styles.resourceStatusUnavailable),
-                        }}
-                      >
-                        {resource.status || 'UNKNOWN'}
-                      </span>
+                {catResources.map(r => (
+                  <div key={r.id} className="flex items-center justify-between gap-3 border-b border-slate-50 px-4 py-3 last:border-0 hover:bg-slate-50/60 transition-colors">
+                    <div>
+                      <p className="text-xs font-semibold text-navy">{r.name || 'Unnamed'}</p>
+                      <p className="mt-0.5 text-[10px] text-[#8494c2]">Cap: {r.capacity || 0}{r.location ? ` · ${[r.location.building, r.location.floor, r.location.room].filter(Boolean).join(' / ')}` : ''}</p>
                     </div>
-                  );
-                })}
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${isAvailable(r.status) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                      {r.status || 'UNKNOWN'}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
           </>
         )}
       </section>
 
-      {showNewBooking && (
-        <section style={styles.bookingStudio}>
-          <div style={styles.resourceShowcase}>
-            <div style={styles.resourceImageWrap}>
+      {/* ── Booking Form ── */}
+      {showForm && (
+        <section className="grid gap-5 xl:grid-cols-2">
+          {/* Resource preview + schedule */}
+          <div className="rounded-[26px] border border-white/60 bg-white p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+            <div className="overflow-hidden rounded-2xl">
               <img
-                src={selectedResource?.imageUrl || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80'}
-                alt={selectedResource?.name || 'Resource preview'}
-                style={styles.resourceImage}
+                src={selectedResource?.imageUrl || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=900&q=80'}
+                alt={selectedResource?.name || 'Resource'}
+                className="h-44 w-full object-cover"
               />
-              <span style={styles.liveBadge}>Active Status</span>
             </div>
 
-            <h3 style={styles.resourceHeading}>{selectedResource?.name || 'Select a resource'}</h3>
-            <p style={styles.resourceDescription}>
-              {selectedResource?.description || 'Choose a category or resource to view full details and request a booking.'}
-            </p>
+            <div className="mt-4">
+              <p className="text-xl font-bold text-navy">{selectedResource?.name || 'Select a resource'}</p>
+              <p className="mt-1 text-sm text-[#6677a4]">{selectedResource?.description || 'Choose a category and resource to see details.'}</p>
+            </div>
 
-            <div style={styles.resourceStats}>
-              <div style={styles.statCard}>
-                <div style={styles.statLabel}>Type</div>
-                <div style={styles.statValue}>{selectedResource?.type || '—'}</div>
-              </div>
-              <div style={styles.statCard}>
-                <div style={styles.statLabel}>Capacity</div>
-                <div style={styles.statValue}>{selectedResource?.capacity || 0} seats</div>
-              </div>
-              <div style={styles.statCard}>
-                <div style={styles.statLabel}>Location</div>
-                <div style={styles.statValue}>
-                  {selectedResource?.location
-                    ? [selectedResource.location.building, selectedResource.location.floor, selectedResource.location.room]
-                        .filter(Boolean)
-                        .join(', ') || 'Not set'
-                    : 'Not set'}
+            <div className="mt-4 grid grid-cols-3 gap-2.5">
+              {[
+                { label: 'Type', value: selectedResource?.type || '—' },
+                { label: 'Capacity', value: selectedResource?.capacity ? `${selectedResource.capacity} seats` : '—' },
+                { label: 'Location', value: selectedResource?.location ? [selectedResource.location.building, selectedResource.location.floor, selectedResource.location.room].filter(Boolean).join(', ') || '—' : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#8494c2]">{label}</p>
+                  <p className="mt-1 text-xs font-semibold text-navy">{value}</p>
                 </div>
-              </div>
+              ))}
             </div>
 
-            <div style={styles.scheduleBox}>
-              <div style={styles.scheduleTitle}>Today&apos;s Schedule</div>
-              {resourceScheduleLoading ? (
-                <p style={styles.helper}>Loading schedule...</p>
+            <div className="mt-4 rounded-xl border border-slate-200 p-4">
+              <p className="mb-3 text-xs font-bold text-navy">Today's Schedule</p>
+              {scheduleLoading ? (
+                <div className="flex items-center gap-2 text-xs text-[#8494c2]"><Loader2 className="h-3 w-3 animate-spin text-brand" />Loading…</div>
               ) : (
                 <>
-                  <div style={styles.scheduleLegend}>
-                    <span style={styles.legendItem}><i style={{ ...styles.legendDot, background: '#1d4ed8' }} />Booked</span>
-                    <span style={styles.legendItem}><i style={{ ...styles.legendDot, background: '#e2e8f0' }} />Available</span>
+                  <div className="mb-2 flex gap-4 text-[10px] text-[#8494c2]">
+                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand inline-block" />Booked</span>
+                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-slate-200 inline-block" />Free</span>
                   </div>
-                  <div style={styles.scheduleGrid}>
-                    {scheduleBlocks.map((block) => (
-                      <div key={block.slot} style={styles.scheduleCellWrap}>
-                        <div style={{ ...styles.scheduleCell, background: block.busy ? '#1d4ed8' : '#e2e8f0' }} />
-                        <span style={styles.scheduleTime}>{block.slot.slice(0, 5)}</span>
+                  <div className="grid grid-cols-12 gap-1">
+                    {scheduleBlocks.map(({ slot, busy }) => (
+                      <div key={slot} className="flex flex-col items-center gap-1">
+                        <div className={`h-6 w-full rounded ${busy ? 'bg-brand' : 'bg-slate-100'}`} />
+                        <span className="text-[8px] text-[#8494c2]">{slot.slice(0, 5)}</span>
                       </div>
                     ))}
                   </div>
@@ -582,165 +332,91 @@ export default function MyBookingsPage() {
             </div>
           </div>
 
-          <div style={styles.requestPanel}>
-            {(submitError || availabilityError) && (
-              <div style={styles.error}>{submitError || availabilityError}</div>
-            )}
-
-            <div style={styles.requestHeaderRow}>
-              <h3 style={styles.requestTitle}>{editingBookingId ? 'Edit Booking' : 'Request a Booking'}</h3>
-              {editingBookingId && (
-                <button type="button" style={styles.linkBtn} onClick={cancelEditMode}>
-                  Cancel Edit
-                </button>
-              )}
+          {/* Form panel */}
+          <div className="rounded-[26px] border border-white/60 bg-white p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-base font-bold text-navy">{editingId ? 'Edit Booking' : 'Request a Booking'}</p>
+              {editingId && <button type="button" onClick={cancelEdit} className="text-xs font-semibold text-brand hover:underline">Cancel Edit</button>}
             </div>
 
-            {editingBookingId && editingBooking && (
-              <div style={styles.editNotice}>
-                Editing pending booking: {editingBooking.bookingReason || editingBooking.id}
+            {editingId && editingBooking && (
+              <div className="mb-4 rounded-xl border border-brand/20 bg-brand/8 px-3 py-2.5 text-xs font-semibold text-brand">
+                Editing: {editingBooking.bookingReason || editingBooking.id}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} style={styles.form}>
-              <div style={styles.field}>
-                <label style={styles.label}>Select Date</label>
-                <input
-                  type="date"
-                  name="date"
-                  min={todayISO()}
-                  value={form.date}
-                  onChange={handleFormChange}
-                  required
-                  style={styles.input}
-                />
+            {(submitError || availError) && (
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-600">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{submitError || availError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className={labelCls}>Date</label>
+                <input type="date" name="date" min={todayISO()} value={form.date} onChange={handleChange} required className={inputCls} />
               </div>
 
-              <div style={styles.row}>
-                <div style={styles.field}>
-                  <label style={styles.label}>Start Time</label>
-                  <input
-                    type="time"
-                    name="startTime"
-                    value={form.startTime}
-                    onChange={handleFormChange}
-                    required
-                    style={styles.input}
-                  />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Start Time</label>
+                  <input type="time" name="startTime" value={form.startTime} onChange={handleChange} required className={inputCls} />
                 </div>
-
-                <div style={styles.field}>
-                  <label style={styles.label}>End Time</label>
-                  <input
-                    type="time"
-                    name="endTime"
-                    value={form.endTime}
-                    onChange={handleFormChange}
-                    required
-                    style={styles.input}
-                  />
+                <div>
+                  <label className={labelCls}>End Time</label>
+                  <input type="time" name="endTime" value={form.endTime} onChange={handleChange} required className={inputCls} />
                 </div>
               </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>Category</label>
-                <select
-                  name="resourceType"
-                  value={form.resourceType}
-                  onChange={handleFormChange}
-                  style={styles.input}
-                >
+              <div>
+                <label className={labelCls}>Category</label>
+                <select name="resourceType" value={form.resourceType} onChange={handleChange} className={inputCls}>
                   <option value="">All Categories</option>
-                  {typeCounts.map(([type]) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
+                  {typeCounts.map(([type]) => <option key={type} value={type}>{type}</option>)}
                 </select>
               </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>Select Resource</label>
-                <select
-                  name="resourceId"
-                  value={form.resourceId}
-                  onChange={handleFormChange}
-                  required
-                  style={styles.input}
-                >
-                  <option value="">Choose available resource...</option>
-                  {displayedResources.map((resource) => (
-                    <option key={resource.id} value={resource.id}>
-                      {getResourceLabel(resource)}
-                    </option>
-                  ))}
+              <div>
+                <label className={labelCls}>Select Resource</label>
+                <select name="resourceId" value={form.resourceId} onChange={handleChange} required className={inputCls}>
+                  <option value="">Choose available resource…</option>
+                  {displayed.map(r => <option key={r.id} value={r.id}>{getResourceLabel(r)}</option>)}
                 </select>
-                <p style={styles.inputHint}>
-                  {availabilityChecked
-                    ? `${displayedResources.length} resources available in this time slot.`
-                    : `${displayedResources.length} currently AVAILABLE resources (status-based).`}
+                <p className="mt-1 text-[10px] text-[#8494c2]">
+                  {availChecked ? `${displayed.length} resources available for this slot.` : `${displayed.length} currently AVAILABLE resources.`}
                 </p>
               </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>Purpose of Booking</label>
-                <textarea
-                  name="purpose"
-                  value={form.purpose}
-                  minLength={10}
-                  rows={3}
-                  onChange={handleFormChange}
-                  required
-                  placeholder="Describe why you need this resource"
-                  style={styles.textarea}
-                />
+              <div>
+                <label className={labelCls}>Purpose</label>
+                <textarea name="purpose" value={form.purpose} minLength={10} rows={3} onChange={handleChange} required placeholder="Describe why you need this resource" className={`${inputCls} resize-y`} />
               </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>Booking Reason</label>
-                <input
-                  type="text"
-                  name="bookingReason"
-                  value={form.bookingReason}
-                  maxLength={100}
-                  onChange={handleFormChange}
-                  required
-                  placeholder="e.g. Robotics team meeting"
-                  style={styles.input}
-                />
+              <div>
+                <label className={labelCls}>Booking Reason</label>
+                <input type="text" name="bookingReason" value={form.bookingReason} maxLength={100} onChange={handleChange} required placeholder="e.g. Robotics team meeting" className={inputCls} />
               </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>Expected Attendees</label>
-                <input
-                  type="text"
-                  name="expectedAttendees"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={form.expectedAttendees}
-                  onChange={handleFormChange}
-                  required
-                  placeholder="e.g. 24"
-                  style={styles.input}
-                />
+              <div>
+                <label className={labelCls}>Expected Attendees</label>
+                <input type="text" name="expectedAttendees" inputMode="numeric" pattern="[0-9]*" value={form.expectedAttendees} onChange={handleChange} required placeholder="e.g. 24" className={inputCls} />
               </div>
 
-              <div style={styles.formActions}>
+              <div className="flex justify-end gap-3 pt-1">
                 <button
                   type="button"
-                  style={styles.secondaryBtn}
-                  onClick={handleCheckAvailability}
-                  disabled={checkingAvailability || resourcesLoading}
+                  onClick={() => checkAvailability()}
+                  disabled={checkingAvail || resourcesLoading}
+                  className="rounded-xl bg-[#001d45] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#002a66] disabled:opacity-60"
                 >
-                  {checkingAvailability ? 'Checking...' : 'Check Availability'}
+                  {checkingAvail ? 'Checking…' : 'Check Availability'}
                 </button>
-
                 <button
                   type="submit"
-                  style={styles.primaryActionBtn}
-                  disabled={loading || checkingAvailability || resourcesLoading}
+                  disabled={loading || checkingAvail}
+                  className="rounded-xl bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-[0_4px_12px_rgba(244,94,43,0.30)] transition hover:opacity-90 disabled:opacity-60"
                 >
-                  {loading ? 'Saving...' : editingBookingId ? 'Save Changes' : 'Send Booking Request'}
+                  {loading ? 'Saving…' : editingId ? 'Save Changes' : 'Send Request'}
                 </button>
               </div>
             </form>
@@ -748,53 +424,49 @@ export default function MyBookingsPage() {
         </section>
       )}
 
+      {/* ── Bookings list ── */}
       {bookings.length === 0 ? (
-        <div style={styles.emptyBox}>
-          <p>You have no bookings yet.</p>
-          <button style={styles.newBtn} onClick={() => setShowNewBooking(true)}>
-            Create Your First Booking
+        <div className="flex flex-col items-center justify-center rounded-[26px] border-2 border-dashed border-slate-200 bg-white py-20 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10">
+            <CalendarCheck2 className="h-6 w-6 text-brand" />
+          </div>
+          <h3 className="mt-4 text-base font-semibold text-navy">No bookings yet</h3>
+          <p className="mt-1 text-sm text-[#8494c2]">Create your first booking to get started.</p>
+          <button type="button" onClick={startNew} className="mt-5 flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-[0_4px_12px_rgba(244,94,43,0.25)] hover:opacity-90">
+            <Plus className="h-4 w-4" /> Create First Booking
           </button>
         </div>
       ) : (
-        <div style={styles.list}>
+        <div className="space-y-3">
           {bookings.map(b => (
-            <div key={b.id} style={styles.card}>
-              <div style={styles.cardTop}>
+            <div key={b.id} className="rounded-[22px] border border-white/60 bg-white p-5 shadow-[0_8px_30px_rgba(21,32,85,0.07)] transition hover:shadow-[0_14px_40px_rgba(21,32,85,0.11)]">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div style={styles.resourceName}>{b.bookingReason}</div>
-                  <div style={styles.meta}>
-                    {b.date} &nbsp;·&nbsp; {b.startTime} – {b.endTime}
-                    &nbsp;·&nbsp; {b.resourceType}
-                  </div>
+                  <p className="font-bold text-navy">{b.bookingReason}</p>
+                  <p className="mt-0.5 text-xs text-[#8494c2]">
+                    {b.date} · {b.startTime}–{b.endTime} · {b.resourceType}
+                  </p>
                 </div>
                 <BookingStatusBadge status={b.status} />
               </div>
 
-              <p style={styles.purpose}>{b.purpose}</p>
+              {b.purpose && <p className="mt-2.5 text-sm text-[#6677a4]">{b.purpose}</p>}
 
               {b.adminNote && (
-                <div style={styles.noteBox}>
-                  <strong>Admin note:</strong> {b.adminNote}
+                <div className="mt-3 rounded-xl border border-[#001d45]/20 bg-[#001d45]/8 px-3 py-2.5 text-xs font-medium text-[#001d45]">
+                  <span className="font-bold">Admin note:</span> {b.adminNote}
                 </div>
               )}
 
-              <div style={styles.actions}>
+              <div className="mt-4 flex gap-2.5">
                 {b.status === 'PENDING' && (
-                  <button
-                    style={styles.editBtn}
-                    onClick={() => startEditBooking(b)}
-                  >
-                    Edit Booking
+                  <button type="button" onClick={() => startEdit(b)} className="flex items-center gap-1.5 rounded-lg border border-brand/30 bg-brand/8 px-3.5 py-2 text-xs font-semibold text-brand transition hover:bg-brand/15">
+                    <Pencil className="h-3 w-3" /> Edit Booking
                   </button>
                 )}
-
                 {(b.status === 'PENDING' || b.status === 'APPROVED') && (
-                  <button
-                    style={styles.cancelBtn}
-                    disabled={cancelling === b.id}
-                    onClick={() => handleCancel(b.id)}
-                  >
-                    {cancelling === b.id ? 'Cancelling…' : 'Cancel Booking'}
+                  <button type="button" disabled={cancelling === b.id} onClick={() => handleCancel(b.id)} className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60">
+                    <X className="h-3 w-3" />{cancelling === b.id ? 'Cancelling…' : 'Cancel Booking'}
                   </button>
                 )}
               </div>
@@ -805,344 +477,3 @@ export default function MyBookingsPage() {
     </div>
   );
 }
-
-/* ── styles ─────────────────────────────────────────────────────────────── */
-const styles = {
-  page:    { maxWidth: 760, margin: '0 auto', padding: '32px 16px' },
-  header:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  heading: { margin: 0, fontSize: 24, fontWeight: 700, color: '#1a1a2e' },
-  sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' },
-  categorySection: {
-    background: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    boxShadow: '0 1px 8px rgba(0,0,0,.05)',
-  },
-  typeGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 10 },
-  typeCard: {
-    border: '1px solid #d1d5db',
-    borderRadius: 10,
-    background: '#f8fafc',
-    padding: 12,
-    cursor: 'pointer',
-    textAlign: 'left',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-  },
-  typeCardActive: {
-    borderColor: '#2563eb',
-    background: '#eff6ff',
-  },
-  typeCount: { fontSize: 12, color: '#6b7280' },
-  helper: { margin: 0, fontSize: 13, color: '#6b7280' },
-  categoryResourceList: {
-    marginTop: 12,
-    border: '1px solid #e5e7eb',
-    borderRadius: 10,
-    background: '#ffffff',
-    overflow: 'hidden',
-  },
-  categoryResourceHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '10px 12px',
-    borderBottom: '1px solid #e5e7eb',
-    background: '#f8fafc',
-    fontSize: 14,
-  },
-  categoryResourceItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 10,
-    padding: '10px 12px',
-    borderBottom: '1px solid #f1f5f9',
-  },
-  categoryResourceMain: { minWidth: 0 },
-  categoryResourceName: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: '#111827',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  },
-  categoryResourceMeta: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  resourceStatus: {
-    fontSize: 11,
-    fontWeight: 700,
-    borderRadius: 999,
-    padding: '4px 8px',
-    border: '1px solid transparent',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    whiteSpace: 'nowrap',
-  },
-  resourceStatusAvailable: {
-    color: '#166534',
-    background: '#f0fdf4',
-    borderColor: '#bbf7d0',
-  },
-  resourceStatusUnavailable: {
-    color: '#991b1b',
-    background: '#fef2f2',
-    borderColor: '#fecaca',
-  },
-  newBookingCard: {
-    background: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    boxShadow: '0 1px 8px rgba(0,0,0,.05)',
-  },
-  form: { display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 },
-  bookingStudio: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-    gap: 16,
-    marginBottom: 20,
-  },
-  resourceShowcase: {
-    background: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 14,
-    padding: 14,
-    boxShadow: '0 12px 30px -24px rgba(15, 23, 42, 0.35)',
-  },
-  resourceImageWrap: {
-    position: 'relative',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 14,
-  },
-  resourceImage: {
-    width: '100%',
-    height: 'clamp(210px, 34vw, 300px)',
-    objectFit: 'cover',
-    display: 'block',
-  },
-  liveBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    background: '#dcfce7',
-    border: '1px solid #bbf7d0',
-    color: '#166534',
-    padding: '4px 9px',
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: 700,
-    textTransform: 'uppercase',
-  },
-  resourceHeading: {
-    margin: '0 0 6px',
-    fontSize: 36,
-    lineHeight: 1.1,
-    color: '#0f172a',
-    fontWeight: 800,
-    letterSpacing: '-0.02em',
-  },
-  resourceDescription: {
-    margin: '0 0 14px',
-    fontSize: 14,
-    color: '#475569',
-    lineHeight: 1.5,
-  },
-  resourceStats: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 10,
-    marginBottom: 12,
-  },
-  statCard: {
-    border: '1px solid #e2e8f0',
-    borderRadius: 10,
-    padding: 10,
-    background: '#f8fafc',
-  },
-  statLabel: {
-    fontSize: 11,
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontWeight: 700,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 13,
-    color: '#0f172a',
-    fontWeight: 700,
-  },
-  scheduleBox: {
-    border: '1px solid #e2e8f0',
-    borderRadius: 10,
-    padding: 10,
-    background: '#ffffff',
-  },
-  scheduleTitle: {
-    fontSize: 15,
-    fontWeight: 700,
-    color: '#0f172a',
-    marginBottom: 8,
-  },
-  scheduleLegend: {
-    display: 'flex',
-    gap: 14,
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 8,
-  },
-  legendItem: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 5,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-    display: 'inline-block',
-  },
-  scheduleGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
-    gap: 6,
-  },
-  scheduleCellWrap: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 3,
-  },
-  scheduleCell: {
-    width: '100%',
-    height: 28,
-    borderRadius: 6,
-  },
-  scheduleTime: {
-    fontSize: 10,
-    color: '#94a3b8',
-    fontWeight: 600,
-  },
-  requestPanel: {
-    background: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 14,
-    padding: 16,
-    boxShadow: '0 12px 30px -24px rgba(15, 23, 42, 0.35)',
-    alignSelf: 'start',
-    position: 'relative',
-  },
-  requestTitle: {
-    margin: 0,
-    fontSize: 24,
-    color: '#111827',
-    fontWeight: 800,
-    letterSpacing: '-0.02em',
-  },
-  requestHeaderRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-  },
-  editNotice: {
-    marginTop: 10,
-    marginBottom: 4,
-    padding: '8px 10px',
-    borderRadius: 8,
-    background: '#eff6ff',
-    color: '#1d4ed8',
-    border: '1px solid #bfdbfe',
-    fontSize: 12,
-    fontWeight: 600,
-  },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
-  field: { display: 'flex', flexDirection: 'column', gap: 6 },
-  label: { fontSize: 12, color: '#374151', fontWeight: 600 },
-  input: {
-    padding: '9px 10px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    fontSize: 14,
-    background: '#fff',
-  },
-  textarea: {
-    padding: '9px 10px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    fontSize: 14,
-    resize: 'vertical',
-    fontFamily: 'inherit',
-  },
-  formActions: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
-  secondaryBtn: {
-    padding: '9px 14px',
-    background: '#ffffff',
-    color: '#1f2937',
-    border: '1px solid #9ca3af',
-    borderRadius: 8,
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  primaryActionBtn: {
-    padding: '10px 16px',
-    background: '#1d4ed8',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: 8,
-    fontSize: 14,
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
-  linkBtn: {
-    background: 'transparent',
-    border: 'none',
-    color: '#2563eb',
-    cursor: 'pointer',
-    fontWeight: 600,
-    fontSize: 13,
-  },
-  inputHint: { margin: '2px 0 0', fontSize: 12, color: '#6b7280' },
-  list:    { display: 'flex', flexDirection: 'column', gap: 16 },
-  card: {
-    background: '#fff', borderRadius: 12, padding: 20,
-    boxShadow: '0 1px 8px rgba(0,0,0,.07)', border: '1px solid #e5e7eb',
-  },
-  cardTop:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-  resourceName: { fontWeight: 700, fontSize: 16, color: '#111827' },
-  meta:         { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  purpose:      { fontSize: 14, color: '#374151', margin: '4px 0 12px' },
-  noteBox:      { background: '#fef9c3', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#713f12', marginBottom: 8 },
-  actions:      { display: 'flex', gap: 8 },
-  cancelBtn: {
-    padding: '7px 16px', background: '#fff', color: '#dc2626',
-    border: '1px solid #dc2626', borderRadius: 8, fontSize: 13,
-    fontWeight: 600, cursor: 'pointer',
-  },
-  editBtn: {
-    padding: '7px 16px',
-    background: '#eff6ff',
-    color: '#1d4ed8',
-    border: '1px solid #93c5fd',
-    borderRadius: 8,
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  newBtn: {
-    padding: '9px 18px', background: '#2563eb', color: '#fff',
-    border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-  },
-  msg:      { padding: 24, textAlign: 'center', color: '#666' },
-  error:    { background: '#fef2f2', color: '#dc2626', padding: '12px 16px', borderRadius: 8, marginBottom: 16 },
-  success:  { background: '#f0fdf4', color: '#166534', padding: '12px 16px', borderRadius: 8, marginBottom: 16 },
-  emptyBox: { textAlign: 'center', padding: 60, color: '#6b7280' },
-};
