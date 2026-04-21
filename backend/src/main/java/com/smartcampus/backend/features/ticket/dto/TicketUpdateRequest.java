@@ -2,39 +2,18 @@ package com.smartcampus.backend.features.ticket.dto;
 
 import com.smartcampus.backend.features.ticket.model.TicketCategory;
 import com.smartcampus.backend.features.ticket.model.TicketPriority;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
-public class CreateTicketRequest {
-
-    @NotBlank(message = "User ID is required")
-    private String userId;
+public class TicketUpdateRequest {
 
     private String resourceId;
-
-    @NotNull(message = "Category is required")
     private TicketCategory category;
-
-    @NotBlank(message = "Subject is required")
     private String subject;
-
-    @NotBlank(message = "Description is required")
     private String description;
-
-    @NotNull(message = "Priority is required")
     private TicketPriority priority;
-
-    @NotBlank(message = "Location is required")
     private String location;
-
-    @NotBlank(message = "Preferred contact is required")
     private String preferredContact;
 
-    public CreateTicketRequest() {
-    }
-
-    public String getUserId() {
-        return userId;
+    public TicketUpdateRequest() {
     }
 
     public String getResourceId() {
@@ -63,10 +42,6 @@ public class CreateTicketRequest {
 
     public String getPreferredContact() {
         return preferredContact;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
     }
 
     public void setResourceId(String resourceId) {
