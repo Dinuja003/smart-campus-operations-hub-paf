@@ -186,7 +186,7 @@ const drawResourceCard = (pdf, resource, index, y, pageWidth, margin) => {
 
 export default function ResourceDirectoryReportPreview({ resources, onClose }) {
   const [downloading, setDownloading] = useState(false);
-  const list = Array.isArray(resources) ? resources : [];
+  const list = useMemo(() => (Array.isArray(resources) ? resources : []), [resources]);
 
   const summary = useMemo(() => ({
     total: list.length,
@@ -299,18 +299,17 @@ export default function ResourceDirectoryReportPreview({ resources, onClose }) {
         className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[30px] border border-white/50 bg-[#f7f9ff] shadow-[0_36px_100px_rgba(12,22,58,0.30)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative overflow-hidden border-b border-slate-200/80 bg-[#11214e] px-7 py-6 text-white">
+        <div className="relative overflow-hidden border-b border-slate-200/80 bg-[#11214e] px-7 py-8 text-white">
           <div className="absolute -left-10 top-4 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute right-10 top-6 h-20 w-20 rounded-full bg-[#ffbe66]/30 blur-2xl" />
-          <div className="relative flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-2xl">
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl pr-2">
               <p className="text-[11px] font-bold uppercase tracking-widest text-[#cbd7ff]">Resource Directory Preview</p>
-              <h2 className="mt-2 font-serif text-4xl font-semibold tracking-tight">Operational Report Deck</h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-[#e2e9ff]">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[#e2e9ff]">
                 A polished preview of your full campus resource inventory, ready for export and handoff.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2 self-start">
               <button
                 type="button"
                 onClick={handleDownloadPdf}

@@ -275,7 +275,7 @@ export default function AdminResourcesInterface() {
             <button
               type="button"
               onClick={() => setDirectoryReportOpen(true)}
-              disabled={loading || resources.length === 0}
+              disabled={loading || filtered.length === 0}
               className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-[#5a6b98] shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Download className="h-4 w-4" /> Export PDF
@@ -437,7 +437,7 @@ export default function AdminResourcesInterface() {
 
       {/* ── Create / Edit Modal ── */}
       {directoryReportOpen && (
-        <ResourceDirectoryReportPreview resources={resources} onClose={() => setDirectoryReportOpen(false)} />
+        <ResourceDirectoryReportPreview resources={filtered} onClose={() => setDirectoryReportOpen(false)} />
       )}
       {reportPreviewResource && (
         <ResourceReportPreview resource={reportPreviewResource} onClose={() => setReportPreviewResource(null)} />
