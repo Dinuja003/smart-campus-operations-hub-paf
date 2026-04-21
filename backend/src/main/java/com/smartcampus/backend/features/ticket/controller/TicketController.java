@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 
 import java.io.IOException;
 import java.util.List;
+import com.smartcampus.backend.features.auth.dto.UserResponse;
 import com.smartcampus.backend.features.auth.model.User;
 import com.smartcampus.backend.features.auth.repository.UserRepository;
 import com.smartcampus.backend.features.auth.model.UserRole;
@@ -62,6 +63,10 @@ public class TicketController {
 
     @GetMapping
     public ResponseEntity<List<TicketResponse>> getAllTickets(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof String)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
         String userId = (String) authentication.getPrincipal();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -70,7 +75,7 @@ public class TicketController {
 
     @GetMapping("/technicians")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<User>> getTechnicians() {
+    public ResponseEntity<List<UserResponse>> getTechnicians() {
         return ResponseEntity.ok(ticketService.getTechnicians());
     }
 

@@ -9,8 +9,9 @@ import com.smartcampus.backend.features.ticket.model.Ticket;
 import com.smartcampus.backend.features.ticket.model.TicketStatus;
 import com.smartcampus.backend.features.ticket.repository.TicketRepository;
 import com.smartcampus.backend.features.auth.model.User;
-import com.smartcampus.backend.features.auth.model.UserRole;
+import com.smartcampus.backend.features.auth.dto.UserResponse;
 import com.smartcampus.backend.features.auth.repository.UserRepository;
+import com.smartcampus.backend.features.auth.model.UserRole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -171,8 +172,11 @@ public class TicketService {
         return TicketResponse.from(saved, canEditOrDelete(saved), canEditOrDelete(saved), resolveTechnicianName(saved.getAssignedTechnicianId()));
     }
 
-    public List<User> getTechnicians() {
-        return userRepository.findByRole(UserRole.TECHNICIAN);
+    public List<UserResponse> getTechnicians() {
+        return userRepository.findByRole(UserRole.TECHNICIAN)
+                .stream()
+                .map(UserResponse::from)
+                .toList();
     }
 
     public TicketResponse assignTechnician(String ticketId, String technicianId) {
@@ -199,10 +203,14 @@ public class TicketService {
     }
 
     private String resolveTechnicianName(String technicianId) {
-        if (technicianId == null) return null;
-        return userRepository.findById(technicianId)
-                .map(u -> u.getFirstName() + " " + u.getLastName())
-                .orElse("Unknown Technician");
+        if (technicianId == null || technicianId.trim().isEmpty()) return null;
+        try {
+            return userRepository.findById(technicianId)
+                    .map(u -> u.getFirstName() + " " + u.getLastName())
+                    .orElse("Unknown Technician");
+        } catch (Exception e) {
+            return "Unknown Technician";
+        }
     }
 
     private boolean canEditOrDelete(Ticket ticket) {

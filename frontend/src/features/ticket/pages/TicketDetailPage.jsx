@@ -48,14 +48,20 @@ export default function TicketDetailPage() {
     try {
       const data = await getTicketById(id)
       setTicket(data)
-      if (currentUserRole === "ADMIN") {
-        const techs = await getTechnicians()
-        setTechnicians(techs)
-      }
     } catch (err) {
       setError("Failed to load ticket details")
     } finally {
       setLoading(false)
+    }
+
+    // Load technicians separately (Admin only)
+    if (currentUserRole === "ADMIN") {
+      try {
+        const techs = await getTechnicians()
+        setTechnicians(techs)
+      } catch (err) {
+        console.error("Failed to load technician list:", err)
+      }
     }
   }
 

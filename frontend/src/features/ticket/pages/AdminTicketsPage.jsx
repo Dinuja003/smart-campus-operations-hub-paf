@@ -38,15 +38,21 @@ export default function AdminTicketsPage() {
 
   useEffect(() => {
     async function loadData() {
+      // Load tickets
       try {
-        const [ticketsData, techsData] = await Promise.all([
-          getAllTickets(),
-          getTechnicians()
-        ])
+        const ticketsData = await getAllTickets()
         setTickets(Array.isArray(ticketsData) ? ticketsData : [])
-        setTechnicians(Array.isArray(techsData) ? techsData : [])
       } catch (err) {
         setError("Failed to load campus tickets")
+      }
+
+      // Load technicians
+      try {
+        const techsData = await getTechnicians()
+        setTechnicians(Array.isArray(techsData) ? techsData : [])
+      } catch (err) {
+        console.error("Failed to load technicians:", err)
+        // We don't set a global error here to allow tickets to show
       } finally {
         setLoading(false)
       }
