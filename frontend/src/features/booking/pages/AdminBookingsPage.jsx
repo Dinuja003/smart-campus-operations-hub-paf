@@ -1,6 +1,6 @@
 // frontend/src/features/booking/pages/AdminBookingsPage.jsx
 import { useEffect, useState } from 'react';
-import { Trash2, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CheckCircle, Clock, ShieldCheck, Trash2, XCircle } from 'lucide-react';
 import { useBooking } from '@/hooks/useBooking';
 import BookingStatusBadge from '@/components/BookingStatusBadge';
 
@@ -11,12 +11,14 @@ const toArray = (value) => {
   return [];
 };
 
+const FILTERS = ['', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'];
+
 export default function AdminBookingsPage() {
   const { getAllBookings, reviewBooking, deleteBooking, loading, error } = useBooking();
-  const [bookings, setBookings]       = useState([]);
+  const [bookings, setBookings]         = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
-  const [reviewModal, setReviewModal]  = useState(null);
-  const [adminNote, setAdminNote]      = useState('');
+  const [reviewModal, setReviewModal]   = useState(null);
+  const [adminNote, setAdminNote]       = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
   const loadBookings = (filter) => {
@@ -27,10 +29,7 @@ export default function AdminBookingsPage() {
 
   useEffect(() => { loadBookings(statusFilter); }, [statusFilter]);
 
-  const openReview = (booking) => {
-    setReviewModal(booking);
-    setAdminNote('');
-  };
+  const openReview = (booking) => { setReviewModal(booking); setAdminNote(''); };
 
   const submitReview = async (approved) => {
     if (!approved && !adminNote.trim()) {
@@ -54,140 +53,202 @@ export default function AdminBookingsPage() {
     } catch (_) {}
   };
 
-  return (
-    <div style={styles.page}>
-      {/* Header */}
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.heading}>Booking Management</h1>
-          <p style={styles.subtitle}>Review and manage all campus resource bookings</p>
-        </div>
-        <div style={styles.badgeCount}>
-          <span style={styles.badge}>{bookings.length}</span>
-          <span style={styles.badgeLabel}>Total Bookings</span>
-        </div>
-      </div>
+  const pendingCount = bookings.filter(b => b.status === 'PENDING').length;
 
-      {/* Filter bar */}
-      <div style={styles.filterBar}>
-        {['', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map(s => (
-          <button key={s}
-            style={{ ...styles.filterBtn, ...(statusFilter === s ? styles.filterBtnActive : {}) }}
-            onClick={() => setStatusFilter(s)}>
+  return (
+    <div className="space-y-5">
+
+      {/* ── Header ── */}
+      <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-6">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand/8 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-[#001d45] px-3 py-0.5 text-[10px] font-semibold tracking-wide text-white">
+              <ShieldCheck className="h-3 w-3" /> Admin Panel
+            </p>
+            <h1 className="mt-1.5 text-2xl font-bold text-navy sm:text-3xl">Booking Management</h1>
+            <p className="mt-0.5 text-sm text-[#5a6b98]">Review, approve and manage all campus resource bookings.</p>
+          </div>
+          <div className="flex gap-3">
+            <div className="rounded-2xl border border-[#001d45]/20 bg-[#001d45] px-5 py-3 text-center">
+              <p className="text-2xl font-bold text-white">{bookings.length}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Total</p>
+            </div>
+            <div className="rounded-2xl border border-brand/30 bg-brand/10 px-5 py-3 text-center">
+              <p className="text-2xl font-bold text-brand">{pendingCount}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-brand/70">Pending</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Filter bar ── */}
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map(s => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setStatusFilter(s)}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
+              statusFilter === s
+                ? 'bg-brand text-white shadow-[0_4px_12px_rgba(244,94,43,0.30)]'
+                : 'border border-slate-200 bg-white text-slate-500 hover:border-brand/30 hover:text-brand'
+            }`}
+          >
             {s || 'All Bookings'}
           </button>
         ))}
       </div>
 
-      {error && <div style={styles.error}>{error}</div>}
-      {loading && bookings.length === 0 && <div style={styles.loading}>
-        <div style={styles.spinner}></div>
-        <p>Loading bookings…</p>
-      </div>}
+      {/* ── Error ── */}
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+      )}
 
-      {/* Table */}
-      {bookings.length > 0 && <div style={styles.tableWrap}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>Reason</th>
-              <th style={styles.th}>Resource</th>
-              <th style={styles.th}>Date</th>
-              <th style={styles.th}>Time</th>
-              <th style={styles.th}>Requested By</th>
-              <th style={styles.th}>Attendees</th>
-              <th style={styles.th}>Status</th>
-              <th style={styles.th}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bookings.map(b => (
-              <tr key={b.id} style={styles.tr}>
-                <td style={styles.td}>
-                  <div style={styles.reasonCol}>
-                    <strong style={styles.reasonTitle}>{b.bookingReason}</strong>
-                    <span style={styles.purpose}>{b.purpose?.slice(0, 60)}{b.purpose?.length > 60 ? '…' : ''}</span>
-                  </div>
-                </td>
-                <td style={styles.td}>
-                  <span style={styles.badge}>{b.resourceType || '—'}</span>
-                </td>
-                <td style={styles.td}>{b.date}</td>
-                <td style={styles.td}>
-                  <span style={styles.time}>{b.startTime} – {b.endTime}</span>
-                </td>
-                <td style={styles.td}>{b.requestedBy?.slice(0, 12)}…</td>
-                <td style={styles.td}><span style={styles.attendees}>{b.expectedAttendees}</span></td>
-                <td style={styles.td}><BookingStatusBadge status={b.status} /></td>
-                <td style={styles.td}>
-                  <div style={styles.actions}>
-                    {b.status === 'PENDING' && (
-                      <button style={styles.reviewBtn} onClick={() => openReview(b)} title="Review this booking">
-                        <Clock size={15} />
-                        <span>Review</span>
-                      </button>
-                    )}
-                    <button style={styles.deleteBtn} onClick={() => handleDelete(b.id)} title="Delete this booking">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>}
-
-      {bookings.length === 0 && !loading && (
-        <div style={styles.empty}>
-          <div style={styles.emptyIcon}>📋</div>
-          <h3 style={styles.emptyTitle}>No bookings found</h3>
-          <p style={styles.emptyText}>There are no bookings matching your filters</p>
+      {/* ── Loading ── */}
+      {loading && bookings.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-[26px] border border-white/60 bg-white py-16 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-brand" />
+          <p className="mt-4 text-sm text-[#8494c2]">Loading bookings…</p>
         </div>
       )}
 
-      {/* Review modal */}
+      {/* ── Table ── */}
+      {bookings.length > 0 && (
+        <div className="overflow-hidden rounded-[26px] border border-white/60 bg-white shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  {['Reason', 'Resource', 'Date', 'Time', 'Requested By', 'Attendees', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map((b, idx) => (
+                  <tr key={b.id} className={idx < bookings.length - 1 ? 'border-b border-slate-50 hover:bg-slate-50/60 transition-colors' : 'hover:bg-slate-50/60 transition-colors'}>
+                    <td className="px-5 py-3.5">
+                      <p className="font-semibold text-navy">{b.bookingReason}</p>
+                      <p className="mt-0.5 text-[11px] text-[#8494c2]">{b.purpose?.slice(0, 55)}{b.purpose?.length > 55 ? '…' : ''}</p>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="rounded-lg bg-brand/10 px-2.5 py-1 text-[11px] font-semibold text-brand">{b.resourceType || '—'}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-[#6677a4]">{b.date}</td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-[#6677a4]">{b.startTime} – {b.endTime}</td>
+                    <td className="px-5 py-3.5 text-[#6677a4]">{b.requestedBy?.slice(0, 14)}…</td>
+                    <td className="px-5 py-3.5">
+                      <span className="font-semibold text-brand">{b.expectedAttendees}</span>
+                    </td>
+                    <td className="px-5 py-3.5"><BookingStatusBadge status={b.status} /></td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2">
+                        {b.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            onClick={() => openReview(b)}
+                            className="flex items-center gap-1.5 rounded-lg bg-[#001d45] px-3 py-1.5 text-[11px] font-semibold text-white transition-all hover:bg-[#002a66] hover:opacity-90"
+                          >
+                            <Clock className="h-3 w-3" /> Review
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(b.id)}
+                          className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-500 transition-colors hover:bg-red-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Empty state ── */}
+      {bookings.length === 0 && !loading && (
+        <div className="flex flex-col items-center justify-center rounded-[26px] border-2 border-dashed border-slate-200 bg-white py-20 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10">
+            <ShieldCheck className="h-6 w-6 text-brand" />
+          </div>
+          <h3 className="mt-4 text-base font-semibold text-navy">No bookings found</h3>
+          <p className="mt-1 text-sm text-[#8494c2]">No bookings match the selected filter.</p>
+        </div>
+      )}
+
+      {/* ── Review Modal ── */}
       {reviewModal && (
-        <div style={styles.overlay} onClick={() => setReviewModal(null)}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>Review Booking</h3>
-              <button style={styles.closeBtn} onClick={() => setReviewModal(null)}>✕</button>
-            </div>
-            
-            <div style={styles.modalContent}>
-              <div style={styles.bookingDetail}>
-                <span style={styles.detailLabel}>Reason</span>
-                <span style={styles.detailValue}>{reviewModal.bookingReason}</span>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setReviewModal(null)}
+        >
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-[26px] bg-white shadow-[0_30px_80px_rgba(21,32,85,0.25)]"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Admin Action</p>
+                <h3 className="mt-0.5 text-lg font-bold text-navy">Review Booking</h3>
               </div>
-              <div style={styles.bookingDetail}>
-                <span style={styles.detailLabel}>Time</span>
-                <span style={styles.detailValue}>{reviewModal.date} · {reviewModal.startTime}–{reviewModal.endTime}</span>
-              </div>
-              <div style={styles.bookingDetail}>
-                <span style={styles.detailLabel}>Purpose</span>
-                <span style={styles.detailValue}>{reviewModal.purpose}</span>
-              </div>
-              
-              <label style={styles.label}>Admin Note {!reviewModal.approved && <span style={{color: '#dc2626'}}>*</span>}</label>
-              <textarea rows={4} value={adminNote}
-                onChange={e => setAdminNote(e.target.value)}
-                placeholder="Add your note here…"
-                style={styles.textarea} />
+              <button type="button" onClick={() => setReviewModal(null)} className="rounded-xl p-2 text-[#8494c2] hover:bg-slate-100 hover:text-navy transition-colors">
+                <XCircle className="h-5 w-5" />
+              </button>
             </div>
 
-            <div style={styles.modalFooter}>
-              <button style={styles.approveBtn} disabled={actionLoading}
-                onClick={() => submitReview(true)}>
-                <CheckCircle size={16} style={{marginRight: 6}} />
-                Approve
+            <div className="space-y-3 px-6 py-5">
+              {[
+                { label: 'Reason', value: reviewModal.bookingReason },
+                { label: 'Date & Time', value: `${reviewModal.date} · ${reviewModal.startTime}–${reviewModal.endTime}` },
+                { label: 'Purpose', value: reviewModal.purpose },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{label}</p>
+                  <p className="mt-0.5 text-sm font-medium text-navy">{value}</p>
+                </div>
+              ))}
+
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">
+                  Admin Note <span className="text-red-400">*required for rejection</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={adminNote}
+                  onChange={e => setAdminNote(e.target.value)}
+                  placeholder="Add your note here…"
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-navy placeholder-slate-400 outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => submitReview(true)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-600 disabled:opacity-60"
+              >
+                <CheckCircle className="h-4 w-4" /> Approve
               </button>
-              <button style={styles.rejectBtn} disabled={actionLoading}
-                onClick={() => submitReview(false)}>
-                <XCircle size={16} style={{marginRight: 6}} />
-                Reject
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => submitReview(false)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-2.5 text-sm font-bold text-white transition-all hover:bg-red-600 disabled:opacity-60"
+              >
+                <XCircle className="h-4 w-4" /> Reject
               </button>
-              <button style={styles.cancelBtn} onClick={() => setReviewModal(null)}>
+              <button
+                type="button"
+                onClick={() => setReviewModal(null)}
+                className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+              >
                 Cancel
               </button>
             </div>
@@ -197,362 +258,3 @@ export default function AdminBookingsPage() {
     </div>
   );
 }
-
-/* ── modern styles ────────────────────────────────────────────────────── */
-const styles = {
-  page: { 
-    padding: '32px 24px', 
-    maxWidth: 1400, 
-    margin: '0 auto',
-    minHeight: '100%',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 32,
-    paddingBottom: 24,
-    borderBottom: '1px solid #e5e7eb',
-  },
-  heading: { 
-    fontSize: 32, 
-    fontWeight: 800, 
-    color: '#0f172a', 
-    margin: 0,
-    letterSpacing: '-0.5px',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 6,
-    margin: '6px 0 0 0',
-  },
-  badgeCount: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 4,
-  },
-  badge: {
-    fontSize: 20,
-    fontWeight: 700,
-    color: '#2563eb',
-  },
-  badgeLabel: {
-    fontSize: 12,
-    color: '#94a3b8',
-  },
-  filterBar: { 
-    display: 'flex', 
-    gap: 8, 
-    marginBottom: 28, 
-    flexWrap: 'wrap' 
-  },
-  filterBtn: { 
-    padding: '8px 16px', 
-    border: '1px solid #e2e8f0', 
-    borderRadius: 8,
-    background: '#fff', 
-    color: '#64748b',
-    cursor: 'pointer', 
-    fontSize: 13,
-    fontWeight: 500,
-    transition: 'all 0.2s ease',
-    ':hover': { borderColor: '#cbd5e1' },
-  },
-  filterBtnActive: { 
-    background: '#2563eb', 
-    color: '#fff', 
-    borderColor: '#2563eb',
-    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
-  },
-  tableWrap: { 
-    borderRadius: 12,
-    border: '1px solid #e5e7eb',
-    background: '#fff',
-    overflow: 'hidden',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-  },
-  table: { 
-    width: '100%', 
-    borderCollapse: 'collapse', 
-    fontSize: 14 
-  },
-  th: { 
-    background: '#f8fafc',
-    padding: '14px 16px', 
-    textAlign: 'left',
-    borderBottom: '2px solid #e2e8f0', 
-    fontWeight: 700, 
-    color: '#334155',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    whiteSpace: 'nowrap',
-  },
-  tr: { 
-    borderBottom: '1px solid #e5e7eb',
-    transition: 'background-color 0.15s ease',
-    ':hover': { backgroundColor: '#f8fafc' },
-  },
-  td: { 
-    padding: '16px',
-    verticalAlign: 'middle',
-    color: '#334155',
-  },
-  reasonCol: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-  },
-  reasonTitle: {
-    color: '#0f172a',
-    fontSize: 14,
-    fontWeight: 600,
-  },
-  purpose: {
-    fontSize: 12,
-    color: '#94a3b8',
-  },
-  time: {
-    fontSize: 13,
-    fontWeight: 500,
-    color: '#475569',
-  },
-  attendees: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: '#2563eb',
-  },
-  actions: {
-    display: 'flex',
-    gap: 8,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  reviewBtn: { 
-    padding: '8px 12px', 
-    background: '#2563eb', 
-    color: '#fff',
-    border: 'none', 
-    borderRadius: 6, 
-    cursor: 'pointer', 
-    fontSize: 12,
-    fontWeight: 600,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    transition: 'all 0.2s ease',
-    boxShadow: '0 1px 2px rgba(37, 99, 235, 0.2)',
-  },
-  deleteBtn: { 
-    padding: '8px 10px', 
-    background: '#fef2f2', 
-    color: '#dc2626',
-    border: '1px solid #fecaca', 
-    borderRadius: 6, 
-    cursor: 'pointer', 
-    fontSize: 12,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s ease',
-    boxShadow: '0 1px 2px rgba(220, 38, 38, 0.1)',
-  },
-  loading: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 60,
-    color: '#94a3b8',
-  },
-  spinner: {
-    width: 40,
-    height: 40,
-    border: '3px solid #e2e8f0',
-    borderTop: '3px solid #2563eb',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-    marginBottom: 16,
-  },
-  error: { 
-    background: '#fef2f2', 
-    color: '#991b1b',
-    padding: '12px 16px',
-    borderRadius: 8, 
-    marginBottom: 24,
-    border: '1px solid #fecaca',
-    fontSize: 14,
-  },
-  empty: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 80,
-    textAlign: 'center',
-    background: '#f8fafc',
-    borderRadius: 12,
-    border: '2px dashed #e2e8f0',
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: 700,
-    color: '#0f172a',
-    margin: 0,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#94a3b8',
-    margin: '8px 0 0 0',
-  },
-  // modal styles
-  overlay: { 
-    position: 'fixed', 
-    inset: 0, 
-    background: 'rgba(0,0,0,0.5)',
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    zIndex: 1000,
-    backdropFilter: 'blur(4px)',
-  },
-  modal: { 
-    background: '#fff', 
-    borderRadius: 16, 
-    width: '100%', 
-    maxWidth: 540,
-    boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-    overflow: 'hidden',
-    animation: 'slideUp 0.3s ease-out',
-  },
-  modalHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '24px 24px 16px',
-    borderBottom: '1px solid #e5e7eb',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 700,
-    color: '#0f172a',
-    margin: 0,
-  },
-  closeBtn: {
-    background: 'none',
-    border: 'none',
-    fontSize: 24,
-    color: '#94a3b8',
-    cursor: 'pointer',
-    padding: 0,
-    width: 32,
-    height: 32,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalContent: {
-    padding: 24,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 16,
-  },
-  bookingDetail: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-  },
-  detailLabel: {
-    fontSize: 12,
-    fontWeight: 700,
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#334155',
-    fontWeight: 500,
-  },
-  label: { 
-    fontSize: 12, 
-    fontWeight: 700, 
-    color: '#334155', 
-    display: 'block', 
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  },
-  textarea: { 
-    width: '100%', 
-    padding: '12px 14px', 
-    borderRadius: 8, 
-    border: '1px solid #e2e8f0',
-    fontSize: 14, 
-    fontFamily: 'inherit', 
-    boxSizing: 'border-box', 
-    resize: 'vertical',
-    color: '#334155',
-    transition: 'all 0.2s ease',
-    ':focus': {
-      outline: 'none',
-      borderColor: '#2563eb',
-      boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.1)',
-    },
-  },
-  modalFooter: {
-    display: 'flex',
-    gap: 12,
-    padding: 24,
-    borderTop: '1px solid #e5e7eb',
-    background: '#f8fafc',
-  },
-  approveBtn: { 
-    flex: 1, 
-    padding: '12px 16px', 
-    background: '#16a34a', 
-    color: '#fff',
-    border: 'none', 
-    borderRadius: 8, 
-    fontWeight: 700, 
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s ease',
-    fontSize: 14,
-  },
-  rejectBtn: { 
-    flex: 1, 
-    padding: '12px 16px', 
-    background: '#dc2626', 
-    color: '#fff',
-    border: 'none', 
-    borderRadius: 8, 
-    fontWeight: 700, 
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s ease',
-    fontSize: 14,
-  },
-  cancelBtn: { 
-    flex: 1, 
-    padding: '12px 16px', 
-    background: '#e2e8f0', 
-    color: '#334155',
-    border: 'none', 
-    borderRadius: 8, 
-    fontWeight: 700, 
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    fontSize: 14,
-  },
-};

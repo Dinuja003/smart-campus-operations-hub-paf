@@ -24,7 +24,7 @@ export default function OAuth2CallbackPage() {
       userId: params.get("userId") || "",
       email: params.get("email") || "",
     })
-    navigate(redirectTo || roleToDashboard(role), { replace: true })
+    navigate(roleToDashboard(), { replace: true })
   }, [location.search, navigate])
 
   return (

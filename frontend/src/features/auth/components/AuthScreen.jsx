@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { ArrowRight, Lock, Mail, Sparkles, User } from "lucide-react"
+import { ArrowRight, Building2, CalendarCheck2, Lock, Mail, Sparkles, Ticket, TrendingUp, User, Wrench } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { persistAuth, signIn, signUp } from "@/features/auth/services/authService"
-import { roleToDashboard } from "@/features/auth/utils/redirectByRole"
 
 function GoogleMark() {
   return (
@@ -19,21 +18,24 @@ function GoogleMark() {
   )
 }
 
+const features = [
+  { icon: CalendarCheck2, label: "Smart Bookings" },
+  { icon: Wrench,         label: "Resources"      },
+  { icon: Ticket,         label: "Ticketing"      },
+  { icon: TrendingUp,     label: "Analytics"      },
+]
+
 export default function AuthScreen({ initialMode = "login" }) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [mode, setMode] = useState(initialMode)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-  })
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" })
 
   const isLogin = mode === "login"
   const backendOrigin = import.meta.env.VITE_BACKEND_ORIGIN || "http://localhost:8081"
+
   const topError = useMemo(() => {
     if (searchParams.get("error") === "google_auth_failed") {
       return "Google authentication failed. Please try again."
@@ -48,16 +50,10 @@ export default function AuthScreen({ initialMode = "login" }) {
     try {
       const payload = isLogin
         ? { email: form.email, password: form.password }
-        : {
-            firstName: form.firstName,
-            lastName: form.lastName,
-            email: form.email,
-            password: form.password,
-          }
-
+        : { firstName: form.firstName, lastName: form.lastName, email: form.email, password: form.password }
       const data = isLogin ? await signIn(payload) : await signUp(payload)
       persistAuth(data)
-      navigate(data?.redirectTo || roleToDashboard(data?.role), { replace: true })
+      navigate("/", { replace: true })
     } catch (err) {
       setError(err?.response?.data?.message || err?.response?.data?.error || "Authentication failed")
     } finally {
@@ -72,53 +68,100 @@ export default function AuthScreen({ initialMode = "login" }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_16%_10%,#dbeafe_0,#eff6ff_32%,#f8fafc_72%)] px-4 py-8">
-      <div className="relative w-full max-w-[940px] overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_40px_110px_-50px_rgba(15,23,42,0.6)]">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-24 top-[-92px] h-64 w-64 rounded-full bg-blue-200/55 blur-3xl" />
-          <div className="absolute -right-16 bottom-[-84px] h-64 w-64 rounded-full bg-blue-300/50 blur-3xl" />
-        </div>
+    <div className="flex min-h-screen items-center justify-center bg-[#001d45] px-4 py-8">
 
-        <div className="relative z-10 min-h-[680px] lg:h-[560px]">
+      {/* ── Card ── */}
+      <div className="relative w-full max-w-[940px] overflow-hidden rounded-[28px] shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
+        <div className="relative flex min-h-[680px] lg:min-h-[580px]">
+
+          {/* ── Left panel (navy, orange accents) ── */}
           <aside
             className={cn(
-              "hidden lg:flex absolute inset-y-0 w-1/2 flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 p-9 text-white transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
+              "hidden lg:flex absolute inset-y-0 w-1/2 flex-col justify-between overflow-hidden bg-[#001d45] border-r border-white/10 p-10 text-white transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
               isLogin ? "translate-x-full" : "translate-x-0"
-            )}>
-            <div className="absolute -left-24 -top-20 h-60 w-60 rounded-full border border-white/20 bg-white/10" />
-            <div className="absolute -bottom-36 right-[-70px] h-80 w-80 rounded-full border border-white/20 bg-cyan-300/20" />
+            )}
+          >
+            {/* Subtle decorative shapes */}
+            <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[#f45e2b]/8" />
+            <div className="pointer-events-none absolute -left-10 bottom-10 h-40 w-40 rounded-full bg-[#f45e2b]/5" />
+            <div className="pointer-events-none absolute right-10 top-1/2 h-2.5 w-2.5 rounded-full bg-[#f45e2b]/50" />
+            <div className="pointer-events-none absolute left-16 top-1/3 h-1.5 w-1.5 rounded-full bg-[#f45e2b]/35" />
+            <div className="pointer-events-none absolute right-24 bottom-32 h-2 w-2 rounded-full bg-white/20" />
 
-            <div className="relative space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-3 py-1.5 text-xs tracking-[0.16em] uppercase">
-                <Sparkles className="h-3.5 w-3.5" />
-                UniSlot Auth
+            {/* Brand + tagline */}
+            <div className="relative space-y-7">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#f45e2b] shadow-[0_6px_20px_rgba(244,94,43,0.45)]">
+                  <Building2 className="h-4 w-4 text-white" />
+                </div>
+                <span className="text-lg font-extrabold tracking-tight text-white">UniSlot</span>
               </div>
-              <h3 className="max-w-sm text-4xl leading-tight font-semibold text-white">
-                {isLogin ? "Secure access for every smart-campus workflow." : "Start your smart-campus experience in seconds."}
-              </h3>
-              <p className="max-w-sm text-sm text-blue-50/90">
-                {isLogin ? "Sign in to manage bookings, facilities, and notifications from one operational hub." : "Create your account and unlock bookings, service requests, and collaboration tools."}
-              </p>
+
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#f45e2b]/30 bg-[#f45e2b]/10 px-3 py-1.5 text-[11px] font-medium tracking-widest uppercase text-[#f45e2b]">
+                  <Sparkles className="h-3 w-3" />
+                  Smart Campus Auth
+                </div>
+                <h2 className="max-w-xs text-[1.85rem] font-bold leading-snug text-white" style={{ margin: 0 }}>
+                  {isLogin
+                    ? "Welcome back to your campus hub."
+                    : "Join the smart campus network."}
+                </h2>
+                <p className="max-w-xs text-sm leading-relaxed text-white/55">
+                  {isLogin
+                    ? "Manage bookings, facilities and operations — all from one unified workspace."
+                    : "Create your account and unlock resources, bookings, tickets and analytics."}
+                </p>
+              </div>
+
+              {/* Feature tags */}
+              <div className="flex flex-wrap gap-2">
+                {features.map(({ icon: Icon, label }) => (
+                  <span
+                    key={label}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/55"
+                  >
+                    <Icon className="h-3 w-3 text-[#f45e2b]" />
+                    {label}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            <div className="relative rounded-2xl border border-white/25 bg-white/10 px-5 py-4 backdrop-blur-md">
-              <p className="text-xs tracking-[0.12em] text-blue-100 uppercase">Campus Status</p>
-              <p className="mt-2 text-2xl font-semibold">All Systems Online</p>
-              <p className="mt-1 text-sm text-blue-100/90">Authentication, booking sync, and facility updates are healthy.</p>
+            {/* Status card */}
+            <div className="relative rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-sm">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#f45e2b]" />
+                <p className="text-[10px] font-semibold tracking-widest text-white/40 uppercase">Campus Status</p>
+              </div>
+              <p className="text-base font-semibold text-white">All Systems Online</p>
+              <p className="mt-0.5 text-xs text-white/45">Auth, booking sync and facility updates are healthy.</p>
             </div>
           </aside>
 
+          {/* ── Right panel (white form) ── */}
           <div
             className={cn(
-              "relative w-full px-6 py-6 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-9 lg:w-1/2 lg:px-10 lg:py-8",
+              "relative w-full bg-white px-6 py-8 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-9 lg:w-1/2 lg:px-10 lg:py-9",
               isLogin ? "lg:translate-x-0" : "lg:translate-x-full"
-            )}>
+            )}
+          >
             <div className="mx-auto w-full max-w-md space-y-5">
+
+              {/* Logo — mobile only */}
+              <div className="flex items-center gap-2 lg:hidden">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#f45e2b]">
+                  <Building2 className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="text-base font-extrabold text-[#001d45]">UniSlot</span>
+              </div>
+
+              {/* Tab switcher */}
               <div className="space-y-4">
-                <div className="relative inline-grid grid-cols-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                <div className="relative inline-grid w-full grid-cols-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
                   <span
                     className={cn(
-                      "pointer-events-none absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] rounded-lg bg-white shadow-[0_10px_26px_-15px_rgba(15,23,42,0.7)] transition-transform duration-300",
+                      "pointer-events-none absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] rounded-lg bg-[#001d45] shadow-[0_4px_14px_rgba(0,29,69,0.25)] transition-transform duration-300",
                       isLogin ? "translate-x-0" : "translate-x-full"
                     )}
                   />
@@ -126,28 +169,32 @@ export default function AuthScreen({ initialMode = "login" }) {
                     type="button"
                     onClick={() => toggle("login")}
                     className={cn(
-                      "relative z-10 rounded-lg px-5 py-2 text-sm font-medium transition-colors",
-                      isLogin ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
-                    )}>
+                      "relative z-10 rounded-lg px-5 py-2 text-sm font-semibold transition-colors",
+                      isLogin ? "text-white" : "text-slate-500 hover:text-slate-700"
+                    )}
+                  >
                     Sign In
                   </button>
                   <button
                     type="button"
                     onClick={() => toggle("signup")}
                     className={cn(
-                      "relative z-10 rounded-lg px-5 py-2 text-sm font-medium transition-colors",
-                      isLogin ? "text-slate-500 hover:text-slate-700" : "text-slate-900"
-                    )}>
+                      "relative z-10 rounded-lg px-5 py-2 text-sm font-semibold transition-colors",
+                      isLogin ? "text-slate-500 hover:text-slate-700" : "text-white"
+                    )}
+                  >
                     Sign Up
                   </button>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="text-[29px] leading-tight font-semibold text-slate-900">
+                <div className="space-y-1">
+                  <h3 className="text-[1.6rem] font-bold leading-tight text-[#001d45]" style={{ margin: 0 }}>
                     {isLogin ? "Welcome Back" : "Create Account"}
                   </h3>
                   <p className="text-sm text-slate-500">
-                    {isLogin ? "Sign in with your email and password." : "Register with email and set a secure password."}
+                    {isLogin
+                      ? "Sign in with your email and password."
+                      : "Register with your email and a secure password."}
                   </p>
                 </div>
               </div>
@@ -158,52 +205,93 @@ export default function AuthScreen({ initialMode = "login" }) {
                 </div>
               )}
 
-              <form className="space-y-4" onSubmit={submit}>
+              <form className="space-y-3.5" onSubmit={submit}>
                 {!isLogin && (
-                  <>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700" htmlFor="first-name">First Name</label>
-                        <div className="relative">
-                          <User className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                          <Input id="first-name" required value={form.firstName} onChange={(e) => setForm((prev) => ({ ...prev, firstName: e.target.value }))} placeholder="First name" className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 text-sm shadow-none focus-visible:ring-blue-400/35" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700" htmlFor="last-name">Last Name</label>
-                        <div className="relative">
-                          <User className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                          <Input id="last-name" required value={form.lastName} onChange={(e) => setForm((prev) => ({ ...prev, lastName: e.target.value }))} placeholder="Last name" className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 text-sm shadow-none focus-visible:ring-blue-400/35" />
-                        </div>
+                  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-widest text-[#001d45]/60" htmlFor="first-name">
+                        First Name
+                      </label>
+                      <div className="relative">
+                        <User className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          id="first-name"
+                          required
+                          value={form.firstName}
+                          onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
+                          placeholder="First name"
+                          className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 text-sm shadow-none focus-visible:border-[#f45e2b]/60 focus-visible:ring-[#f45e2b]/20"
+                        />
                       </div>
                     </div>
-                  </>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-widest text-[#001d45]/60" htmlFor="last-name">
+                        Last Name
+                      </label>
+                      <div className="relative">
+                        <User className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          id="last-name"
+                          required
+                          value={form.lastName}
+                          onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
+                          placeholder="Last name"
+                          className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 text-sm shadow-none focus-visible:border-[#f45e2b]/60 focus-visible:ring-[#f45e2b]/20"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 )}
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700" htmlFor="email">Email</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-[#001d45]/60" htmlFor="email">
+                    Email Address
+                  </label>
                   <div className="relative">
                     <Mail className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <Input id="email" type="email" required value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="you@campus.edu" className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 text-sm shadow-none focus-visible:ring-blue-400/35" />
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      value={form.email}
+                      onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                      placeholder="you@campus.edu"
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 text-sm shadow-none focus-visible:border-[#f45e2b]/60 focus-visible:ring-[#f45e2b]/20"
+                    />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700" htmlFor="password">Password</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-[#001d45]/60" htmlFor="password">
+                    Password
+                  </label>
                   <div className="relative">
                     <Lock className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <Input id="password" type="password" required minLength={8} value={form.password} onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))} placeholder={isLogin ? "Enter your password" : "Create a secure password"} className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 text-sm shadow-none focus-visible:ring-blue-400/35" />
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      minLength={8}
+                      value={form.password}
+                      onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                      placeholder={isLogin ? "Enter your password" : "Create a secure password"}
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 text-sm shadow-none focus-visible:border-[#f45e2b]/60 focus-visible:ring-[#f45e2b]/20"
+                    />
                   </div>
                 </div>
 
-                <Button type="submit" disabled={loading} className="h-11 w-full rounded-xl bg-gradient-to-r from-blue-700 to-blue-500 text-sm font-semibold text-white shadow-[0_14px_36px_-18px_rgba(37,99,235,0.8)] hover:from-blue-600 hover:to-blue-500">
-                  {loading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
-                  <ArrowRight className="h-4 w-4" />
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="h-11 w-full rounded-xl bg-[#f45e2b] text-sm font-semibold text-white shadow-[0_8px_24px_rgba(244,94,43,0.35)] hover:bg-[#e04d1e] disabled:opacity-60"
+                >
+                  {loading ? "Please wait…" : isLogin ? "Sign In" : "Create Account"}
+                  {!loading && <ArrowRight className="h-4 w-4" />}
                 </Button>
               </form>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 text-xs uppercase tracking-[0.14em] text-slate-400">
+              <div className="space-y-3.5">
+                <div className="flex items-center gap-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                   <span className="h-px flex-1 bg-slate-200" />
                   or continue with
                   <span className="h-px flex-1 bg-slate-200" />
@@ -213,18 +301,37 @@ export default function AuthScreen({ initialMode = "login" }) {
                   type="button"
                   variant="outline"
                   onClick={() => { window.location.href = `${backendOrigin}/oauth2/authorization/google` }}
-                  className="h-11 w-full rounded-xl border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  className="h-11 w-full rounded-xl border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-[#001d45]/20"
+                >
                   <GoogleMark />
                   {isLogin ? "Sign in with Google" : "Sign up with Google"}
                 </Button>
               </div>
+
+              {/* Mobile toggle hint */}
+              <p className="text-center text-xs text-slate-400 lg:hidden">
+                {isLogin ? "No account?" : "Already registered?"}{" "}
+                <button
+                  type="button"
+                  onClick={() => toggle(isLogin ? "signup" : "login")}
+                  className="font-semibold text-[#f45e2b] hover:underline"
+                >
+                  {isLogin ? "Sign up free" : "Sign in"}
+                </button>
+              </p>
             </div>
           </div>
 
-          <div className="lg:hidden border-t border-slate-200 bg-gradient-to-r from-blue-700 to-blue-500 px-6 py-5 text-white sm:px-10">
-            <p className="text-xs tracking-[0.14em] uppercase text-blue-100">Smart Campus Operations Hub</p>
-            <p className="mt-1 text-sm text-blue-50">
-              {isLogin ? "Need an account? Switch to Sign Up above and start in minutes." : "Already registered? Switch to Sign In above to continue."}
+          {/* Mobile bottom bar */}
+          <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-[#001d45] px-6 py-4 text-white lg:hidden">
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#f45e2b]" />
+              <p className="text-[10px] font-semibold tracking-widest text-white/50 uppercase">Smart Campus Operations Hub</p>
+            </div>
+            <p className="mt-1 text-xs text-white/40">
+              {isLogin
+                ? "Need an account? Switch to Sign Up above."
+                : "Already registered? Switch to Sign In above."}
             </p>
           </div>
         </div>
