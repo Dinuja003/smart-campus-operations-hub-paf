@@ -7,11 +7,11 @@ export default function ProtectedRoute({ allowedRoles, children }) {
 
   if (!token || isTokenExpired(token)) {
     clearAuth()
-    return <Navigate to="/login" replace />
+    return <Navigate to="/" replace />
   }
   if (!allowedRoles.includes(role)) {
     clearAuth()
-    return <Navigate to="/login" replace />
+    return <Navigate to="/" replace />
   }
   return children
 }

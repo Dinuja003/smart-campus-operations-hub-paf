@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { persistAuth, signIn, signUp } from "@/features/auth/services/authService"
-import { roleToDashboard } from "@/features/auth/utils/redirectByRole"
 
 function GoogleMark() {
   return (
@@ -54,7 +53,7 @@ export default function AuthScreen({ initialMode = "login" }) {
         : { firstName: form.firstName, lastName: form.lastName, email: form.email, password: form.password }
       const data = isLogin ? await signIn(payload) : await signUp(payload)
       persistAuth(data)
-      navigate(data?.redirectTo || roleToDashboard(data?.role), { replace: true })
+      navigate("/", { replace: true })
     } catch (err) {
       setError(err?.response?.data?.message || err?.response?.data?.error || "Authentication failed")
     } finally {

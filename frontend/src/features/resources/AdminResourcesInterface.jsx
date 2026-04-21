@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarClock,
   CheckCircle2,
+  Download,
   Eye,
   Filter,
   MapPin,
@@ -17,6 +18,8 @@ import {
   Wrench,
   X,
 } from "lucide-react";
+import ResourceDirectoryReportPreview from "./ResourceDirectoryReportPreview";
+import ResourceReportPreview from "./ResourceReportPreview";
 
 const API = axios.create({ baseURL: "/api" });
 API.interceptors.request.use((cfg) => {
@@ -32,8 +35,6 @@ const formatDate = (v) => { if (!v) return "Not recorded"; const d = new Date(v)
 const formatAvailability = (windows = []) => { if (!Array.isArray(windows) || !windows.length) return "Not configured"; return windows.map((w) => [w.day, [w.startTime, w.endTime].filter(Boolean).join(" – ")].filter(Boolean).join(": ")).join(", "); };
 const addMinutes = (time, mins) => { if (!time) return ""; const [h, m] = time.split(":").map(Number); const d = new Date(); d.setHours(h, m + mins, 0, 0); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
 
-const dayIndex = { SUNDAY:0, MONDAY:1, TUESDAY:2, WEDNESDAY:3, THURSDAY:4, FRIDAY:5, SATURDAY:6 };
-
 const statusCls = {
   AVAILABLE:   "bg-emerald-100 text-emerald-700 border-emerald-200",
   Available:   "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -47,31 +48,40 @@ const statusCls = {
 
 const typeIcons = { "Lecture Hall": Building2, HALL: Building2, Hall: Building2, "Meeting Room": Users, ROOM: Users, Room: Users, "Computer Lab": Monitor, LAB: Monitor, Lab: Monitor, "Seminar Room": CalendarClock, Auditorium: Building2, AUDITORIUM: Building2 };
 
-const emptyForm = { name:"", type:"MEETING_ROOM", eqCount:"", capacity:"1", building:"", floor:"", room:"", status:"AVAILABLE", description:"", imageUrl:"", createdBy:"", day:"MONDAY", startTime:"09:00", endTime:"17:00" };
+const createAvailabilityWindow = (overrides = {}) => ({ day:"MONDAY", startTime:"09:00", endTime:"17:00", ...overrides });
+
+const emptyForm = { name:"", type:"MEETING_ROOM", eqCount:"", capacity:"1", building:"", floor:"", room:"", status:"AVAILABLE", description:"", imageUrl:"", createdBy:"", availabilityWindows:[createAvailabilityWindow()] };
 
 const getFormValues = (r = {}) => {
-  const w = Array.isArray(r.availabilityWindows) ? r.availabilityWindows[0] : null;
-  return { name: r.name||"", type: r.type||"MEETING_ROOM", eqCount: String(r.eqCount??""), capacity: String(r.capacity||1), building: r.location?.building||"", floor: r.location?.floor||"", room: r.location?.room||"", status: r.status||"AVAILABLE", description: r.description||"", imageUrl: r.imageUrl||"", createdBy: r.createdBy||"", day: w?.day||"MONDAY", startTime: w?.startTime||"09:00", endTime: w?.endTime||"17:00" };
+  const windows = Array.isArray(r.availabilityWindows) && r.availabilityWindows.length
+    ? r.availabilityWindows.map((w) => createAvailabilityWindow({ day: w?.day, startTime: w?.startTime, endTime: w?.endTime }))
+    : [createAvailabilityWindow()];
+  return { name: r.name||"", type: r.type||"MEETING_ROOM", eqCount: String(r.eqCount??""), capacity: String(r.capacity||1), building: r.location?.building||"", floor: r.location?.floor||"", room: r.location?.room||"", status: r.status||"AVAILABLE", description: r.description||"", imageUrl: r.imageUrl||"", createdBy: r.createdBy||"", availabilityWindows: windows };
 };
 
 const buildPayload = (f) => {
   const eq = f.type === "EQUIPMENT";
-  return { name: f.name.trim(), type: f.type.trim(), eqCount: eq ? Number(f.eqCount||0) : 0, capacity: eq ? 1 : Number(f.capacity||0), location: { building: f.building.trim(), floor: f.floor.trim(), room: f.room.trim() }, availabilityWindows: (f.day||f.startTime||f.endTime) ? [{ day:f.day, startTime:f.startTime, endTime:f.endTime }] : [], status: f.status.trim(), description: f.description.trim(), imageUrl: f.imageUrl.trim(), createdBy: f.createdBy.trim() };
+  const windows = Array.isArray(f.availabilityWindows) ? f.availabilityWindows : [];
+  return { name: f.name.trim(), type: f.type.trim(), eqCount: eq ? Number(f.eqCount||0) : 0, capacity: eq ? 1 : Number(f.capacity||0), location: { building: f.building.trim(), floor: f.floor.trim(), room: f.room.trim() }, availabilityWindows: windows.map((w) => ({ day:w.day, startTime:w.startTime, endTime:w.endTime })), status: f.status.trim(), description: f.description.trim(), imageUrl: f.imageUrl.trim(), createdBy: f.createdBy.trim() };
 };
 
 const validateForm = (f) => {
   const eq = f.type === "EQUIPMENT";
-  const req = [["Resource name",f.name],["Type",f.type],["Status",f.status],["Building",f.building],["Floor",f.floor],["Room",f.room],["Day",f.day],["Start time",f.startTime],["End time",f.endTime],["Resource image",f.imageUrl],["Description",f.description],["Created by",f.createdBy]];
+  const req = [["Resource name",f.name],["Type",f.type],["Status",f.status],["Building",f.building],["Floor",f.floor],["Room",f.room],["Resource image",f.imageUrl],["Description",f.description],["Created by",f.createdBy]];
   const miss = req.find(([,v]) => !String(v||"").trim());
   if (miss) return `${miss[0]} is required.`;
   if (!eq && Number(f.capacity||0) <= 0) return "Capacity must be greater than 0.";
   if (eq && Number(f.eqCount||0) <= 0) return "Equipment count must be greater than 0.";
   if (!/^\d+$/.test(f.floor.trim())) return "Floor must be a number.";
-  if (f.endTime <= f.startTime) return "End time must be after start time.";
-  const now = new Date();
-  const todayName = Object.keys(dayIndex).find((d) => dayIndex[d] === now.getDay());
-  const cur = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-  if (f.day === todayName && f.startTime < cur) return "Start time must be current or future.";
+  const windows = Array.isArray(f.availabilityWindows) ? f.availabilityWindows : [];
+  if (!windows.length) return "At least one availability window is required.";
+  for (let i = 0; i < windows.length; i += 1) {
+    const windowItem = windows[i];
+    if (!String(windowItem.day || "").trim()) return `Day is required for window ${i + 1}.`;
+    if (!String(windowItem.startTime || "").trim()) return `Start time is required for window ${i + 1}.`;
+    if (!String(windowItem.endTime || "").trim()) return `End time is required for window ${i + 1}.`;
+    if (windowItem.endTime <= windowItem.startTime) return `End time must be after start time for window ${i + 1}.`;
+  }
   return "";
 };
 
@@ -90,8 +100,13 @@ const replaceById = (list, updated, origId) => {
   return replaced ? next : list;
 };
 
+const formatEqCount = (value) => Number(value) > 0 ? String(value) : "-";
+const formatCapacityValue = (resource) => resource?.type === "EQUIPMENT" ? "-" : `${resource?.capacity || 0} people`;
+const formatCapacityCell = (resource) => resource?.type === "EQUIPMENT" ? "-" : (resource?.capacity || 0);
+
 const inputCls = "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm text-navy outline-none placeholder-slate-400 transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10";
 const labelCls = "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]";
+const titleCase = (value = "") => value.includes(" ") ? value : `${value.charAt(0)}${value.slice(1).toLowerCase()}`;
 
 export default function AdminResourcesInterface() {
   const [resources, setResources]         = useState([]);
@@ -99,6 +114,8 @@ export default function AdminResourcesInterface() {
   const [typeFilter, setTypeFilter]       = useState("All Types");
   const [statusFilter, setStatusFilter]   = useState("All Status");
   const [selectedResource, setSelectedResource] = useState(null);
+  const [reportPreviewResource, setReportPreviewResource] = useState(null);
+  const [directoryReportOpen, setDirectoryReportOpen] = useState(false);
   const [showForm, setShowForm]           = useState(false);
   const [editingResource, setEditingResource] = useState(null);
   const [form, setForm]                   = useState(emptyForm);
@@ -140,7 +157,23 @@ export default function AdminResourcesInterface() {
     capacity: resources.reduce((s, r) => s + Number(r.capacity||0), 0),
   }), [resources]);
 
-  const updateForm  = (field, value) => setForm((c) => { if (field === "startTime") { const minEnd = addMinutes(value, 1); return { ...c, startTime: value, endTime: c.endTime <= value ? minEnd : c.endTime }; } return { ...c, [field]: value }; });
+  const updateForm  = (field, value) => setForm((c) => ({ ...c, [field]: value }));
+  const updateAvailabilityWindow = (index, field, value) => setForm((current) => {
+    const nextWindows = current.availabilityWindows.map((windowItem, windowIndex) => {
+      if (windowIndex !== index) return windowItem;
+      if (field === "startTime") {
+        const minEnd = addMinutes(value, 1);
+        return { ...windowItem, startTime: value, endTime: windowItem.endTime <= value ? minEnd : windowItem.endTime };
+      }
+      return { ...windowItem, [field]: value };
+    });
+    return { ...current, availabilityWindows: nextWindows };
+  });
+  const addAvailabilityWindow = () => setForm((current) => ({ ...current, availabilityWindows: [...current.availabilityWindows, createAvailabilityWindow()] }));
+  const removeAvailabilityWindow = (index) => setForm((current) => {
+    if (current.availabilityWindows.length === 1) return current;
+    return { ...current, availabilityWindows: current.availabilityWindows.filter((_, windowIndex) => windowIndex !== index) };
+  });
   const updateImage = async (file) => { if (!file) return; if (!file.type.startsWith("image/")) { setFormError("Select a valid image."); return; } try { const url = await readImage(file); setForm((c) => ({ ...c, imageUrl: url })); setFormError(""); } catch (e) { setFormError(e.message); } };
 
   const closeForm  = () => { if (saving) return; setShowForm(false); setEditingResource(null); setForm(emptyForm); setFormError(""); };
@@ -249,7 +282,7 @@ export default function AdminResourcesInterface() {
             onClick={() => setStatusFilter(s)}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${statusFilter === s ? "bg-brand text-white shadow-[0_4px_12px_rgba(85,120,210,0.30)]" : "border border-slate-200 bg-white text-slate-500 hover:border-brand/30 hover:text-brand"}`}
           >
-            {s}
+            {titleCase(s)}
           </button>
         ))}
       </div>
@@ -265,13 +298,23 @@ export default function AdminResourcesInterface() {
               {loading ? "Loading…" : `${filtered.length} resource${filtered.length !== 1 ? "s" : ""} matching current view`}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white shadow-[0_4px_12px_rgba(85,120,210,0.25)] transition hover:opacity-90"
-          >
-            <Plus className="h-4 w-4" /> Add Resource
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDirectoryReportOpen(true)}
+              disabled={loading || filtered.length === 0}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-[#5a6b98] shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Download className="h-4 w-4" /> Export PDF
+            </button>
+            <button
+              type="button"
+              onClick={openCreate}
+              className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white shadow-[0_4px_12px_rgba(85,120,210,0.25)] transition hover:opacity-90"
+            >
+              <Plus className="h-4 w-4" /> Add Resource
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -322,7 +365,7 @@ export default function AdminResourcesInterface() {
                           {formatLocation(r.location)}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 font-bold text-navy">{r.capacity || 0}</td>
+                      <td className="px-5 py-3.5 font-bold text-navy">{formatCapacityCell(r)}</td>
                       <td className="px-5 py-3.5">
                         <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusCls[r.status] || "bg-slate-100 text-slate-600 border-slate-200"}`}>{r.status || "—"}</span>
                       </td>
@@ -348,7 +391,7 @@ export default function AdminResourcesInterface() {
       {/* ── Details Modal ── */}
       {selectedResource && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={() => setSelectedResource(null)}>
-          <div className="w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-[26px] bg-white shadow-[0_30px_80px_rgba(21,32,85,0.25)]" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-2xl rounded-[26px] bg-white shadow-[0_30px_80px_rgba(21,32,85,0.25)]" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Resource Details</p>
@@ -371,8 +414,8 @@ export default function AdminResourcesInterface() {
               {[
                 { label:"Type",       value: selectedResource.type || "—" },
                 { label:"Status",     value: <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${statusCls[selectedResource.status] || "bg-slate-100 text-slate-600 border-slate-200"}`}>{selectedResource.status||"—"}</span> },
-                { label:"Capacity",   value: `${selectedResource.capacity||0} people` },
-                { label:"Eq Count",   value: selectedResource.eqCount||0 },
+                { label:"Capacity",   value: formatCapacityValue(selectedResource) },
+                { label:"Eq Count",   value: formatEqCount(selectedResource.eqCount) },
                 { label:"Location",   value: formatLocation(selectedResource.location) },
                 { label:"Created By", value: selectedResource.createdBy || "—" },
                 { label:"Created",    value: formatDate(selectedResource.createdAt) },
@@ -401,6 +444,13 @@ export default function AdminResourcesInterface() {
             </div>
 
             <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setReportPreviewResource(selectedResource)}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#5a6b98] transition hover:bg-slate-100"
+              >
+                <Eye className="h-4 w-4" /> Print
+              </button>
               <button type="button" disabled={deleting} onClick={() => handleDelete(selectedResource)} className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60">
                 <Trash2 className="h-4 w-4" />{deleting ? "Deleting…" : "Delete"}
               </button>
@@ -413,6 +463,13 @@ export default function AdminResourcesInterface() {
       )}
 
       {/* ── Create / Edit Modal ── */}
+      {directoryReportOpen && (
+        <ResourceDirectoryReportPreview resources={filtered} onClose={() => setDirectoryReportOpen(false)} />
+      )}
+      {reportPreviewResource && (
+        <ResourceReportPreview resource={reportPreviewResource} onClose={() => setReportPreviewResource(null)} />
+      )}
+
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={closeForm}>
           <form
@@ -468,16 +525,35 @@ export default function AdminResourcesInterface() {
               </div>
 
               <div>
-                <p className="mb-3 text-xs font-bold text-navy">Availability Window</p>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div>
-                    <label className={labelCls}>Day *</label>
-                    <select value={form.day} onChange={(e) => updateForm("day",e.target.value)} required className={inputCls}>
-                      {["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"].map((d) => <option key={d}>{d}</option>)}
-                    </select>
-                  </div>
-                  <div><label className={labelCls}>Start Time *</label><input type="time" value={form.startTime} onChange={(e) => updateForm("startTime",e.target.value)} required className={inputCls} /></div>
-                  <div><label className={labelCls}>End Time *</label><input type="time" value={form.endTime} min={addMinutes(form.startTime,1)} onChange={(e) => updateForm("endTime",e.target.value)} required className={inputCls} /></div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-xs font-bold text-navy">Availability Windows</p>
+                  <button type="button" onClick={addAvailabilityWindow} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#5a6b98] transition hover:bg-slate-50">
+                    Add Window
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {form.availabilityWindows.map((windowItem, index) => (
+                    <div key={`${index}-${windowItem.day}-${windowItem.startTime}`} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Window {index + 1}</p>
+                        {form.availabilityWindows.length > 1 && (
+                          <button type="button" onClick={() => removeAvailabilityWindow(index)} className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 transition hover:bg-red-100">
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div>
+                          <label className={labelCls}>Day *</label>
+                          <select value={windowItem.day} onChange={(e) => updateAvailabilityWindow(index,"day",e.target.value)} required className={inputCls}>
+                            {["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"].map((d) => <option key={d}>{d}</option>)}
+                          </select>
+                        </div>
+                        <div><label className={labelCls}>Start Time *</label><input type="time" value={windowItem.startTime} onChange={(e) => updateAvailabilityWindow(index,"startTime",e.target.value)} required className={inputCls} /></div>
+                        <div><label className={labelCls}>End Time *</label><input type="time" value={windowItem.endTime} min={addMinutes(windowItem.startTime,1)} onChange={(e) => updateAvailabilityWindow(index,"endTime",e.target.value)} required className={inputCls} /></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
