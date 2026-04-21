@@ -31,6 +31,7 @@ import resourceService from "./features/resources/services/resourceService"
 import AdminResourcesInterface from "./features/resources/AdminResourcesInterface.jsx"
 import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
 import AnalyticsPage from "./features/booking/pages/AnalyticsPage"
+import UserManagementPage from "./features/users/pages/UserManagementPage.jsx"
 
 const actionConfigByRole = {
   USER: [
@@ -762,6 +763,14 @@ function AppShell() {
                 element={
                   <RoleRoute allowedRoles={["ADMIN", "TECHNICIAN"]}>
                     <AdminResourcesInterface />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <RoleRoute allowedRoles={["ADMIN"]}>
+                    <UserManagementPage />
                   </RoleRoute>
                 }
               />
