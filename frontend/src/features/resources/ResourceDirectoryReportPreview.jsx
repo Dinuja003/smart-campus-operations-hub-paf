@@ -299,7 +299,7 @@ export default function ResourceDirectoryReportPreview({ resources, onClose }) {
         className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[30px] border border-white/50 bg-[#f7f9ff] shadow-[0_36px_100px_rgba(12,22,58,0.30)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative overflow-hidden border-b border-slate-200/80 bg-[#11214e] px-7 py-8 text-white">
+        <div className="relative overflow-hidden border-b border-slate-200/80 bg-[#11214e] px-7 py-10 text-white">
           <div className="absolute -left-10 top-4 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute right-10 top-6 h-20 w-20 rounded-full bg-[#ffbe66]/30 blur-2xl" />
           <div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
