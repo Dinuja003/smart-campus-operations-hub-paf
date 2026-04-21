@@ -50,7 +50,7 @@ export default function MyBookingsPage() {
     (async () => {
       setResourcesLoading(true); setResourcesError('');
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const [myB, allR] = await Promise.all([
           getMyBookings(),
           axios.get('/api/resources', { headers: token ? { Authorization: `Bearer ${token}` } : {} }),

@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Ticket,
   User,
+  Users,
   Wrench,
 } from "lucide-react"
 import {
@@ -37,7 +38,7 @@ const navSectionsByRole = {
     {
       section: "MAIN MENU",
       items: [
-        { label: "Dashboard", path: "/", icon: LayoutDashboard },
+        { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
         { label: "My Bookings", path: "/my-bookings", icon: CalendarCheck2 },
       ],
     },
@@ -54,11 +55,12 @@ const navSectionsByRole = {
     {
       section: "MAIN MENU",
       items: [
-        { label: "Dashboard", path: "/", icon: LayoutDashboard },
-        { label: "All Bookings", path: "/admin/bookings", icon: ShieldCheck },
-        { label: "Analytics", path: "/analytics", icon: BarChart3 },
-        { label: "My Bookings", path: "/my-bookings", icon: CalendarCheck2 },
-        { label: "Resources", path: "/resources", icon: Wrench },
+        { label: "Dashboard",    path: "/dashboard",      icon: LayoutDashboard },
+        { label: "All Bookings", path: "/admin/bookings", icon: ShieldCheck     },
+        { label: "Analytics",    path: "/analytics",      icon: BarChart3       },
+        { label: "My Bookings",  path: "/my-bookings",    icon: CalendarCheck2  },
+        { label: "Resources",    path: "/resources",      icon: Wrench          },
+        { label: "Users",        path: "/admin/users",    icon: Users           },
       ],
     },
     {
@@ -74,7 +76,7 @@ const navSectionsByRole = {
     {
       section: "MAIN MENU",
       items: [
-        { label: "Dashboard", path: "/", icon: LayoutDashboard },
+        { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
         { label: "Resources", path: "/resources", icon: Wrench },
       ],
     },
@@ -111,8 +113,8 @@ function deriveInitials(displayName) {
 export function AppSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const email = localStorage.getItem("email") || ""
-  const role = (localStorage.getItem("role") || "USER").toUpperCase()
+  const email = sessionStorage.getItem("email") || ""
+  const role = (sessionStorage.getItem("role") || "USER").toUpperCase()
   const displayName = deriveDisplayName(email)
   const initials = deriveInitials(displayName)
   const navSections = navSectionsByRole[role] || navSectionsByRole.USER
@@ -208,7 +210,7 @@ export function AppSidebar() {
               className="text-red-500 focus:bg-red-50 focus:text-red-500 cursor-pointer"
               onClick={() => {
                 clearAuth()
-                navigate("/login", { replace: true })
+                navigate("/", { replace: true })
               }}
             >
               <LogOut className="h-4 w-4" />

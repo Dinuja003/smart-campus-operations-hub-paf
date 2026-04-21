@@ -16,15 +16,37 @@ export async function signUp(payload) {
 
 export function persistAuth(data) {
   if (!data?.token) return
-  localStorage.setItem("token", data.token)
-  localStorage.setItem("role", data.role)
-  localStorage.setItem("userId", data.userId)
-  localStorage.setItem("email", data.email)
+  sessionStorage.setItem("token", data.token)
+  sessionStorage.setItem("role", data.role)
+  sessionStorage.setItem("userId", data.userId)
+  sessionStorage.setItem("email", data.email)
 }
 
 export function clearAuth() {
-  localStorage.removeItem("token")
-  localStorage.removeItem("role")
-  localStorage.removeItem("userId")
-  localStorage.removeItem("email")
+  sessionStorage.removeItem("token")
+  sessionStorage.removeItem("role")
+  sessionStorage.removeItem("userId")
+  sessionStorage.removeItem("email")
 }
+
+export function isTokenExpired(token) {
+  if (!token) return true
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]))
+    return Date.now() >= payload.exp * 1000
+  } catch {
+    return true
+  }
+}
+
+// Intercept 401 responses globally — clear session and redirect to login
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      clearAuth()
+      window.location.replace("/")
+    }
+    return Promise.reject(error)
+  }
+)
