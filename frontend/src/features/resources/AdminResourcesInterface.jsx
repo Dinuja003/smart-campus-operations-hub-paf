@@ -251,7 +251,7 @@ export default function AdminResourcesInterface() {
             onClick={() => setStatusFilter(s)}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${statusFilter === s ? "bg-brand text-white shadow-[0_4px_12px_rgba(85,120,210,0.30)]" : "border border-slate-200 bg-white text-slate-500 hover:border-brand/30 hover:text-brand"}`}
           >
-            {s}
+            {s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()}
           </button>
         ))}
       </div>
