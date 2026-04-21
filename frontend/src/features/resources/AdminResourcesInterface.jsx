@@ -350,7 +350,7 @@ export default function AdminResourcesInterface() {
       {/* ── Details Modal ── */}
       {selectedResource && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={() => setSelectedResource(null)}>
-          <div className="w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-[26px] bg-white shadow-[0_30px_80px_rgba(21,32,85,0.25)]" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-2xl rounded-[26px] bg-white shadow-[0_30px_80px_rgba(21,32,85,0.25)]" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Resource Details</p>
