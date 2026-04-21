@@ -17,6 +17,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
+import ResourceReportPreview from "./ResourceReportPreview";
 
 const API = axios.create({ baseURL: "/api" });
 API.interceptors.request.use((cfg) => {
@@ -99,6 +100,7 @@ export default function AdminResourcesInterface() {
   const [typeFilter, setTypeFilter]       = useState("All Types");
   const [statusFilter, setStatusFilter]   = useState("All Status");
   const [selectedResource, setSelectedResource] = useState(null);
+  const [reportPreviewResource, setReportPreviewResource] = useState(null);
   const [showForm, setShowForm]           = useState(false);
   const [editingResource, setEditingResource] = useState(null);
   const [form, setForm]                   = useState(emptyForm);
@@ -401,6 +403,13 @@ export default function AdminResourcesInterface() {
             </div>
 
             <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setReportPreviewResource(selectedResource)}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#5a6b98] transition hover:bg-slate-100"
+              >
+                <Eye className="h-4 w-4" /> Print
+              </button>
               <button type="button" disabled={deleting} onClick={() => handleDelete(selectedResource)} className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60">
                 <Trash2 className="h-4 w-4" />{deleting ? "Deleting…" : "Delete"}
               </button>
@@ -413,6 +422,10 @@ export default function AdminResourcesInterface() {
       )}
 
       {/* ── Create / Edit Modal ── */}
+      {reportPreviewResource && (
+        <ResourceReportPreview resource={reportPreviewResource} onClose={() => setReportPreviewResource(null)} />
+      )}
+
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={closeForm}>
           <form
