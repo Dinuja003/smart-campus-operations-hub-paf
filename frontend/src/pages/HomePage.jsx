@@ -227,7 +227,7 @@ export default function HomePage() {
                 <>
                   <button
                     type="button"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/dashboard")}
                     className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(244,94,43,0.35)] transition-all hover:bg-brand/90 hover:shadow-[0_6px_20px_rgba(244,94,43,0.45)]"
                   >
                     Dashboard
@@ -301,7 +301,7 @@ export default function HomePage() {
               {isLoggedIn ? (
                 <button
                   type="button"
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/dashboard")}
                   className="w-full rounded-lg bg-brand py-2.5 text-sm font-semibold text-white"
                 >
                   Dashboard
@@ -411,7 +411,7 @@ export default function HomePage() {
                 {isLoggedIn ? (
                   <button
                     type="button"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/dashboard")}
                     className="group flex items-center gap-2 rounded-xl bg-brand px-7 py-3.5 text-base font-semibold text-white shadow-[0_8px_30px_rgba(0,0,0,0.35)] transition-all hover:-translate-y-0.5 hover:bg-brand/90"
                   >
                     Open Dashboard
@@ -810,7 +810,7 @@ export default function HomePage() {
               {isLoggedIn ? (
                 <button
                   type="button"
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/dashboard")}
                   className="group inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-base font-semibold text-navy shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
                 >
                   Open Dashboard
