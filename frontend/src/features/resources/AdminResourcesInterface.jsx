@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarClock,
   CheckCircle2,
+  Download,
   Eye,
   Filter,
   MapPin,
@@ -17,6 +18,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
+import ResourceDirectoryReportPreview from "./ResourceDirectoryReportPreview";
 import ResourceReportPreview from "./ResourceReportPreview";
 
 const API = axios.create({ baseURL: "/api" });
@@ -93,6 +95,7 @@ const replaceById = (list, updated, origId) => {
 
 const inputCls = "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm text-navy outline-none placeholder-slate-400 transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10";
 const labelCls = "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]";
+const titleCase = (value = "") => value.includes(" ") ? value : `${value.charAt(0)}${value.slice(1).toLowerCase()}`;
 
 export default function AdminResourcesInterface() {
   const [resources, setResources]         = useState([]);
@@ -101,6 +104,7 @@ export default function AdminResourcesInterface() {
   const [statusFilter, setStatusFilter]   = useState("All Status");
   const [selectedResource, setSelectedResource] = useState(null);
   const [reportPreviewResource, setReportPreviewResource] = useState(null);
+  const [directoryReportOpen, setDirectoryReportOpen] = useState(false);
   const [showForm, setShowForm]           = useState(false);
   const [editingResource, setEditingResource] = useState(null);
   const [form, setForm]                   = useState(emptyForm);
@@ -251,7 +255,7 @@ export default function AdminResourcesInterface() {
             onClick={() => setStatusFilter(s)}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${statusFilter === s ? "bg-brand text-white shadow-[0_4px_12px_rgba(85,120,210,0.30)]" : "border border-slate-200 bg-white text-slate-500 hover:border-brand/30 hover:text-brand"}`}
           >
-            {s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()}
+            {titleCase(s)}
           </button>
         ))}
       </div>
@@ -267,13 +271,23 @@ export default function AdminResourcesInterface() {
               {loading ? "Loading…" : `${filtered.length} resource${filtered.length !== 1 ? "s" : ""} matching current view`}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white shadow-[0_4px_12px_rgba(85,120,210,0.25)] transition hover:opacity-90"
-          >
-            <Plus className="h-4 w-4" /> Add Resource
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDirectoryReportOpen(true)}
+              disabled={loading || resources.length === 0}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-[#5a6b98] shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Download className="h-4 w-4" /> Export PDF
+            </button>
+            <button
+              type="button"
+              onClick={openCreate}
+              className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white shadow-[0_4px_12px_rgba(85,120,210,0.25)] transition hover:opacity-90"
+            >
+              <Plus className="h-4 w-4" /> Add Resource
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -422,6 +436,9 @@ export default function AdminResourcesInterface() {
       )}
 
       {/* ── Create / Edit Modal ── */}
+      {directoryReportOpen && (
+        <ResourceDirectoryReportPreview resources={resources} onClose={() => setDirectoryReportOpen(false)} />
+      )}
       {reportPreviewResource && (
         <ResourceReportPreview resource={reportPreviewResource} onClose={() => setReportPreviewResource(null)} />
       )}
