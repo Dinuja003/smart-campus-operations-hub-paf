@@ -142,6 +142,19 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [liveNow, setLiveNow] = useState(new Date())
+  const [bannerSlide, setBannerSlide] = useState(0)
+
+  const bannerImages = [
+    "https://images.unsplash.com/photo-1562774053-701939374585?w=1400&q=80&fit=crop",
+    "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1400&q=80&fit=crop",
+    "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1400&q=80&fit=crop",
+  ]
+
+  useEffect(() => {
+    const t = window.setInterval(() => setBannerSlide((s) => (s + 1) % bannerImages.length), 4000)
+    return () => window.clearInterval(t)
+  }, [bannerImages.length])
+
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
@@ -422,36 +435,37 @@ function Dashboard() {
 
 
       {/* ── Promo Banner ── */}
-      <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-brand to-[#152055] px-7 py-6 shadow-[0_14px_40px_rgba(21,32,85,0.20)]">
-        {/* Decorative dots */}
-        <div className="pointer-events-none absolute right-24 top-4 h-3 w-3 rounded-full bg-emerald-400 opacity-70" />
-        <div className="pointer-events-none absolute right-44 top-8 h-2 w-2 rounded-full bg-[#f5b800] opacity-80" />
-        <div className="pointer-events-none absolute right-36 bottom-4 h-4 w-4 rounded-full bg-red-400/70 opacity-60" />
-        {/* Decorative card mockups */}
-        <div className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 flex-col gap-3 xl:flex">
-          <div className="w-44 rounded-xl bg-white/15 p-3 backdrop-blur-sm">
-            <div className="mb-2 h-2 w-20 rounded bg-white/40" />
-            <div className="h-6 w-28 rounded bg-white/20" />
+      <section className="relative overflow-hidden rounded-[26px] shadow-[0_14px_40px_rgba(21,32,85,0.18)] h-[160px] sm:h-[180px]">
+        {/* Background images — crossfade */}
+        {bannerImages.map((src, idx) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-1000 ease-in-out"
+            style={{ opacity: idx === bannerSlide ? 1 : 0 }}
+          />
+        ))}
+        {/* Dark overlay on the right to make text readable, fades from transparent on left */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-black/50 to-[#001d45]/92" />
+
+        {/* Content: left side light, right side text */}
+        <div className="relative flex h-full items-center justify-end px-8 sm:px-10">
+          <div className="max-w-sm text-right">
+            <p className="mb-1 text-[10px] font-bold tracking-widest text-[#f45e2b] uppercase">
+              {greeting}
+            </p>
+            <p className="text-2xl font-extrabold leading-tight text-white sm:text-3xl">
+              Need a space?<br />Book it in a tap.
+            </p>
+            <p className="mt-2 text-sm text-white/65">
+              {bookingStats.approved > 0
+                ? `You have ${bookingStats.approved} confirmed booking${bookingStats.approved !== 1 ? "s" : ""}`
+                : "No confirmed bookings yet"}
+              {bookingStats.pending > 0 ? ` and ${bookingStats.pending} pending review.` : "."}
+            </p>
           </div>
-          <div className="ml-8 w-44 rounded-xl bg-white/10 p-3 backdrop-blur-sm">
-            <div className="mb-2 h-2 w-16 rounded bg-white/40" />
-            <div className="mb-1 h-2.5 w-24 rounded bg-orange-400/50" />
-            <div className="h-2.5 w-16 rounded bg-emerald-400/50" />
-          </div>
-        </div>
-        <div className="relative max-w-lg">
-          <p className="mb-1.5 text-[10px] font-bold tracking-widest text-white/50 uppercase">
-            {greeting.toUpperCase()}
-          </p>
-          <p className="text-3xl font-extrabold leading-tight text-white sm:text-4xl">
-            Need a space?<br />Book it in a tap.
-          </p>
-          <p className="mt-2 text-sm text-white/65">
-            {bookingStats.approved > 0
-              ? `You have ${bookingStats.approved} confirmed booking${bookingStats.approved !== 1 ? "s" : ""}`
-              : "No confirmed bookings yet"}
-            {bookingStats.pending > 0 ? ` and ${bookingStats.pending} pending review.` : "."}
-          </p>
         </div>
       </section>
 
