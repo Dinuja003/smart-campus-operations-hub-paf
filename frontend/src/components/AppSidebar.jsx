@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Ticket,
   User,
+  Users,
   Wrench,
 } from "lucide-react"
 import {
@@ -54,11 +55,12 @@ const navSectionsByRole = {
     {
       section: "MAIN MENU",
       items: [
-        { label: "Dashboard", path: "/", icon: LayoutDashboard },
-        { label: "All Bookings", path: "/admin/bookings", icon: ShieldCheck },
-        { label: "Analytics", path: "/analytics", icon: BarChart3 },
-        { label: "My Bookings", path: "/my-bookings", icon: CalendarCheck2 },
-        { label: "Resources", path: "/resources", icon: Wrench },
+        { label: "Dashboard",    path: "/",               icon: LayoutDashboard },
+        { label: "All Bookings", path: "/admin/bookings", icon: ShieldCheck     },
+        { label: "Analytics",    path: "/analytics",      icon: BarChart3       },
+        { label: "My Bookings",  path: "/my-bookings",    icon: CalendarCheck2  },
+        { label: "Resources",    path: "/resources",      icon: Wrench          },
+        { label: "Users",        path: "/admin/users",    icon: Users           },
       ],
     },
     {
@@ -111,8 +113,8 @@ function deriveInitials(displayName) {
 export function AppSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const email = localStorage.getItem("email") || ""
-  const role = (localStorage.getItem("role") || "USER").toUpperCase()
+  const email = sessionStorage.getItem("email") || ""
+  const role = (sessionStorage.getItem("role") || "USER").toUpperCase()
   const displayName = deriveDisplayName(email)
   const initials = deriveInitials(displayName)
   const navSections = navSectionsByRole[role] || navSectionsByRole.USER
