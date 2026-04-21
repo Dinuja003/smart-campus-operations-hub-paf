@@ -13,6 +13,17 @@ const formatDate = (value) => {
   }).format(date);
 };
 
+const formatTime = (value) => {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+};
+
 const formatLocation = (location) => {
   if (!location) return "Not assigned";
   if (typeof location === "string") return location;
@@ -32,6 +43,9 @@ const titleCaseStatus = (value) => {
   if (!value) return "-";
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 };
+
+const formatEquipmentCount = (value) => Number(value) > 0 ? String(value) : "-";
+const formatCapacityValue = (resource) => resource?.type === "EQUIPMENT" ? "-" : `${resource?.capacity || 0} people`;
 
 const statusCls = {
   AVAILABLE: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -150,8 +164,8 @@ export default function ResourceReportPreview({ resource, onClose }) {
   const fields = useMemo(() => ([
     { label: "Type", value: resource?.type || "-" },
     { label: "Status", value: titleCaseStatus(resource?.status) },
-    { label: "Capacity", value: `${resource?.capacity || 0} people` },
-    { label: "Equipment Count", value: resource?.eqCount || 0 },
+    { label: "Capacity", value: formatCapacityValue(resource) },
+    { label: "Equipment Count", value: formatEquipmentCount(resource?.eqCount) },
     { label: "Location", value: formatLocation(resource?.location) },
     { label: "Created By", value: resource?.createdBy || "-" },
     { label: "Created", value: formatDate(resource?.createdAt) },
@@ -173,6 +187,7 @@ export default function ResourceReportPreview({ resource, onClose }) {
       const margin = 12;
       const contentWidth = pageWidth - margin * 2;
       const statusTone = statusPdfTone[String(resource.status || "").toLowerCase()] || statusPdfTone.default;
+      const generatedAt = new Date().toISOString();
       let y = 14;
 
       pdf.setFillColor(246, 248, 255);
@@ -217,7 +232,7 @@ export default function ResourceReportPreview({ resource, onClose }) {
       const metricGap = 4;
       const metricW = (contentWidth - metricGap) / 2;
       drawInfoCard(pdf, { x: margin, y, w: metricW, h: 18, label: "Location", value: formatLocation(resource.location), fill: [255, 255, 255] });
-      drawInfoCard(pdf, { x: margin + metricW + metricGap, y, w: metricW, h: 18, label: "Generated", value: formatDate(new Date().toISOString()), fill: [255, 244, 238] });
+      drawInfoCard(pdf, { x: margin + metricW + metricGap, y, w: metricW, h: 18, label: "Generated", value: `${formatDate(generatedAt)} | ${formatTime(generatedAt)}`, fill: [255, 244, 238] });
 
       y += 24;
 
@@ -402,10 +417,41 @@ export default function ResourceReportPreview({ resource, onClose }) {
             </div>
 
             <aside className="grid gap-3">
-              <div className="rounded-[24px] border border-[#ffd9ca] bg-[#fff1ea] p-4 shadow-[0_16px_40px_rgba(24,39,87,0.06)]">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-[#ff6b35]">Generated On</p>
-                <p className="mt-2 text-[2rem] font-bold tracking-tight text-[#11214e]">{formatDate(new Date().toISOString())}</p>
-                <p className="mt-5 text-sm leading-6 text-[#7c5a48]">Designed for fast sharing, reporting, and administrative review.</p>
+              <div className="relative overflow-hidden rounded-[24px] border border-[#ffd9ca] bg-[linear-gradient(145deg,#fff7f2_0%,#fff1ea_100%)] p-4 shadow-[0_16px_40px_rgba(24,39,87,0.06)]">
+                <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-[#ff6b35]/10 blur-2xl" />
+                <div className="relative">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#ff6b35] shadow-sm">
+                      <CalendarClock className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-[#ff6b35]">Generated On</p>
+                      <p className="mt-1 text-sm text-[#9a6f58]">Report issue date</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-end gap-3 rounded-[20px] border border-white/70 bg-white/70 px-4 py-3 shadow-sm">
+                    <div className="min-w-[4.5rem] rounded-2xl bg-[#11214e] px-3 py-2 text-center text-white">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#cbd7ff]">
+                        {new Intl.DateTimeFormat("en", { month: "short" }).format(new Date())}
+                      </p>
+                      <p className="mt-1 text-2xl font-bold leading-none">
+                        {new Intl.DateTimeFormat("en", { day: "2-digit" }).format(new Date())}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold tracking-tight text-[#11214e]">
+                        {new Intl.DateTimeFormat("en", { year: "numeric" }).format(new Date())}
+                      </p>
+                      <p className="mt-1 text-sm text-[#9a6f58]">{formatDate(new Date().toISOString())}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#ff6b35]">
+                        {new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit", hour12: true }).format(new Date())}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-sm leading-6 text-[#7c5a48]">Prepared for fast sharing, reporting, and administrative review.</p>
+                </div>
               </div>
 
               <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(24,39,87,0.06)]">
@@ -436,8 +482,8 @@ export default function ResourceReportPreview({ resource, onClose }) {
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 { label: "Type", value: resource.type || "-", icon: FileText, card: "bg-[#eef4ff]" },
-                { label: "Capacity", value: `${resource.capacity || 0} people`, icon: Users, card: "bg-[#fff1cf]" },
-                { label: "Eq Count", value: resource.eqCount || 0, icon: Wrench, card: "bg-[#f5f7ff]" },
+                { label: "Capacity", value: formatCapacityValue(resource), icon: Users, card: "bg-[#fff1cf]" },
+                { label: "Eq Count", value: formatEquipmentCount(resource.eqCount), icon: Wrench, card: "bg-[#f5f7ff]" },
                 { label: "Created By", value: resource.createdBy || "-", icon: ShieldCheck, card: "bg-[#e5f8eb]" },
               ].map((item) => {
                 const MetricIcon = item.icon;

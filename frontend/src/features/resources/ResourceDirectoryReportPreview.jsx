@@ -23,6 +23,17 @@ const formatDate = (value) => {
   }).format(date);
 };
 
+const formatTime = (value) => {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+};
+
 const formatLocation = (location) => {
   if (!location) return "Not assigned";
   if (typeof location === "string") return location;
@@ -50,6 +61,9 @@ const titleCaseStatus = (value) => {
   if (!value) return "-";
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 };
+
+const formatEquipmentCount = (value) => Number(value) > 0 ? String(value) : "-";
+const formatCapacityValue = (resource) => resource?.type === "EQUIPMENT" ? "-" : `${resource?.capacity || 0} people`;
 
 const statusTone = {
   available: {
@@ -152,8 +166,8 @@ const drawResourceCard = (pdf, resource, index, y, pageWidth, margin) => {
   );
 
   const meta = [
-    `Capacity: ${resource.capacity || 0} people`,
-    `Eq Count: ${resource.eqCount || 0}`,
+    `Capacity: ${formatCapacityValue(resource)}`,
+    `Eq Count: ${formatEquipmentCount(resource.eqCount)}`,
     `Created By: ${resource.createdBy || "-"}`,
     `Updated: ${formatDate(resource.updatedAt)}`,
   ];
@@ -207,7 +221,9 @@ export default function ResourceDirectoryReportPreview({ resources, onClose }) {
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 12;
       const headerHeight = 34;
-      const generatedOn = formatDate(new Date().toISOString());
+      const generatedAt = new Date().toISOString();
+      const generatedOn = formatDate(generatedAt);
+      const generatedTime = formatTime(generatedAt);
       let y = 18;
 
       pdf.setFillColor(245, 247, 255);
@@ -255,7 +271,7 @@ export default function ResourceDirectoryReportPreview({ resources, onClose }) {
 
       pdf.setFillColor(255, 255, 255);
       pdf.setDrawColor(226, 232, 240);
-      pdf.roundedRect(margin, y, pageWidth - margin * 2, 14, 5, 5, "FD");
+      pdf.roundedRect(margin, y, pageWidth - margin * 2, 18, 5, 5, "FD");
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(8);
       pdf.setTextColor(132, 148, 194);
@@ -263,13 +279,10 @@ export default function ResourceDirectoryReportPreview({ resources, onClose }) {
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(9);
       pdf.setTextColor(90, 107, 152);
-      pdf.text(
-        `Generated on ${generatedOn} for ${summary.total} resources. This document is designed for planning, monitoring, and operational review.`,
-        margin + 5,
-        y + 11
-      );
+      pdf.text(`Generated on ${generatedOn} at ${generatedTime} for ${summary.total} resources.`, margin + 5, y + 11);
+      pdf.text("This document is designed for planning, monitoring, and operational review.", margin + 5, y + 15);
 
-      y += 22;
+      y += 26;
 
       list.forEach((resource, index) => {
         if (y > pageHeight - 72) {
@@ -366,6 +379,7 @@ export default function ResourceDirectoryReportPreview({ resources, onClose }) {
               <div className="rounded-[28px] border border-[#ffd9ca] bg-[#fff1ea] p-5 shadow-[0_16px_40px_rgba(24,39,87,0.06)]">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-[#ff6b35]">Generated On</p>
                 <p className="mt-3 text-3xl font-bold tracking-tight text-[#11214e]">{formatDate(new Date().toISOString())}</p>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#ff6b35]">{formatTime(new Date().toISOString())}</p>
                 <p className="mt-2 text-sm leading-6 text-[#7c5a48]">Fresh export timestamp for sharing, audits, and review meetings.</p>
               </div>
 
@@ -433,8 +447,8 @@ export default function ResourceDirectoryReportPreview({ resources, onClose }) {
                         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                           {[
                             { label: "Type", value: resource.type || "-" },
-                            { label: "Capacity", value: `${resource.capacity || 0} people` },
-                            { label: "Eq Count", value: resource.eqCount || 0 },
+                            { label: "Capacity", value: formatCapacityValue(resource) },
+                            { label: "Eq Count", value: formatEquipmentCount(resource.eqCount) },
                             { label: "Created By", value: resource.createdBy || "-" },
                           ].map(({ label, value }) => (
                             <div key={label} className="rounded-2xl border border-slate-100 bg-white px-4 py-3">

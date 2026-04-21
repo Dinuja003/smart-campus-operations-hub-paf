@@ -93,6 +93,10 @@ const replaceById = (list, updated, origId) => {
   return replaced ? next : list;
 };
 
+const formatEqCount = (value) => Number(value) > 0 ? String(value) : "-";
+const formatCapacityValue = (resource) => resource?.type === "EQUIPMENT" ? "-" : `${resource?.capacity || 0} people`;
+const formatCapacityCell = (resource) => resource?.type === "EQUIPMENT" ? "-" : (resource?.capacity || 0);
+
 const inputCls = "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm text-navy outline-none placeholder-slate-400 transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10";
 const labelCls = "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]";
 const titleCase = (value = "") => value.includes(" ") ? value : `${value.charAt(0)}${value.slice(1).toLowerCase()}`;
@@ -338,7 +342,7 @@ export default function AdminResourcesInterface() {
                           {formatLocation(r.location)}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 font-bold text-navy">{r.capacity || 0}</td>
+                      <td className="px-5 py-3.5 font-bold text-navy">{formatCapacityCell(r)}</td>
                       <td className="px-5 py-3.5">
                         <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusCls[r.status] || "bg-slate-100 text-slate-600 border-slate-200"}`}>{r.status || "—"}</span>
                       </td>
@@ -387,8 +391,8 @@ export default function AdminResourcesInterface() {
               {[
                 { label:"Type",       value: selectedResource.type || "—" },
                 { label:"Status",     value: <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${statusCls[selectedResource.status] || "bg-slate-100 text-slate-600 border-slate-200"}`}>{selectedResource.status||"—"}</span> },
-                { label:"Capacity",   value: `${selectedResource.capacity||0} people` },
-                { label:"Eq Count",   value: selectedResource.eqCount||0 },
+                { label:"Capacity",   value: formatCapacityValue(selectedResource) },
+                { label:"Eq Count",   value: formatEqCount(selectedResource.eqCount) },
                 { label:"Location",   value: formatLocation(selectedResource.location) },
                 { label:"Created By", value: selectedResource.createdBy || "—" },
                 { label:"Created",    value: formatDate(selectedResource.createdAt) },
