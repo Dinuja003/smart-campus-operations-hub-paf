@@ -337,62 +337,62 @@ export default function ResourceReportPreview({ resource, onClose }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-md" onClick={onClose}>
       <div
-        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[30px] border border-white/60 bg-[#f7f9ff] shadow-[0_36px_100px_rgba(12,22,58,0.30)]"
+        className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-[26px] border border-white/60 bg-[#f7f9ff] shadow-[0_36px_100px_rgba(12,22,58,0.30)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative overflow-hidden bg-[#11214e] px-7 py-7 text-white">
+        <div className="relative overflow-hidden bg-[#11214e] px-6 py-5 text-white">
           <div className="absolute -left-8 top-4 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute right-10 top-4 h-20 w-20 rounded-full bg-[#ffbe66]/30 blur-2xl" />
-          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <p className="text-[11px] font-bold uppercase tracking-widest text-[#cbd7ff]">Resource Report Preview</p>
-              <h2 className="mt-2 text-4xl font-bold tracking-tight text-white">{resource.name || "Unnamed Resource"}</h2>
+              <h2 className="mt-1.5 text-3xl font-bold tracking-tight text-white">{resource.name || "Unnamed Resource"}</h2>
             </div>
             <div className="flex items-center gap-2 self-start">
               <button
                 type="button"
                 onClick={handleDownloadPdf}
                 disabled={downloading}
-                className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-[#11214e] shadow-[0_10px_25px_rgba(5,10,30,0.18)] transition hover:-translate-y-0.5 hover:bg-[#fff7f2] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-[#11214e] shadow-[0_10px_25px_rgba(5,10,30,0.18)] transition hover:-translate-y-0.5 hover:bg-[#fff7f2] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Download className="h-4 w-4" />
                 {downloading ? "Generating PDF..." : "Download PDF"}
               </button>
-              <button type="button" onClick={onClose} className="rounded-2xl border border-white/20 bg-white/10 p-3 text-white transition hover:bg-white/15">
+              <button type="button" onClick={onClose} className="rounded-2xl border border-white/20 bg-white/10 p-2.5 text-white transition hover:bg-white/15">
                 <X className="h-5 w-5" />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="overflow-y-auto px-7 py-7">
+        <div className="overflow-y-auto px-6 py-5">
           {downloadError && (
-            <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
               {downloadError}
             </div>
           )}
 
-          <section className="grid gap-4 lg:grid-cols-[1.3fr_0.85fr]">
-            <div className="overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_16px_40px_rgba(24,39,87,0.08)]">
+          <section className="grid gap-3 lg:grid-cols-[1.25fr_0.85fr]">
+            <div className="overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_16px_40px_rgba(24,39,87,0.08)]">
               {resource.imageUrl ? (
-                <div className="bg-[linear-gradient(135deg,#eef4ff_0%,#fff7f2_100%)] p-4">
-                  <div className="overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_12px_30px_rgba(24,39,87,0.10)]">
-                    <img src={resource.imageUrl} alt={resource.name} className="h-72 w-full object-cover" />
+                <div className="bg-[linear-gradient(135deg,#eef4ff_0%,#fff7f2_100%)] p-3">
+                  <div className="overflow-hidden rounded-[20px] border border-white/70 bg-white shadow-[0_12px_30px_rgba(24,39,87,0.10)]">
+                    <img src={resource.imageUrl} alt={resource.name} className="h-56 w-full object-cover" />
                   </div>
                 </div>
               ) : (
-                <div className="flex h-72 items-center justify-center bg-[linear-gradient(135deg,#11214e_0%,#20306d_60%,#ff6b35_170%)]">
-                  <div className="rounded-3xl border border-white/15 bg-white/10 px-6 py-5 text-center text-white backdrop-blur-sm">
+                <div className="flex h-56 items-center justify-center bg-[linear-gradient(135deg,#11214e_0%,#20306d_60%,#ff6b35_170%)]">
+                  <div className="rounded-3xl border border-white/15 bg-white/10 px-5 py-4 text-center text-white backdrop-blur-sm">
                     <FileText className="mx-auto h-7 w-7" />
-                    <p className="mt-3 text-lg font-semibold">No resource image available</p>
+                    <p className="mt-2 text-base font-semibold">No resource image available</p>
                   </div>
                 </div>
               )}
-              <div className="border-t border-slate-100 bg-white px-6 py-5">
+              <div className="border-t border-slate-100 bg-white px-5 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-widest text-[#8494c2]">Campus Resource Report</p>
-                    <p className="mt-2 text-2xl font-bold tracking-tight text-[#11214e]">Visual Preview Sheet</p>
+                    <p className="mt-1.5 text-xl font-bold tracking-tight text-[#11214e]">Visual Preview Sheet</p>
                   </div>
                   <span className={`rounded-full border px-4 py-2 text-xs font-bold ${statusCls[resource.status] || "bg-slate-100 text-slate-600 border-slate-200"}`}>
                     {titleCaseStatus(resource.status)}
@@ -401,39 +401,39 @@ export default function ResourceReportPreview({ resource, onClose }) {
               </div>
             </div>
 
-            <aside className="grid gap-4">
-              <div className="rounded-[28px] border border-[#ffd9ca] bg-[#fff1ea] p-5 shadow-[0_16px_40px_rgba(24,39,87,0.06)]">
+            <aside className="grid gap-3">
+              <div className="rounded-[24px] border border-[#ffd9ca] bg-[#fff1ea] p-4 shadow-[0_16px_40px_rgba(24,39,87,0.06)]">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-[#ff6b35]">Generated On</p>
-                <p className="mt-3 text-3xl font-bold tracking-tight text-[#11214e]">{formatDate(new Date().toISOString())}</p>
-                <p className="mt-2 text-sm leading-6 text-[#7c5a48]">Designed for fast sharing, reporting, and administrative review.</p>
+                <p className="mt-2 text-[2rem] font-bold tracking-tight text-[#11214e]">{formatDate(new Date().toISOString())}</p>
+                <p className="mt-5 text-sm leading-6 text-[#7c5a48]">Designed for fast sharing, reporting, and administrative review.</p>
               </div>
 
-              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_16px_40px_rgba(24,39,87,0.06)]">
+              <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(24,39,87,0.06)]">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef4ff] text-[#11214e]">
-                    <MapPin className="h-5 w-5" />
+                  <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#eef4ff] text-[#11214e]">
+                    <MapPin className="h-4.5 w-4.5" />
                   </span>
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-widest text-[#8494c2]">Location</p>
-                    <p className="mt-1 text-lg font-bold text-[#11214e]">{formatLocation(resource.location)}</p>
+                    <p className="mt-1 text-base font-bold text-[#11214e]">{formatLocation(resource.location)}</p>
                   </div>
                 </div>
               </div>
             </aside>
           </section>
 
-          <section className="mt-6 rounded-[30px] border border-white/70 bg-white p-6 shadow-[0_16px_40px_rgba(24,39,87,0.08)]">
-            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-100 pb-5">
+          <section className="mt-5 rounded-[26px] border border-white/70 bg-white p-5 shadow-[0_16px_40px_rgba(24,39,87,0.08)]">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 pb-4">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-widest text-[#8494c2]">Resource Profile</p>
-                <h3 className="mt-2 text-2xl font-bold tracking-tight text-[#11214e]">Operational Snapshot</h3>
+                <h3 className="mt-1.5 text-xl font-bold tracking-tight text-[#11214e]">Operational Snapshot</h3>
               </div>
               <p className="max-w-xl text-sm leading-6 text-[#5a6b98]">
                 A compact single-page briefing of the resource identity, condition, location, availability, and audit trail.
               </p>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 { label: "Type", value: resource.type || "-", icon: FileText, card: "bg-[#eef4ff]" },
                 { label: "Capacity", value: `${resource.capacity || 0} people`, icon: Users, card: "bg-[#fff1cf]" },
@@ -442,14 +442,14 @@ export default function ResourceReportPreview({ resource, onClose }) {
               ].map((item) => {
                 const MetricIcon = item.icon;
                 return (
-                  <article key={item.label} className={`rounded-2xl border border-slate-100 p-4 shadow-sm ${item.card}`}>
+                  <article key={item.label} className={`rounded-2xl border border-slate-100 p-3.5 shadow-sm ${item.card}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-[#7f90bf]">{item.label}</p>
-                        <p className="mt-2 text-xl font-bold text-[#11214e]">{item.value}</p>
+                        <p className="mt-1.5 text-lg font-bold text-[#11214e]">{item.value}</p>
                       </div>
-                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/80 text-[#11214e] shadow-sm">
-                        <MetricIcon className="h-5 w-5" />
+                      <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/80 text-[#11214e] shadow-sm">
+                        <MetricIcon className="h-4.5 w-4.5" />
                       </span>
                     </div>
                   </article>
@@ -457,39 +457,39 @@ export default function ResourceReportPreview({ resource, onClose }) {
               })}
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-              <div className="rounded-[24px] border border-slate-100 bg-[#f8fbff] p-5">
+            <div className="mt-4 grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="rounded-[22px] border border-slate-100 bg-[#f8fbff] p-4">
                 <div className="flex items-center gap-2 text-[#11214e]">
                   <CalendarClock className="h-4 w-4 text-[#ff6b35]" />
                   <p className="text-sm font-semibold">Availability Windows</p>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {availabilityLines.map((windowText) => (
-                    <span key={windowText} className="rounded-full border border-[#ffd9ca] bg-white px-3 py-1.5 text-xs font-semibold text-[#ff6b35]">
+                    <span key={windowText} className="rounded-full border border-[#ffd9ca] bg-white px-3 py-1 text-xs font-semibold text-[#ff6b35]">
                       {windowText}
                     </span>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-[24px] border border-slate-100 bg-[#fffaf4] p-5">
+              <div className="rounded-[22px] border border-slate-100 bg-[#fffaf4] p-4">
                 <div className="flex items-center gap-2 text-[#11214e]">
                   <FileText className="h-4 w-4 text-[#ff6b35]" />
                   <p className="text-sm font-semibold">Audit Summary</p>
                 </div>
-                <div className="mt-4 space-y-2 text-sm text-[#7c5a48]">
+                <div className="mt-3 space-y-1.5 text-sm text-[#7c5a48]">
                   <p>Created: {formatDate(resource.createdAt)}</p>
                   <p>Updated: {formatDate(resource.updatedAt)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 rounded-[24px] border border-slate-100 bg-white px-5 py-5">
+            <div className="mt-4 rounded-[22px] border border-slate-100 bg-white px-4 py-4">
               <div className="flex items-center gap-2 text-[#11214e]">
                 <FileText className="h-4 w-4 text-[#ff6b35]" />
                 <p className="text-sm font-semibold">Report Summary</p>
               </div>
-              <p className="mt-3 text-sm leading-7 text-[#5a6b98]">
+              <p className="mt-2.5 text-sm leading-6 text-[#5a6b98]">
                 This report brings together the resource identity, operational status, capacity, location, availability windows, and
                 audit metadata in a presentation-friendly format for campus operations.
               </p>

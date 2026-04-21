@@ -341,9 +341,7 @@ export default function ResourceDirectoryReportPreview({ resources, onClose }) {
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   {[
                     { label: "Total Resources", value: summary.total, icon: Building2, card: "bg-[#eef4ff]" },
-                    { label: "Available Now", value: summary.available, icon: ShieldCheck, card: "bg-[#e5f8eb]" },
                     { label: "Capacity", value: summary.capacity, icon: Users, card: "bg-[#fff1cf]" },
-                    { label: "Maintenance", value: summary.maintenance, icon: Wrench, card: "bg-[#dde8ff]" },
                   ].map((item) => {
                     const MetricIcon = item.icon;
                     return (
