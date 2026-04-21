@@ -740,7 +740,7 @@ function AppShell() {
         <main className="flex-1 overflow-y-auto p-6 sm:p-8">
           <div className="mx-auto w-full max-w-6xl">
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/my-bookings" element={<MyBookingsPage />} />
               <Route
                 path="/admin/bookings"
@@ -778,7 +778,7 @@ function AppShell() {
               <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
               <Route path="/profile" element={<ComingSoon title="My Profile" />} />
               <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </div>
         </main>
@@ -793,9 +793,10 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<HomePage />} />
         <Route path="/home" element={<HomePage />} />
-        <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
-        <Route path="/signup" element={token ? <Navigate to="/" replace /> : <SignupPage />} />
+        <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+        <Route path="/signup" element={token ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
         <Route path="/oauth2/callback" element={<OAuth2CallbackPage />} />
         <Route
           path="/*"
