@@ -32,6 +32,7 @@ import AdminResourcesInterface from "./features/resources/AdminResourcesInterfac
 import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
 import AnalyticsPage from "./features/booking/pages/AnalyticsPage"
 import UserManagementPage from "./features/users/pages/UserManagementPage.jsx"
+import ChatBot from "./components/ChatBot"   // ← NEW
 
 const actionConfigByRole = {
   USER: [
@@ -418,7 +419,6 @@ function Dashboard() {
     year: "numeric",
   })
 
-  // Calendar computed values
   const calYear = calendarMonth.getFullYear()
   const calMonthIdx = calendarMonth.getMonth()
   const calDaysInMonth = new Date(calYear, calMonthIdx + 1, 0).getDate()
@@ -432,11 +432,8 @@ function Dashboard() {
 
   return (
     <div className="space-y-4">
-
-
       {/* ── Promo Banner ── */}
       <section className="relative overflow-hidden rounded-[26px] shadow-[0_14px_40px_rgba(21,32,85,0.18)] h-[160px] sm:h-[180px]">
-        {/* Background images — crossfade */}
         {bannerImages.map((src, idx) => (
           <img
             key={src}
@@ -447,10 +444,7 @@ function Dashboard() {
             style={{ opacity: idx === bannerSlide ? 1 : 0 }}
           />
         ))}
-        {/* Dark overlay on the right to make text readable, fades from transparent on left */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-black/50 to-[#001d45]/92" />
-
-        {/* Content: left side light, right side text */}
         <div className="relative flex h-full items-center justify-end px-8 sm:px-10">
           <div className="max-w-sm text-right">
             <p className="mb-1 text-[10px] font-bold tracking-widest text-[#f45e2b] uppercase">
@@ -471,10 +465,6 @@ function Dashboard() {
 
       {/* ── Hero + Calendar ── */}
       <div className="grid gap-4 xl:grid-cols-[1.99fr_0.6fr]">
-
-        
-
-        {/* Greeting + metric cards */}
         <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-4 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-5">
           <div className="pointer-events-none absolute -left-16 top-10 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
           <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#f5b800]/10 blur-3xl" />
@@ -538,14 +528,12 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* Day headers */}
           <div className="mt-2 grid grid-cols-7">
             {["S","M","T","W","T","F","S"].map((d, i) => (
               <div key={i} className="py-0.5 text-center text-[9px] font-bold tracking-wide text-[#8494c2]">{d}</div>
             ))}
           </div>
 
-          {/* Calendar grid */}
           <div className="grid grid-cols-7">
             {Array.from({ length: calStartDay }, (_, i) => <div key={`e${i}`} />)}
             {Array.from({ length: calDaysInMonth }, (_, i) => {
@@ -565,7 +553,6 @@ function Dashboard() {
             })}
           </div>
 
-          {/* Today's bookings */}
           <div className="mt-3 border-t border-slate-100 pt-3">
             <p className="mb-1.5 text-[9px] font-bold tracking-widest text-[#8494c2] uppercase">Today&apos;s Bookings</p>
             {loading ? (
@@ -598,7 +585,6 @@ function Dashboard() {
           </button>
         </section>
       </div>
-
 
       {/* ── Error ── */}
       {error && (
@@ -711,7 +697,6 @@ function Dashboard() {
             })}
           </div>
 
-          {/* Pending summary */}
           <div className="mt-4 rounded-2xl bg-navy p-4 text-white">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-bold tracking-widest text-white/60 uppercase">Pending Alerts</p>
@@ -728,6 +713,7 @@ function Dashboard() {
     </div>
   )
 }
+
 function ComingSoon({ title }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-[26px] border border-white/60 bg-white py-24 shadow-[0_14px_40px_rgba(21,32,85,0.08)] text-center">
@@ -797,6 +783,8 @@ function AppShell() {
           </div>
         </main>
       </div>
+      {/* ── UniBot Chatbot — floats on every page ── */}
+      <ChatBot />
     </SidebarProvider>
   )
 }
@@ -807,8 +795,24 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/home" element={<HomePage />} />
+        <Route
+          path="/"
+          element={
+            <>
+              <HomePage />
+              <ChatBot />
+            </>
+          }
+        />
+        <Route
+          path="/home"
+          element={
+            <>
+              <HomePage />
+              <ChatBot />
+            </>
+          }
+        />
         <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
         <Route path="/signup" element={token ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
         <Route path="/oauth2/callback" element={<OAuth2CallbackPage />} />
