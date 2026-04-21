@@ -8,6 +8,9 @@ import com.smartcampus.backend.features.ticket.model.Attachment;
 import com.smartcampus.backend.features.ticket.model.Ticket;
 import com.smartcampus.backend.features.ticket.model.TicketStatus;
 import com.smartcampus.backend.features.ticket.repository.TicketRepository;
+import com.smartcampus.backend.features.auth.model.User;
+import com.smartcampus.backend.features.auth.model.UserRole;
+import com.smartcampus.backend.features.auth.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -27,6 +30,7 @@ import java.util.UUID;
 public class TicketService {
 
     private final TicketRepository ticketRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     @Value("${app.ticket.upload-dir:uploads/tickets}")
@@ -36,8 +40,9 @@ public class TicketService {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
     private static final long EDIT_DELETE_WINDOW_MINUTES = 15;
 
-    public TicketService(TicketRepository ticketRepository, ObjectMapper objectMapper) {
+    public TicketService(TicketRepository ticketRepository, UserRepository userRepository, ObjectMapper objectMapper) {
         this.ticketRepository = ticketRepository;
+        this.userRepository = userRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -63,7 +68,7 @@ public class TicketService {
             ticket.setAttachments(attachments);
 
             Ticket saved = ticketRepository.save(ticket);
-            return TicketResponse.from(saved, true, true);
+            return TicketResponse.from(saved, true, true, null);
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
@@ -73,14 +78,14 @@ public class TicketService {
     public List<TicketResponse> getTicketsByUser(String userId) {
         return ticketRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(ticket -> TicketResponse.from(ticket, canEditOrDelete(ticket), canEditOrDelete(ticket)))
+                .map(ticket -> TicketResponse.from(ticket, canEditOrDelete(ticket), canEditOrDelete(ticket), resolveTechnicianName(ticket.getAssignedTechnicianId())))
                 .toList();
     }
 
     public TicketResponse getTicketById(String id) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
-        return TicketResponse.from(ticket, canEditOrDelete(ticket), canEditOrDelete(ticket));
+        return TicketResponse.from(ticket, canEditOrDelete(ticket), canEditOrDelete(ticket), resolveTechnicianName(ticket.getAssignedTechnicianId()));
     }
 
     public TicketResponse updateTicket(String id, String userId, TicketUpdateRequest request) {
@@ -120,7 +125,7 @@ public class TicketService {
         ticket.setUpdatedAt(LocalDateTime.now());
         Ticket updated = ticketRepository.save(ticket);
 
-        return TicketResponse.from(updated, canEditOrDelete(updated), canEditOrDelete(updated));
+        return TicketResponse.from(updated, canEditOrDelete(updated), canEditOrDelete(updated), resolveTechnicianName(updated.getAssignedTechnicianId()));
     }
 
     public void deleteTicket(String id, String userId) {
@@ -138,10 +143,20 @@ public class TicketService {
         ticketRepository.delete(ticket);
     }
 
-    public List<TicketResponse> getAllTickets() {
-        return ticketRepository.findAll()
-                .stream()
-                .map(ticket -> TicketResponse.from(ticket, false, false))
+    public List<TicketResponse> getAllTickets(User user) {
+        List<Ticket> tickets;
+        if (user.getRole() == UserRole.ADMIN) {
+            tickets = ticketRepository.findAll();
+        } else if (user.getRole() == UserRole.TECHNICIAN) {
+            tickets = ticketRepository.findAll().stream()
+                    .filter(t -> user.getId().equals(t.getAssignedTechnicianId()))
+                    .toList();
+        } else {
+            tickets = ticketRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+        }
+
+        return tickets.stream()
+                .map(ticket -> TicketResponse.from(ticket, false, false, resolveTechnicianName(ticket.getAssignedTechnicianId())))
                 .toList();
     }
 
@@ -152,8 +167,42 @@ public class TicketService {
         message.setTimestamp(LocalDateTime.now());
         ticket.getMessages().add(message);
         Ticket saved = ticketRepository.save(ticket);
+
+        return TicketResponse.from(saved, canEditOrDelete(saved), canEditOrDelete(saved), resolveTechnicianName(saved.getAssignedTechnicianId()));
+    }
+
+    public List<User> getTechnicians() {
+        return userRepository.findByRole(UserRole.TECHNICIAN);
+    }
+
+    public TicketResponse assignTechnician(String ticketId, String technicianId) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+
+        User technician = userRepository.findById(technicianId)
+                .orElseThrow(() -> new RuntimeException("Technician not found"));
+
+        if (technician.getRole() != UserRole.TECHNICIAN) {
+            throw new RuntimeException("User is not a technician");
+        }
+
+        ticket.setAssignedTechnicianId(technicianId);
+        ticket.setUpdatedAt(LocalDateTime.now());
         
-        return TicketResponse.from(saved, canEditOrDelete(saved), canEditOrDelete(saved));
+        // Optionally set status to IN_PROGRESS if it was OPEN
+        if (ticket.getStatus() == TicketStatus.OPEN) {
+            ticket.setStatus(TicketStatus.IN_PROGRESS);
+        }
+
+        Ticket saved = ticketRepository.save(ticket);
+        return TicketResponse.from(saved, false, false, resolveTechnicianName(technicianId));
+    }
+
+    private String resolveTechnicianName(String technicianId) {
+        if (technicianId == null) return null;
+        return userRepository.findById(technicianId)
+                .map(u -> u.getFirstName() + " " + u.getLastName())
+                .orElse("Unknown Technician");
     }
 
     private boolean canEditOrDelete(Ticket ticket) {

@@ -22,6 +22,7 @@ public class TicketResponse {
     private String preferredContact;
     private TicketStatus status;
     private String assignedTechnicianId;
+    private String assignedTechnicianName;
     private String resolutionNotes;
     private List<Attachment> attachments;
     private List<com.smartcampus.backend.features.ticket.model.TicketMessage> messages;
@@ -30,7 +31,7 @@ public class TicketResponse {
     private boolean editable;
     private boolean deletable;
 
-    public static TicketResponse from(Ticket ticket, boolean editable, boolean deletable) {
+    public static TicketResponse from(Ticket ticket, boolean editable, boolean deletable, String technicianName) {
         TicketResponse response = new TicketResponse();
         response.id = ticket.getId();
         response.userId = ticket.getUserId();
@@ -43,6 +44,7 @@ public class TicketResponse {
         response.preferredContact = ticket.getPreferredContact();
         response.status = ticket.getStatus();
         response.assignedTechnicianId = ticket.getAssignedTechnicianId();
+        response.assignedTechnicianName = technicianName;
         response.resolutionNotes = ticket.getResolutionNotes();
         response.attachments = ticket.getAttachments();
         response.messages = ticket.getMessages();
@@ -99,6 +101,10 @@ public class TicketResponse {
 
     public String getAssignedTechnicianId() {
         return assignedTechnicianId;
+    }
+
+    public String getAssignedTechnicianName() {
+        return assignedTechnicianName;
     }
 
     public String getResolutionNotes() {

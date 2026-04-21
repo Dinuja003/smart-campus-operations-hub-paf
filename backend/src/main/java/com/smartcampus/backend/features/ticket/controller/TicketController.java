@@ -10,8 +10,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.security.core.Authentication;
+
 import java.io.IOException;
 import java.util.List;
+import com.smartcampus.backend.features.auth.model.User;
+import com.smartcampus.backend.features.auth.repository.UserRepository;
+import com.smartcampus.backend.features.auth.model.UserRole;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/tickets")
@@ -19,9 +25,11 @@ import java.util.List;
 public class TicketController {
 
     private final TicketService ticketService;
+    private final UserRepository userRepository;
 
-    public TicketController(TicketService ticketService) {
+    public TicketController(TicketService ticketService, UserRepository userRepository) {
         this.ticketService = ticketService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -53,8 +61,26 @@ public class TicketController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TicketResponse>> getAllTickets() {
-        return ResponseEntity.ok(ticketService.getAllTickets());
+    public ResponseEntity<List<TicketResponse>> getAllTickets(Authentication authentication) {
+        String userId = (String) authentication.getPrincipal();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(ticketService.getAllTickets(user));
+    }
+
+    @GetMapping("/technicians")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<User>> getTechnicians() {
+        return ResponseEntity.ok(ticketService.getTechnicians());
+    }
+
+    @PutMapping("/{id}/assign")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TicketResponse> assignTechnician(
+            @PathVariable String id,
+            @RequestParam String technicianId
+    ) {
+        return ResponseEntity.ok(ticketService.assignTechnician(id, technicianId));
     }
 
     @PostMapping("/{id}/messages")

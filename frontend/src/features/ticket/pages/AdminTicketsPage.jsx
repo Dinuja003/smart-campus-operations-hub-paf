@@ -10,7 +10,8 @@ import {
   Search,
   Filter
 } from "lucide-react"
-import { getAllTickets } from "@/features/ticket/services/ticketService.js"
+import { getAllTickets, getTechnicians, assignTechnician } from "@/features/ticket/services/ticketService.js"
+import { toast } from "sonner"
 
 const statusColors = {
   OPEN: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -31,20 +32,26 @@ export default function AdminTicketsPage() {
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("ALL")
+  const [technicians, setTechnicians] = useState([])
+  const [assigningId, setAssigningId] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
-    async function loadTickets() {
+    async function loadData() {
       try {
-        const data = await getAllTickets()
-        setTickets(Array.isArray(data) ? data : [])
+        const [ticketsData, techsData] = await Promise.all([
+          getAllTickets(),
+          getTechnicians()
+        ])
+        setTickets(Array.isArray(ticketsData) ? ticketsData : [])
+        setTechnicians(Array.isArray(techsData) ? techsData : [])
       } catch (err) {
         setError("Failed to load campus tickets")
       } finally {
         setLoading(false)
       }
     }
-    loadTickets()
+    loadData()
   }, [])
 
   const filteredTickets = tickets.filter(t => {
@@ -53,6 +60,19 @@ export default function AdminTicketsPage() {
     const matchesStatus = statusFilter === "ALL" || t.status === statusFilter
     return matchesSearch && matchesStatus
   })
+
+  const handleAssign = async (ticketId, technicianId) => {
+    try {
+      await assignTechnician(ticketId, technicianId)
+      toast.success("Technician assigned successfully")
+      setAssigningId(null)
+      // Reload tickets
+      const data = await getAllTickets()
+      setTickets(data)
+    } catch (err) {
+      toast.error(err.message || "Assignment failed")
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -131,22 +151,60 @@ export default function AdminTicketsPage() {
                   </span>
                 </div>
                 <h3 className="mt-2 text-base font-bold text-navy">{ticket.subject}</h3>
-                <p className="mt-0.5 text-xs text-[#8494c2]">Requested by: <span className="font-mono">{ticket.userId}</span></p>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                  <p className="text-xs text-[#8494c2]">Requested by: <span className="font-mono">{ticket.userId}</span></p>
+                  {ticket.assignedTechnicianName && (
+                    <p className="text-xs font-semibold text-brand">Assigned to: {ticket.assignedTechnicianName}</p>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center gap-6">
-                <div className="text-right">
-                  <div className="flex items-center justify-end gap-1.5 text-xs text-[#8494c2]">
-                    <Clock3 className="h-3.5 w-3.5" />
-                    {new Date(ticket.createdAt).toLocaleDateString()}
+                <div className="relative flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="flex items-center justify-end gap-1.5 text-xs text-[#8494c2]">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      {new Date(ticket.createdAt).toLocaleDateString()}
+                    </div>
+                    <div className="mt-1 flex items-center justify-end gap-1.5 text-xs text-[#8494c2]">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      {ticket.messages?.length || 0} messages
+                    </div>
                   </div>
-                  <div className="mt-1 flex items-center justify-end gap-1.5 text-xs text-[#8494c2]">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    {ticket.messages?.length || 0} messages
+                  
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    {!ticket.assignedTechnicianId && (
+                      <div className="relative">
+                        <button 
+                          onClick={() => setAssigningId(assigningId === ticket.id ? null : ticket.id)}
+                          className="rounded-lg bg-brand/10 px-3 py-1.5 text-[10px] font-bold text-brand hover:bg-brand hover:text-white transition-colors"
+                        >
+                          ASSIGN
+                        </button>
+                        
+                        {assigningId === ticket.id && (
+                          <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                            <p className="mb-2 px-2 text-[9px] font-bold uppercase tracking-widest text-[#8494c2]">Select Technician</p>
+                            <div className="max-h-48 overflow-y-auto space-y-1">
+                              {technicians.map(tech => (
+                                <button
+                                  key={tech.id}
+                                  onClick={() => handleAssign(ticket.id, tech.id)}
+                                  className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-navy hover:bg-slate-50 transition-colors"
+                                >
+                                  {tech.firstName} {tech.lastName}
+                                </button>
+                              ))}
+                              {technicians.length === 0 && (
+                                <p className="px-2 py-4 text-center text-[10px] text-slate-400">No technicians available</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <ChevronRight className="h-5 w-5 text-slate-300 transition-transform group-hover:translate-x-1" />
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-slate-300 transition-transform group-hover:translate-x-1" />
-              </div>
             </div>
           ))}
         </div>

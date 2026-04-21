@@ -14,7 +14,8 @@ import {
   Paperclip,
   CheckCircle2
 } from "lucide-react"
-import { getTicketById, addTicketMessage, updateTicket } from "@/features/ticket/services/ticketService.js"
+import { getTicketById, addTicketMessage, updateTicket, getTechnicians, assignTechnician } from "@/features/ticket/services/ticketService.js"
+import { toast } from "sonner"
 
 const statusColors = {
   OPEN: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -31,6 +32,8 @@ export default function TicketDetailPage() {
   const [error, setError] = useState("")
   const [newMessage, setNewMessage] = useState("")
   const [sending, setSending] = useState(false)
+  const [technicians, setTechnicians] = useState([])
+  const [showAssign, setShowAssign] = useState(false)
   const chatEndRef = useRef(null)
 
   const currentUserId = "69c038632d897c2ee8880785" // TEMP_USER_ID
@@ -45,6 +48,10 @@ export default function TicketDetailPage() {
     try {
       const data = await getTicketById(id)
       setTicket(data)
+      if (currentUserRole === "ADMIN") {
+        const techs = await getTechnicians()
+        setTechnicians(techs)
+      }
     } catch (err) {
       setError("Failed to load ticket details")
     } finally {
@@ -89,6 +96,17 @@ export default function TicketDetailPage() {
       loadTicket()
     } catch (err) {
       alert("Failed to update status")
+    }
+  }
+
+  const handleAssign = async (techId) => {
+    try {
+      await assignTechnician(id, techId)
+      toast.success("Technician assigned")
+      setShowAssign(false)
+      loadTicket()
+    } catch (err) {
+      toast.error("Assignment failed")
     }
   }
 
@@ -297,12 +315,12 @@ export default function TicketDetailPage() {
              </div>
              
              <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-white/20">
-               {[
-                 { label: 'Created', status: 'COMPLETED', time: ticket.createdAt },
-                 { label: 'Technician Assigned', status: ticket.assignedTechnicianId ? 'COMPLETED' : 'PENDING' },
-                 { label: 'Work In Progress', status: ticket.status === 'IN_PROGRESS' || ticket.status === 'RESOLVED' ? 'COMPLETED' : 'PENDING' },
-                 { label: 'Resolved', status: ticket.status === 'RESOLVED' ? 'COMPLETED' : 'PENDING' },
-               ].map((step, idx) => (
+                {[
+                  { label: 'Created', status: 'COMPLETED', time: ticket.createdAt },
+                  { label: ticket.assignedTechnicianName ? `Assigned to: ${ticket.assignedTechnicianName}` : 'Technician Assigned', status: ticket.assignedTechnicianId ? 'COMPLETED' : 'PENDING' },
+                  { label: 'Work In Progress', status: ticket.status === 'IN_PROGRESS' || ticket.status === 'RESOLVED' ? 'COMPLETED' : 'PENDING' },
+                  { label: 'Resolved', status: ticket.status === 'RESOLVED' ? 'COMPLETED' : 'PENDING' },
+                ].map((step, idx) => (
                  <div key={idx} className="relative pl-8">
                    <div className={`absolute left-0 top-1 h-6 w-6 rounded-full border-4 border-[#001d45] flex items-center justify-center ${
                      step.status === 'COMPLETED' ? 'bg-brand' : 'bg-[#152055]'
@@ -312,9 +330,38 @@ export default function TicketDetailPage() {
                    <p className={`text-xs font-bold ${step.status === 'COMPLETED' ? 'text-white' : 'text-white/40'}`}>{step.label}</p>
                    {step.time && <p className="text-[9px] text-white/40">{new Date(step.time).toLocaleDateString()}</p>}
                  </div>
-               ))}
-             </div>
-          </section>
+                ))}
+              </div>
+
+              {currentUserRole === "ADMIN" && !ticket.assignedTechnicianId && (
+                <div className="mt-8 border-t border-white/10 pt-6">
+                  <button 
+                    onClick={() => setShowAssign(!showAssign)}
+                    className="w-full rounded-xl bg-brand py-3 text-xs font-bold text-white shadow-lg hover:opacity-90"
+                  >
+                    {showAssign ? "Cancel Assignment" : "Assign Technician"}
+                  </button>
+
+                  {showAssign && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Available Technicians</p>
+                      <div className="max-h-40 overflow-y-auto space-y-2">
+                        {technicians.map(tech => (
+                          <button
+                            key={tech.id}
+                            onClick={() => handleAssign(tech.id)}
+                            className="w-full rounded-xl bg-white/5 p-3 text-left text-xs transition hover:bg-white/10"
+                          >
+                            <p className="font-bold">{tech.firstName} {tech.lastName}</p>
+                            <p className="text-[10px] opacity-40">{tech.email}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+           </section>
         </div>
       </div>
     </div>

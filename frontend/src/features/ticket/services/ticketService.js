@@ -57,4 +57,14 @@ export async function deleteTicket(ticketId, userId) {
     params: { userId },
   });
 }
+
+export async function getTechnicians() {
+  const res = await API.get("/tickets/technicians");
+  return res.data;
+}
+
+export async function assignTechnician(ticketId, technicianId) {
+  const res = await API.put(`/tickets/${ticketId}/assign?technicianId=${technicianId}`);
+  return res.data;
+}
 
