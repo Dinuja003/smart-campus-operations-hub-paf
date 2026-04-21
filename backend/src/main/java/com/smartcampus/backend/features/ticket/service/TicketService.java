@@ -1,16 +1,23 @@
 package com.smartcampus.backend.features.ticket.service;
 
-import com.smartcampus.backend.features.ticket.model.AttachmentInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.smartcampus.backend.features.ticket.dto.CreateTicketRequest;
+import com.smartcampus.backend.features.ticket.dto.TicketResponse;
+import com.smartcampus.backend.features.ticket.dto.TicketUpdateRequest;
+import com.smartcampus.backend.features.ticket.model.Attachment;
 import com.smartcampus.backend.features.ticket.model.Ticket;
+import com.smartcampus.backend.features.ticket.model.TicketStatus;
 import com.smartcampus.backend.features.ticket.repository.TicketRepository;
-import org.bson.types.ObjectId;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,154 +27,195 @@ import java.util.UUID;
 public class TicketService {
 
     private final TicketRepository ticketRepository;
-    private final Path uploadDir = Paths.get("uploads", "tickets");
+    private final ObjectMapper objectMapper;
 
-    public TicketService(TicketRepository ticketRepository) throws IOException {
+    @Value("${app.ticket.upload-dir:uploads/tickets}")
+    private String uploadDir;
+
+    private static final int MAX_ATTACHMENTS = 3;
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+    private static final long EDIT_DELETE_WINDOW_MINUTES = 15;
+
+    public TicketService(TicketRepository ticketRepository, ObjectMapper objectMapper) {
         this.ticketRepository = ticketRepository;
-        Files.createDirectories(uploadDir);
+        this.objectMapper = objectMapper;
     }
 
-    public Ticket createTicket(
-            String userId,
-            String resourceId,
-            String category,
-            String subject,
-            String description,
-            String priority,
-            String location,
-            String preferredContact,
-            MultipartFile[] attachments
-    ) throws IOException {
+    public TicketResponse createTicket(String ticketJson, MultipartFile[] files) throws IOException {
+        try {
+            CreateTicketRequest request = objectMapper.readValue(ticketJson, CreateTicketRequest.class);
+            validateAttachments(files);
 
-        validateInput(userId, category, subject, description, priority, location, preferredContact, attachments);
+            Ticket ticket = new Ticket();
+            ticket.setUserId(request.getUserId());
+            ticket.setResourceId(blankToNull(request.getResourceId()));
+            ticket.setCategory(request.getCategory());
+            ticket.setSubject(StringUtils.hasText(request.getSubject()) ? request.getSubject().trim() : "No Subject");
+            ticket.setDescription(StringUtils.hasText(request.getDescription()) ? request.getDescription().trim() : "");
+            ticket.setPriority(request.getPriority());
+            ticket.setLocation(StringUtils.hasText(request.getLocation()) ? request.getLocation().trim() : "Not Specified");
+            ticket.setPreferredContact(StringUtils.hasText(request.getPreferredContact()) ? request.getPreferredContact().trim() : "None");
+            ticket.setStatus(TicketStatus.OPEN);
+            ticket.setCreatedAt(LocalDateTime.now());
+            ticket.setUpdatedAt(LocalDateTime.now());
 
-        Ticket ticket = new Ticket();
-        ticket.setUserId(new ObjectId(userId));
+            List<Attachment> attachments = saveFiles(files);
+            ticket.setAttachments(attachments);
 
-        if (resourceId != null && !resourceId.isBlank()) {
-            ticket.setResourceId(new ObjectId(resourceId));
-        } else {
-            ticket.setResourceId(null);
+            Ticket saved = ticketRepository.save(ticket);
+            return TicketResponse.from(saved, true, true);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    public List<TicketResponse> getTicketsByUser(String userId) {
+        return ticketRepository.findByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(ticket -> TicketResponse.from(ticket, canEditOrDelete(ticket), canEditOrDelete(ticket)))
+                .toList();
+    }
+
+    public TicketResponse getTicketById(String id) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+        return TicketResponse.from(ticket, canEditOrDelete(ticket), canEditOrDelete(ticket));
+    }
+
+    public TicketResponse updateTicket(String id, String userId, TicketUpdateRequest request) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+
+        if (!ticket.getUserId().equals(userId)) {
+            throw new RuntimeException("You can only update your own ticket");
         }
 
-        ticket.setCategory(category.trim());
-        ticket.setSubject(subject.trim());
-        ticket.setDescription(description.trim());
-        ticket.setPriority(priority.trim());
-        ticket.setLocation(location.trim());
-        ticket.setPreferredContact(preferredContact.trim());
-        ticket.setTicketStatus("OPEN");
-        ticket.setAssignedTechnicianId(null);
-        ticket.setResolutionNotes(null);
-        ticket.setAttachments(saveAttachments(attachments));
-        ticket.setCreatedAt(LocalDateTime.now());
+        if (!canEditOrDelete(ticket)) {
+            throw new RuntimeException("Edit time window has expired or ticket is already being processed");
+        }
+
+        if (request.getResourceId() != null) {
+            ticket.setResourceId(blankToNull(request.getResourceId()));
+        }
+        if (request.getCategory() != null) {
+            ticket.setCategory(request.getCategory());
+        }
+        if (StringUtils.hasText(request.getSubject())) {
+            ticket.setSubject(request.getSubject().trim());
+        }
+        if (StringUtils.hasText(request.getDescription())) {
+            ticket.setDescription(request.getDescription().trim());
+        }
+        if (request.getPriority() != null) {
+            ticket.setPriority(request.getPriority());
+        }
+        if (StringUtils.hasText(request.getLocation())) {
+            ticket.setLocation(request.getLocation().trim());
+        }
+        if (StringUtils.hasText(request.getPreferredContact())) {
+            ticket.setPreferredContact(request.getPreferredContact().trim());
+        }
+
         ticket.setUpdatedAt(LocalDateTime.now());
+        Ticket updated = ticketRepository.save(ticket);
 
-        return ticketRepository.save(ticket);
+        return TicketResponse.from(updated, canEditOrDelete(updated), canEditOrDelete(updated));
     }
 
-    public List<Ticket> getAllTickets() {
-        return ticketRepository.findAll();
+    public void deleteTicket(String id, String userId) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+
+        if (!ticket.getUserId().equals(userId)) {
+            throw new RuntimeException("You can only delete your own ticket");
+        }
+
+        if (!canEditOrDelete(ticket)) {
+            throw new RuntimeException("Delete time window has expired or ticket is already being processed");
+        }
+
+        ticketRepository.delete(ticket);
     }
 
-    public Ticket getTicketById(String id) {
-        return ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found with id: " + id));
+    public List<TicketResponse> getAllTickets() {
+        return ticketRepository.findAll()
+                .stream()
+                .map(ticket -> TicketResponse.from(ticket, false, false))
+                .toList();
     }
 
-    public void deleteTicket(String id) {
-        if (!ticketRepository.existsById(id)) {
-            throw new RuntimeException("Ticket not found with id: " + id);
-        }
-        ticketRepository.deleteById(id);
+    public TicketResponse addMessage(String ticketId, com.smartcampus.backend.features.ticket.model.TicketMessage message) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+        
+        message.setTimestamp(LocalDateTime.now());
+        ticket.getMessages().add(message);
+        Ticket saved = ticketRepository.save(ticket);
+        
+        return TicketResponse.from(saved, canEditOrDelete(saved), canEditOrDelete(saved));
     }
 
-    private void validateInput(
-            String userId,
-            String category,
-            String subject,
-            String description,
-            String priority,
-            String location,
-            String preferredContact,
-            MultipartFile[] attachments
-    ) {
-        if (userId == null || userId.isBlank()) {
-            throw new RuntimeException("userId is required");
+    private boolean canEditOrDelete(Ticket ticket) {
+        if (ticket.getStatus() != TicketStatus.OPEN) {
+            return false;
         }
 
-        if (category == null || category.isBlank()) {
-            throw new RuntimeException("category is required");
-        }
+        long minutes = Duration.between(ticket.getCreatedAt(), LocalDateTime.now()).toMinutes();
+        return minutes <= EDIT_DELETE_WINDOW_MINUTES;
+    }
 
-        if (subject == null || subject.isBlank()) {
-            throw new RuntimeException("subject is required");
-        }
+    private void validateAttachments(MultipartFile[] files) {
+        if (files == null) return;
 
-        if (description == null || description.isBlank()) {
-            throw new RuntimeException("description is required");
-        }
-
-        if (priority == null || priority.isBlank()) {
-            throw new RuntimeException("priority is required");
-        }
-
-        if (location == null || location.isBlank()) {
-            throw new RuntimeException("location is required");
-        }
-
-        if (preferredContact == null || preferredContact.isBlank()) {
-            throw new RuntimeException("preferredContact is required");
-        }
-
-        if (attachments != null && attachments.length > 3) {
+        if (files.length > MAX_ATTACHMENTS) {
             throw new RuntimeException("You can upload up to 3 images only");
         }
 
-        if (attachments != null) {
-            for (MultipartFile file : attachments) {
-                if (file == null || file.isEmpty()) {
-                    continue;
-                }
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) continue;
 
-                String contentType = file.getContentType();
-                if (contentType == null || !contentType.startsWith("image/")) {
-                    throw new RuntimeException("Only image files are allowed");
-                }
+            if (file.getSize() > MAX_FILE_SIZE) {
+                throw new RuntimeException("Each file must be less than 5MB");
+            }
 
-                if (file.getSize() > 5 * 1024 * 1024) {
-                    throw new RuntimeException("Each image must be smaller than 5MB");
-                }
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                throw new RuntimeException("Only image files are allowed");
             }
         }
     }
 
-    private List<AttachmentInfo> saveAttachments(MultipartFile[] attachments) throws IOException {
-        List<AttachmentInfo> savedFiles = new ArrayList<>();
+    private List<Attachment> saveFiles(MultipartFile[] files) throws IOException {
+        List<Attachment> attachments = new ArrayList<>();
+        if (files == null || files.length == 0) return attachments;
 
-        if (attachments == null) {
-            return savedFiles;
+        // Use absolute path to avoid issues with Tomcat temporary directories
+        Path uploadPath = Paths.get(uploadDir).toAbsolutePath();
+        Files.createDirectories(uploadPath);
+
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) continue;
+
+            String originalName = file.getOriginalFilename() == null ? "image" : file.getOriginalFilename();
+            String storedName = UUID.randomUUID() + "_" + originalName;
+            Path targetPath = uploadPath.resolve(storedName);
+
+            // Transfer to absolute file location
+            file.transferTo(targetPath.toFile());
+
+            attachments.add(new Attachment(
+                    originalName,
+                    file.getContentType(),
+                    "/uploads/tickets/" + storedName, // Store relative URL for frontend
+                    (int) file.getSize()
+            ));
         }
 
-        for (MultipartFile file : attachments) {
-            if (file == null || file.isEmpty()) {
-                continue;
-            }
+        return attachments;
+    }
 
-            String uniqueName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path targetPath = uploadDir.resolve(uniqueName);
-            Files.copy(file.getInputStream(), targetPath);
-
-            AttachmentInfo info = new AttachmentInfo();
-            info.setFileName(uniqueName);
-            info.setOriginalFileName(file.getOriginalFilename());
-            info.setFileType(file.getContentType());
-            info.setFileSize(file.getSize());
-            info.setFilePath(targetPath.toString());
-
-            savedFiles.add(info);
-        }
-
-        return savedFiles;
+    private String blankToNull(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 }
