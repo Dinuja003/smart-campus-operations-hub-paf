@@ -31,6 +31,7 @@ import resourceService from "./features/resources/services/resourceService"
 import AdminResourcesInterface from "./features/resources/AdminResourcesInterface.jsx"
 import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
 import AnalyticsPage from "./features/booking/pages/AnalyticsPage"
+import UserManagementPage from "./features/users/pages/UserManagementPage.jsx"
 
 const actionConfigByRole = {
   USER: [
@@ -133,8 +134,8 @@ function readableStatus(status) {
 
 function Dashboard() {
   const navigate = useNavigate()
-  const role = (localStorage.getItem("role") || "USER").toUpperCase()
-  const email = localStorage.getItem("email") || "operator@smartcampus.local"
+  const role = (sessionStorage.getItem("role") || "USER").toUpperCase()
+  const email = sessionStorage.getItem("email") || "operator@smartcampus.local"
 
   const [bookings, setBookings] = useState([])
   const [resources, setResources] = useState([])
@@ -726,7 +727,7 @@ function ComingSoon({ title }) {
 }
 
 function RoleRoute({ allowedRoles, children }) {
-  const role = (localStorage.getItem("role") || "").toUpperCase()
+  const role = (sessionStorage.getItem("role") || "").toUpperCase()
   if (!allowedRoles.includes(role)) return <Navigate to="/" replace />
   return children
 }
@@ -739,7 +740,7 @@ function AppShell() {
         <main className="flex-1 overflow-y-auto p-6 sm:p-8">
           <div className="mx-auto w-full max-w-6xl">
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/my-bookings" element={<MyBookingsPage />} />
               <Route
                 path="/admin/bookings"
@@ -765,11 +766,19 @@ function AppShell() {
                   </RoleRoute>
                 }
               />
+              <Route
+                path="/admin/users"
+                element={
+                  <RoleRoute allowedRoles={["ADMIN"]}>
+                    <UserManagementPage />
+                  </RoleRoute>
+                }
+              />
               <Route path="/tickets" element={<CreateTicketPage />} />
               <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
               <Route path="/profile" element={<ComingSoon title="My Profile" />} />
               <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </div>
         </main>
@@ -779,14 +788,15 @@ function AppShell() {
 }
 
 function App() {
-  const token = localStorage.getItem("token")
+  const token = sessionStorage.getItem("token")
 
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<HomePage />} />
         <Route path="/home" element={<HomePage />} />
-        <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
-        <Route path="/signup" element={token ? <Navigate to="/" replace /> : <SignupPage />} />
+        <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+        <Route path="/signup" element={token ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
         <Route path="/oauth2/callback" element={<OAuth2CallbackPage />} />
         <Route
           path="/*"
