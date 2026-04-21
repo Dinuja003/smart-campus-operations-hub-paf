@@ -111,8 +111,8 @@ function deriveInitials(displayName) {
 export function AppSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const email = localStorage.getItem("email") || ""
-  const role = (localStorage.getItem("role") || "USER").toUpperCase()
+  const email = sessionStorage.getItem("email") || ""
+  const role = (sessionStorage.getItem("role") || "USER").toUpperCase()
   const displayName = deriveDisplayName(email)
   const initials = deriveInitials(displayName)
   const navSections = navSectionsByRole[role] || navSectionsByRole.USER

@@ -133,8 +133,8 @@ function readableStatus(status) {
 
 function Dashboard() {
   const navigate = useNavigate()
-  const role = (localStorage.getItem("role") || "USER").toUpperCase()
-  const email = localStorage.getItem("email") || "operator@smartcampus.local"
+  const role = (sessionStorage.getItem("role") || "USER").toUpperCase()
+  const email = sessionStorage.getItem("email") || "operator@smartcampus.local"
 
   const [bookings, setBookings] = useState([])
   const [resources, setResources] = useState([])
@@ -726,7 +726,7 @@ function ComingSoon({ title }) {
 }
 
 function RoleRoute({ allowedRoles, children }) {
-  const role = (localStorage.getItem("role") || "").toUpperCase()
+  const role = (sessionStorage.getItem("role") || "").toUpperCase()
   if (!allowedRoles.includes(role)) return <Navigate to="/" replace />
   return children
 }
@@ -779,7 +779,7 @@ function AppShell() {
 }
 
 function App() {
-  const token = localStorage.getItem("token")
+  const token = sessionStorage.getItem("token")
 
   return (
     <BrowserRouter>

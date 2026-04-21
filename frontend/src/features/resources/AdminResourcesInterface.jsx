@@ -20,7 +20,7 @@ import {
 
 const API = axios.create({ baseURL: "/api" });
 API.interceptors.request.use((cfg) => {
-  const t = localStorage.getItem("token");
+  const t = sessionStorage.getItem("token");
   if (t) cfg.headers.Authorization = `Bearer ${t}`;
   return cfg;
 });
