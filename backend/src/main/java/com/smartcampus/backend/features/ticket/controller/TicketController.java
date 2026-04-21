@@ -1,9 +1,12 @@
 package com.smartcampus.backend.features.ticket.controller;
 
-import com.smartcampus.backend.features.ticket.model.Ticket;
+import com.smartcampus.backend.features.ticket.dto.TicketResponse;
+import com.smartcampus.backend.features.ticket.dto.TicketUpdateRequest;
 import com.smartcampus.backend.features.ticket.service.TicketService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/tickets")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:5173")
 public class TicketController {
 
     private final TicketService ticketService;
@@ -22,44 +25,52 @@ public class TicketController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @ResponseStatus(HttpStatus.CREATED)
-    public Ticket createTicket(
-            @RequestParam String userId,
-            @RequestParam(required = false) String resourceId,
-            @RequestParam String category,
-            @RequestParam String subject,
-            @RequestParam String description,
-            @RequestParam String priority,
-            @RequestParam String location,
-            @RequestParam String preferredContact,
-            @RequestParam(required = false) MultipartFile[] attachments
+    public ResponseEntity<TicketResponse> createTicket(
+            @RequestPart("ticket") String ticket,
+            @RequestPart(value = "files", required = false) MultipartFile[] files
     ) throws IOException {
-        return ticketService.createTicket(
-                userId,
-                resourceId,
-                category,
-                subject,
-                description,
-                priority,
-                location,
-                preferredContact,
-                attachments
-        );
+        TicketResponse response = ticketService.createTicket(ticket, files);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping
-    public List<Ticket> getAllTickets() {
-        return ticketService.getAllTickets();
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<TicketResponse>> getUserTickets(@PathVariable String userId) {
+        return ResponseEntity.ok(ticketService.getTicketsByUser(userId));
     }
 
     @GetMapping("/{id}")
-    public Ticket getTicketById(@PathVariable String id) {
-        return ticketService.getTicketById(id);
+    public ResponseEntity<TicketResponse> getTicketById(@PathVariable String id) {
+        return ResponseEntity.ok(ticketService.getTicketById(id));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<TicketResponse> updateTicket(
+            @PathVariable String id,
+            @RequestParam String userId,
+            @Valid @RequestBody TicketUpdateRequest request
+    ) {
+        return ResponseEntity.ok(ticketService.updateTicket(id, userId, request));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<TicketResponse>> getAllTickets() {
+        return ResponseEntity.ok(ticketService.getAllTickets());
+    }
+
+    @PostMapping("/{id}/messages")
+    public ResponseEntity<TicketResponse> addMessage(
+            @PathVariable String id,
+            @RequestBody com.smartcampus.backend.features.ticket.model.TicketMessage message
+    ) {
+        return ResponseEntity.ok(ticketService.addMessage(id, message));
     }
 
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteTicket(@PathVariable String id) {
-        ticketService.deleteTicket(id);
+    public ResponseEntity<Void> deleteTicket(
+            @PathVariable String id,
+            @RequestParam String userId
+    ) {
+        ticketService.deleteTicket(id, userId);
+        return ResponseEntity.noContent().build();
     }
 }
