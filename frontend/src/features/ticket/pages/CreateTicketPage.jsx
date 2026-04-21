@@ -27,6 +27,7 @@ function CreateTicketPage() {
     preferredContact: "",
   })
 
+  const [files, setFiles] = useState([])
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -39,6 +40,18 @@ function CreateTicketPage() {
     }))
   }
 
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files || [])
+
+    if (selectedFiles.length > 3) {
+      setError("You can upload up to 3 images only.")
+      return
+    }
+
+    setError("")
+    setFiles(selectedFiles)
+  }
+
   const handleReset = () => {
     setFormData({
       resourceId: "",
@@ -49,6 +62,7 @@ function CreateTicketPage() {
       location: "",
       preferredContact: "",
     })
+    setFiles([])
     setMessage("")
     setError("")
   }
@@ -68,6 +82,7 @@ function CreateTicketPage() {
     if (!formData.description.trim()) return "Description is required."
     if (!formData.location.trim()) return "Location is required."
     if (!formData.preferredContact.trim()) return "Preferred contact is required."
+    if (files.length > 3) return "You can upload up to 3 images only."
     return ""
   }
 
@@ -84,32 +99,33 @@ function CreateTicketPage() {
       }
 
       const apiPassword = getApiPassword()
-
       if (!apiPassword) {
         throw new Error("Backend password is required to continue.")
       }
 
-      const payload = {
-        userId: TEMP_USER_ID,
-        category: formData.category,
-        subject: formData.subject.trim(),
-        description: formData.description.trim(),
-        priority: formData.priority,
-        location: formData.location.trim(),
-        preferredContact: formData.preferredContact.trim(),
-      }
+      const form = new FormData()
+      form.append("userId", TEMP_USER_ID)
+      form.append("category", formData.category)
+      form.append("subject", formData.subject.trim())
+      form.append("description", formData.description.trim())
+      form.append("priority", formData.priority)
+      form.append("location", formData.location.trim())
+      form.append("preferredContact", formData.preferredContact.trim())
 
       if (formData.resourceId.trim()) {
-        payload.resourceId = formData.resourceId.trim()
+        form.append("resourceId", formData.resourceId.trim())
       }
+
+      files.forEach((file) => {
+        form.append("attachments", file)
+      })
 
       const response = await fetch("/api/tickets", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: "Basic " + btoa(`${API_USERNAME}:${apiPassword}`),
         },
-        body: JSON.stringify(payload),
+        body: form,
       })
 
       if (!response.ok) {
@@ -117,7 +133,7 @@ function CreateTicketPage() {
 
         if (response.status === 401) {
           sessionStorage.removeItem("apiPassword")
-          throw new Error("Unauthorized. Backend password may have changed after restart. Please update the password and try again.")
+          throw new Error("Unauthorized. Backend password may have changed after restart.")
         }
 
         throw new Error(text || `Request failed with status ${response.status}`)
@@ -145,14 +161,7 @@ function CreateTicketPage() {
           boxShadow: "0 20px 50px rgba(37, 99, 235, 0.25)",
         }}
       >
-        <div
-          style={{
-            fontSize: "14px",
-            opacity: 0.9,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-          }}
-        >
+        <div style={{ fontSize: "14px", opacity: 0.9, letterSpacing: "0.08em", textTransform: "uppercase" }}>
           Maintenance & Incident Module
         </div>
 
@@ -165,13 +174,7 @@ function CreateTicketPage() {
         </p>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(220px, 280px) 1fr",
-          gap: "24px",
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 280px) 1fr", gap: "24px" }}>
         <div
           style={{
             borderRadius: "20px",
@@ -186,17 +189,9 @@ function CreateTicketPage() {
             Guidelines
           </h3>
 
-          <div
-            style={{
-              display: "grid",
-              gap: "12px",
-              color: "#64748b",
-              fontSize: "14px",
-              lineHeight: 1.7,
-            }}
-          >
+          <div style={{ display: "grid", gap: "12px", color: "#64748b", fontSize: "14px", lineHeight: 1.7 }}>
             <div>• A temporary dummy user ID is used until session/login is implemented.</div>
-            <div>• Later, replace the dummy user ID with the user ID from session.</div>
+            <div>• You can upload up to 3 image attachments.</div>
             <div>• Use the correct resource ID if available.</div>
             <div>• Keep the subject short and clear.</div>
             <div>• Explain the issue properly in description.</div>
@@ -261,12 +256,7 @@ function CreateTicketPage() {
 
               <div>
                 <label style={labelStyle}>Category</label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  style={inputStyle}
-                >
+                <select name="category" value={formData.category} onChange={handleChange} style={inputStyle}>
                   <option value="HARDWARE">HARDWARE</option>
                   <option value="SOFTWARE">SOFTWARE</option>
                   <option value="NETWORK">NETWORK</option>
@@ -278,12 +268,7 @@ function CreateTicketPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
                 <label style={labelStyle}>Priority</label>
-                <select
-                  name="priority"
-                  value={formData.priority}
-                  onChange={handleChange}
-                  style={inputStyle}
-                >
+                <select name="priority" value={formData.priority} onChange={handleChange} style={inputStyle}>
                   <option value="LOW">LOW</option>
                   <option value="MEDIUM">MEDIUM</option>
                   <option value="HIGH">HIGH</option>
@@ -342,31 +327,25 @@ function CreateTicketPage() {
               />
             </div>
 
+            <div>
+              <label style={labelStyle}>Attachments (up to 3 images)</label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                style={inputStyle}
+              />
+            </div>
+
             {message && (
-              <div
-                style={{
-                  padding: "14px 16px",
-                  borderRadius: "12px",
-                  background: "#dcfce7",
-                  color: "#166534",
-                  border: "1px solid #86efac",
-                }}
-              >
+              <div style={{ padding: "14px 16px", borderRadius: "12px", background: "#dcfce7", color: "#166534", border: "1px solid #86efac" }}>
                 {message}
               </div>
             )}
 
             {error && (
-              <div
-                style={{
-                  padding: "14px 16px",
-                  borderRadius: "12px",
-                  background: "#fee2e2",
-                  color: "#991b1b",
-                  border: "1px solid #fca5a5",
-                  whiteSpace: "pre-wrap",
-                }}
-              >
+              <div style={{ padding: "14px 16px", borderRadius: "12px", background: "#fee2e2", color: "#991b1b", border: "1px solid #fca5a5", whiteSpace: "pre-wrap" }}>
                 {error}
               </div>
             )}

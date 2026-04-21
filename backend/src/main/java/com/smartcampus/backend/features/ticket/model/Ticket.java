@@ -5,6 +5,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Document(collection = "tickets")
 public class Ticket {
@@ -23,6 +25,7 @@ public class Ticket {
     private String ticketStatus;
     private String assignedTechnicianId;
     private String resolutionNotes;
+    private List<AttachmentInfo> attachments = new ArrayList<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -123,6 +126,14 @@ public class Ticket {
 
     public void setResolutionNotes(String resolutionNotes) {
         this.resolutionNotes = resolutionNotes;
+    }
+
+    public List<AttachmentInfo> getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(List<AttachmentInfo> attachments) {
+        this.attachments = attachments;
     }
 
     public LocalDateTime getCreatedAt() {
