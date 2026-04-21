@@ -25,8 +25,8 @@ import {
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const token = localStorage.getItem("token")
-  const email = localStorage.getItem("email") || ""
+  const token = sessionStorage.getItem("token")
+  const email = sessionStorage.getItem("email") || ""
   const isLoggedIn = !!token
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
