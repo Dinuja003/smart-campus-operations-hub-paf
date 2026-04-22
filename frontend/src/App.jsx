@@ -32,6 +32,11 @@ import AdminResourcesInterface from "./features/resources/AdminResourcesInterfac
 import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
 import AnalyticsPage from "./features/booking/pages/AnalyticsPage"
 import UserManagementPage from "./features/users/pages/UserManagementPage.jsx"
+import MyTicketsPage from "./features/ticket/pages/MyTicketsPage"
+import AdminTicketsPage from "./features/ticket/pages/AdminTicketsPage"
+import TicketDetailPage from "./features/ticket/pages/TicketDetailPage"
+import { Toaster } from "sonner"
+import ChatBot from "./components/ChatBot"   // ← NEW
 
 const actionConfigByRole = {
   USER: [
@@ -99,7 +104,7 @@ const actionConfigByRole = {
       label: "Tickets",
       subtitle: "Open technical task queue",
       icon: Ticket,
-      path: "/tickets",
+      path: "/admin/tickets",
       gradient: "from-slate-700 to-slate-800",
       light: false,
     },
@@ -142,6 +147,19 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [liveNow, setLiveNow] = useState(new Date())
+  const [bannerSlide, setBannerSlide] = useState(0)
+
+  const bannerImages = [
+    "https://images.unsplash.com/photo-1562774053-701939374585?w=1400&q=80&fit=crop",
+    "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1400&q=80&fit=crop",
+    "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1400&q=80&fit=crop",
+  ]
+
+  useEffect(() => {
+    const t = window.setInterval(() => setBannerSlide((s) => (s + 1) % bannerImages.length), 4000)
+    return () => window.clearInterval(t)
+  }, [bannerImages.length])
+
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
@@ -405,7 +423,6 @@ function Dashboard() {
     year: "numeric",
   })
 
-  // Calendar computed values
   const calYear = calendarMonth.getFullYear()
   const calMonthIdx = calendarMonth.getMonth()
   const calDaysInMonth = new Date(calYear, calMonthIdx + 1, 0).getDate()
@@ -419,48 +436,39 @@ function Dashboard() {
 
   return (
     <div className="space-y-4">
-
-
       {/* ── Promo Banner ── */}
-      <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-r from-brand to-[#152055] px-7 py-6 shadow-[0_14px_40px_rgba(21,32,85,0.20)]">
-        {/* Decorative dots */}
-        <div className="pointer-events-none absolute right-24 top-4 h-3 w-3 rounded-full bg-emerald-400 opacity-70" />
-        <div className="pointer-events-none absolute right-44 top-8 h-2 w-2 rounded-full bg-[#f5b800] opacity-80" />
-        <div className="pointer-events-none absolute right-36 bottom-4 h-4 w-4 rounded-full bg-red-400/70 opacity-60" />
-        {/* Decorative card mockups */}
-        <div className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 flex-col gap-3 xl:flex">
-          <div className="w-44 rounded-xl bg-white/15 p-3 backdrop-blur-sm">
-            <div className="mb-2 h-2 w-20 rounded bg-white/40" />
-            <div className="h-6 w-28 rounded bg-white/20" />
+      <section className="relative overflow-hidden rounded-[26px] shadow-[0_14px_40px_rgba(21,32,85,0.18)] h-[160px] sm:h-[180px]">
+        {bannerImages.map((src, idx) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-1000 ease-in-out"
+            style={{ opacity: idx === bannerSlide ? 1 : 0 }}
+          />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-black/50 to-[#001d45]/92" />
+        <div className="relative flex h-full items-center justify-end px-8 sm:px-10">
+          <div className="max-w-sm text-right">
+            <p className="mb-1 text-[10px] font-bold tracking-widest text-[#f45e2b] uppercase">
+              {greeting}
+            </p>
+            <p className="text-2xl font-extrabold leading-tight text-white sm:text-3xl">
+              Need a space?<br />Book it in a tap.
+            </p>
+            <p className="mt-2 text-sm text-white/65">
+              {bookingStats.approved > 0
+                ? `You have ${bookingStats.approved} confirmed booking${bookingStats.approved !== 1 ? "s" : ""}`
+                : "No confirmed bookings yet"}
+              {bookingStats.pending > 0 ? ` and ${bookingStats.pending} pending review.` : "."}
+            </p>
           </div>
-          <div className="ml-8 w-44 rounded-xl bg-white/10 p-3 backdrop-blur-sm">
-            <div className="mb-2 h-2 w-16 rounded bg-white/40" />
-            <div className="mb-1 h-2.5 w-24 rounded bg-orange-400/50" />
-            <div className="h-2.5 w-16 rounded bg-emerald-400/50" />
-          </div>
-        </div>
-        <div className="relative max-w-lg">
-          <p className="mb-1.5 text-[10px] font-bold tracking-widest text-white/50 uppercase">
-            {greeting.toUpperCase()}
-          </p>
-          <p className="text-3xl font-extrabold leading-tight text-white sm:text-4xl">
-            Need a space?<br />Book it in a tap.
-          </p>
-          <p className="mt-2 text-sm text-white/65">
-            {bookingStats.approved > 0
-              ? `You have ${bookingStats.approved} confirmed booking${bookingStats.approved !== 1 ? "s" : ""}`
-              : "No confirmed bookings yet"}
-            {bookingStats.pending > 0 ? ` and ${bookingStats.pending} pending review.` : "."}
-          </p>
         </div>
       </section>
 
       {/* ── Hero + Calendar ── */}
       <div className="grid gap-4 xl:grid-cols-[1.99fr_0.6fr]">
-
-        
-
-        {/* Greeting + metric cards */}
         <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-4 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-5">
           <div className="pointer-events-none absolute -left-16 top-10 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
           <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#f5b800]/10 blur-3xl" />
@@ -524,14 +532,12 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* Day headers */}
           <div className="mt-2 grid grid-cols-7">
             {["S","M","T","W","T","F","S"].map((d, i) => (
               <div key={i} className="py-0.5 text-center text-[9px] font-bold tracking-wide text-[#8494c2]">{d}</div>
             ))}
           </div>
 
-          {/* Calendar grid */}
           <div className="grid grid-cols-7">
             {Array.from({ length: calStartDay }, (_, i) => <div key={`e${i}`} />)}
             {Array.from({ length: calDaysInMonth }, (_, i) => {
@@ -551,7 +557,6 @@ function Dashboard() {
             })}
           </div>
 
-          {/* Today's bookings */}
           <div className="mt-3 border-t border-slate-100 pt-3">
             <p className="mb-1.5 text-[9px] font-bold tracking-widest text-[#8494c2] uppercase">Today&apos;s Bookings</p>
             {loading ? (
@@ -584,7 +589,6 @@ function Dashboard() {
           </button>
         </section>
       </div>
-
 
       {/* ── Error ── */}
       {error && (
@@ -697,7 +701,6 @@ function Dashboard() {
             })}
           </div>
 
-          {/* Pending summary */}
           <div className="mt-4 rounded-2xl bg-navy p-4 text-white">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-bold tracking-widest text-white/60 uppercase">Pending Alerts</p>
@@ -714,6 +717,7 @@ function Dashboard() {
     </div>
   )
 }
+
 function ComingSoon({ title }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-[26px] border border-white/60 bg-white py-24 shadow-[0_14px_40px_rgba(21,32,85,0.08)] text-center">
@@ -738,6 +742,7 @@ function AppShell() {
       <div className="flex min-h-screen w-full bg-[#eef2fb]">
         <AppSidebar />
         <main className="flex-1 overflow-y-auto p-6 sm:p-8">
+          <Toaster position="top-right" richColors />
           <div className="mx-auto w-full max-w-6xl">
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
@@ -774,7 +779,25 @@ function AppShell() {
                   </RoleRoute>
                 }
               />
-              <Route path="/tickets" element={<CreateTicketPage />} />
+              <Route path="/tickets" element={<MyTicketsPage />} />
+              <Route path="/tickets/create" element={<CreateTicketPage />} />
+              <Route path="/tickets/:id" element={<TicketDetailPage />} />
+              <Route
+                path="/admin/tickets"
+                element={
+                  <RoleRoute allowedRoles={["ADMIN", "TECHNICIAN"]}>
+                    <AdminTicketsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/admin/tickets/:id"
+                element={
+                  <RoleRoute allowedRoles={["ADMIN", "TECHNICIAN"]}>
+                    <TicketDetailPage />
+                  </RoleRoute>
+                }
+              />
               <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
               <Route path="/profile" element={<ComingSoon title="My Profile" />} />
               <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
@@ -783,6 +806,8 @@ function AppShell() {
           </div>
         </main>
       </div>
+      {/* ── UniBot Chatbot — floats on every page ── */}
+      <ChatBot />
     </SidebarProvider>
   )
 }
@@ -793,8 +818,24 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/home" element={<HomePage />} />
+        <Route
+          path="/"
+          element={
+            <>
+              <HomePage />
+              <ChatBot />
+            </>
+          }
+        />
+        <Route
+          path="/home"
+          element={
+            <>
+              <HomePage />
+              <ChatBot />
+            </>
+          }
+        />
         <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
         <Route path="/signup" element={token ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
         <Route path="/oauth2/callback" element={<OAuth2CallbackPage />} />
