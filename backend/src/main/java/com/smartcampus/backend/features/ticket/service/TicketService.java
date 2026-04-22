@@ -25,7 +25,9 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class TicketService {
@@ -77,9 +79,16 @@ public class TicketService {
     }
 
     public List<TicketResponse> getTicketsByUser(String userId) {
-        return ticketRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(ticket -> TicketResponse.from(ticket, canEditOrDelete(ticket), canEditOrDelete(ticket), resolveTechnicianName(ticket.getAssignedTechnicianId())))
+        List<Ticket> tickets = ticketRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        Map<String, String> techNames = getTechnicianNameMap();
+        
+        return tickets.stream()
+                .map(ticket -> TicketResponse.from(
+                    ticket, 
+                    canEditOrDelete(ticket), 
+                    canEditOrDelete(ticket), 
+                    ticket.getAssignedTechnicianId() != null ? techNames.getOrDefault(ticket.getAssignedTechnicianId(), "Unknown Technician") : null
+                ))
                 .toList();
     }
 
@@ -156,9 +165,29 @@ public class TicketService {
             tickets = ticketRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
         }
 
+        Map<String, String> techNames = getTechnicianNameMap();
+
         return tickets.stream()
-                .map(ticket -> TicketResponse.from(ticket, false, false, resolveTechnicianName(ticket.getAssignedTechnicianId())))
+                .map(ticket -> TicketResponse.from(
+                    ticket, 
+                    false, 
+                    false, 
+                    ticket.getAssignedTechnicianId() != null ? techNames.getOrDefault(ticket.getAssignedTechnicianId(), "Unknown Technician") : null
+                ))
                 .toList();
+    }
+
+    private Map<String, String> getTechnicianNameMap() {
+        try {
+            return userRepository.findByRole(UserRole.TECHNICIAN).stream()
+                    .collect(Collectors.toMap(
+                        User::getId, 
+                        u -> u.getFirstName() + " " + u.getLastName(),
+                        (existing, replacement) -> existing
+                    ));
+        } catch (Exception e) {
+            return new java.util.HashMap<>();
+        }
     }
 
     public TicketResponse addMessage(String ticketId, com.smartcampus.backend.features.ticket.model.TicketMessage message) {
