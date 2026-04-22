@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   FileText,
   Image as ImageIcon,
@@ -6,8 +6,10 @@ import {
   Send,
   Ticket,
   X,
+  CalendarCheck2
 } from "lucide-react"
 import { createTicket } from "@/features/ticket/services/ticketService.js"
+import bookingService from "@/features/booking/Services/BookingService"
 import { toast } from "sonner"
 
 const TEMP_USER_ID = "69c038632d897c2ee8880785"
@@ -29,14 +31,48 @@ function CreateTicketPage() {
     priority: "HIGH",
     location: "",
     preferredContact: "",
+    bookingId: ""
   }
 
   const [formData, setFormData] = useState(initialForm)
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(false)
+  const [bookings, setBookings] = useState([])
+  const [fetchingBookings, setFetchingBookings] = useState(false)
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setFetchingBookings(true)
+      try {
+        const data = await bookingService.getMyBookings()
+        setBookings(Array.isArray(data) ? data : [])
+      } catch (err) {
+        console.error("Failed to load bookings:", err)
+      } finally {
+        setFetchingBookings(false)
+      }
+    }
+    fetchBookings()
+  }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    
+    if (name === "bookingId") {
+      const selectedBooking = bookings.find(b => b.id === value)
+      if (selectedBooking) {
+        setFormData(prev => ({
+          ...prev,
+          bookingId: value,
+          resourceId: selectedBooking.resourceId,
+          category: selectedBooking.resourceType === "EQUIPMENT" ? "HARDWARE" : "FACILITY"
+        }))
+      } else {
+        setFormData(prev => ({ ...prev, bookingId: "", resourceId: "" }))
+      }
+      return
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
@@ -179,18 +215,49 @@ function CreateTicketPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">
-                  Resource ID <span className="normal-case text-slate-400">(optional)</span>
+                  Related Booking <span className="normal-case text-slate-400">(optional)</span>
                 </label>
-                <input
-                  type="text"
-                  name="resourceId"
-                  value={formData.resourceId}
-                  onChange={handleChange}
-                  placeholder="Enter resource ObjectId"
+                <select 
+                  name="bookingId" 
+                  value={formData.bookingId} 
+                  onChange={handleChange} 
                   className={inputCls}
-                />
+                  disabled={fetchingBookings}
+                >
+                  <option value="">No related booking</option>
+                  {bookings.map(b => (
+                    <option key={b.id} value={b.id}>
+                      {b.bookingReason} ({new Date(b.date).toLocaleDateString()})
+                    </option>
+                  ))}
+                </select>
               </div>
 
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">
+                  Affected Resource
+                </label>
+                <select 
+                  name="resourceId" 
+                  value={formData.resourceId} 
+                  onChange={handleChange} 
+                  className={inputCls}
+                  disabled={!!formData.bookingId} // Disable if a booking is selected (auto-filled)
+                >
+                  <option value="">Select a resource...</option>
+                  {/* If a booking is selected, show its resource as the only option */}
+                  {formData.bookingId ? (
+                    <option value={formData.resourceId}>
+                      {bookings.find(b => b.id === formData.bookingId)?.resourceName || "Selected Resource"}
+                    </option>
+                  ) : (
+                    <option value="" disabled>Select from bookings above or enter manually below</option>
+                  )}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Category</label>
                 <select name="category" value={formData.category} onChange={handleChange} className={inputCls}>
