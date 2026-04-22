@@ -145,7 +145,8 @@ export default function AdminResourcesInterface() {
     const q = query.trim().toLowerCase();
     return resources.filter((r) => {
       const loc = formatLocation(r.location);
-      const match = !q || [r.name,r.id,r.type,r.status,r.createdBy,loc,r.description].join(" ").toLowerCase().includes(q);
+      const searchableText = [r.name, r.id, r.type, r.status, loc].join(" ").toLowerCase();
+      const match = !q || searchableText.includes(q);
       return match && (typeFilter === "All Types" || r.type === typeFilter) && (statusFilter === "All Status" || r.status === statusFilter);
     });
   }, [query, resources, statusFilter, typeFilter]);
@@ -239,19 +240,23 @@ export default function AdminResourcesInterface() {
           { label: "Available Now",   value: stats.available,   icon: CheckCircle2, iconBg: "bg-emerald-500" },
           { label: "Total Capacity",  value: stats.capacity,    icon: Users,        iconBg: "bg-[#f5b800]" },
           { label: "Maintenance",     value: stats.maintenance, icon: Wrench,       iconBg: "bg-[#152055]" },
-        ].map(({ label, value, icon: Icon, iconBg }) => (
-          <article key={label} className="rounded-[22px] border border-white/60 bg-white p-4 shadow-[0_8px_30px_rgba(21,32,85,0.07)]">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{label}</p>
-                <p className="mt-1.5 text-2xl font-bold text-navy">{value}</p>
+        ].map((stat) => {
+          const StatIcon = stat.icon;
+
+          return (
+            <article key={stat.label} className="rounded-[22px] border border-white/60 bg-white p-4 shadow-[0_8px_30px_rgba(21,32,85,0.07)]">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{stat.label}</p>
+                  <p className="mt-1.5 text-2xl font-bold text-navy">{stat.value}</p>
+                </div>
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stat.iconBg}`}>
+                  <StatIcon className="h-3.5 w-3.5 text-white" />
+                </span>
               </div>
-              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
-                <Icon className="h-3.5 w-3.5 text-white" />
-              </span>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
       {/* ── Toolbar ── */}
