@@ -2,8 +2,10 @@ package com.smartcampus.backend.features.auth.dto;
 
 import com.smartcampus.backend.features.auth.model.User;
 import com.smartcampus.backend.features.auth.model.UserRole;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
