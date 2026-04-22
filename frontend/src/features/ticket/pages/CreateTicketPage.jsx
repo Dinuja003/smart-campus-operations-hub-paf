@@ -12,6 +12,8 @@ import { createTicket } from "@/features/ticket/services/ticketService.js"
 import bookingService from "@/features/booking/Services/BookingService"
 import { toast } from "sonner"
 
+import axios from "axios"
+
 const TEMP_USER_ID = "69c038632d897c2ee8880785"
 const CATEGORIES = ["HARDWARE", "SOFTWARE", "NETWORK", "FACILITY"]
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH"]
@@ -38,37 +40,48 @@ function CreateTicketPage() {
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(false)
   const [bookings, setBookings] = useState([])
-  const [fetchingBookings, setFetchingBookings] = useState(false)
+  const [resources, setResources] = useState([])
+  const [fetchingData, setFetchingData] = useState(false)
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      setFetchingBookings(true)
+    const loadInitialData = async () => {
+      setFetchingData(true)
       try {
-        const data = await bookingService.getMyBookings()
-        setBookings(Array.isArray(data) ? data : [])
+        const [bookingsData, resourcesData] = await Promise.all([
+          bookingService.getMyBookings(),
+          axios.get("/api/resources").then(res => res.data)
+        ])
+        setBookings(Array.isArray(bookingsData) ? bookingsData : [])
+        setResources(Array.isArray(resourcesData) ? resourcesData : [])
       } catch (err) {
-        console.error("Failed to load bookings:", err)
+        console.error("Failed to load initial data:", err)
       } finally {
-        setFetchingBookings(false)
+        setFetchingData(false)
       }
     }
-    fetchBookings()
+    loadInitialData()
   }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    
+
     if (name === "bookingId") {
       const selectedBooking = bookings.find(b => b.id === value)
       if (selectedBooking) {
+        // Look up resource details from our local list
+        const res = resources.find(r => r.id === selectedBooking.resourceId)
+        const locStr = res?.location ? [res.location.building, res.location.floor, res.location.room].filter(Boolean).join(", ") : ""
+
         setFormData(prev => ({
           ...prev,
           bookingId: value,
           resourceId: selectedBooking.resourceId,
-          category: selectedBooking.resourceType === "EQUIPMENT" ? "HARDWARE" : "FACILITY"
+          category: selectedBooking.resourceType === "EQUIPMENT" ? "HARDWARE" : "FACILITY",
+          location: locStr
+          // Subject and Description are removed from auto-fill as per user request
         }))
       } else {
-        setFormData(prev => ({ ...prev, bookingId: "", resourceId: "" }))
+        setFormData(prev => ({ ...prev, bookingId: "", resourceId: "", subject: "", description: "", location: "" }))
       }
       return
     }
@@ -217,12 +230,12 @@ function CreateTicketPage() {
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">
                   Related Booking <span className="normal-case text-slate-400">(optional)</span>
                 </label>
-                <select 
-                  name="bookingId" 
-                  value={formData.bookingId} 
-                  onChange={handleChange} 
+                <select
+                  name="bookingId"
+                  value={formData.bookingId}
+                  onChange={handleChange}
                   className={inputCls}
-                  disabled={fetchingBookings}
+                  disabled={fetchingData}
                 >
                   <option value="">No related booking</option>
                   {bookings.map(b => (
@@ -237,18 +250,18 @@ function CreateTicketPage() {
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">
                   Affected Resource
                 </label>
-                <select 
-                  name="resourceId" 
-                  value={formData.resourceId} 
-                  onChange={handleChange} 
+                <select
+                  name="resourceId"
+                  value={formData.resourceId}
+                  onChange={handleChange}
                   className={inputCls}
-                  disabled={!!formData.bookingId} // Disable if a booking is selected (auto-filled)
+                  disabled={!!formData.bookingId}
                 >
                   <option value="">Select a resource...</option>
                   {/* If a booking is selected, show its resource as the only option */}
                   {formData.bookingId ? (
                     <option value={formData.resourceId}>
-                      {bookings.find(b => b.id === formData.bookingId)?.resourceName || "Selected Resource"}
+                      {resources.find(r => r.id === formData.resourceId)?.name || "Selected Resource"}
                     </option>
                   ) : (
                     <option value="" disabled>Select from bookings above or enter manually below</option>
