@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { AlertCircle, CalendarCheck2, CheckCircle2, ChevronRight, Clock3, Loader2, Pencil, Plus, X } from 'lucide-react';
+import { AlertCircle, CalendarCheck2, CheckCircle2, ChevronRight, Clock3, Eye, Loader2, Pencil, Plus, X } from 'lucide-react';
 import { useBooking } from '@/hooks/useBooking';
 import bookingService from '@/features/booking/Services/BookingService';
 import BookingStatusBadge from '@/components/BookingStatusBadge';
@@ -42,6 +42,7 @@ export default function MyBookingsPage() {
   const [scheduleItems, setScheduleItems]   = useState([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [editingId, setEditingId]       = useState(null);
+  const [detailModal, setDetailModal]   = useState(null);
   const [form, setForm]                 = useState(() => createEmpty());
   const navigate = useNavigate();
 
@@ -87,6 +88,12 @@ export default function MyBookingsPage() {
   }, [displayed, form.resourceId, resources, catResources]);
 
   const editingBooking = useMemo(() => bookings.find(b => b.id === editingId) || null, [bookings, editingId]);
+
+  const getBookingResourceLabel = (booking) => {
+    const resource = resources.find((r) => r.id === booking.resourceId);
+    if (resource?.name) return resource.name;
+    return booking.resourceType || 'Unassigned Resource';
+  };
 
   const daySlots = useMemo(() => ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'], []);
 
@@ -464,6 +471,11 @@ export default function MyBookingsPage() {
                     <Pencil className="h-3 w-3" /> Edit Booking
                   </button>
                 )}
+                {b.status === 'APPROVED' && (
+                  <button type="button" onClick={() => setDetailModal(b)} className="flex items-center gap-1.5 rounded-lg border border-[#001d45]/20 bg-[#001d45]/8 px-3.5 py-2 text-xs font-semibold text-[#001d45] transition hover:bg-[#001d45]/15">
+                    <Eye className="h-3 w-3" /> View Details
+                  </button>
+                )}
                 {(b.status === 'PENDING' || b.status === 'APPROVED') && (
                   <button type="button" disabled={cancelling === b.id} onClick={() => handleCancel(b.id)} className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60">
                     <X className="h-3 w-3" />{cancelling === b.id ? 'Cancelling…' : 'Cancel Booking'}
@@ -472,6 +484,66 @@ export default function MyBookingsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Approved Booking Details Modal ── */}
+      {detailModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setDetailModal(null)}
+        >
+          <div
+            className="w-full max-w-xl overflow-hidden rounded-[26px] bg-white shadow-[0_30px_80px_rgba(21,32,85,0.25)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Booking Details</p>
+                <h3 className="mt-0.5 text-lg font-bold text-navy">Approved Booking</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailModal(null)}
+                className="rounded-xl p-2 text-[#8494c2] transition-colors hover:bg-slate-100 hover:text-navy"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 px-6 py-5">
+              {[
+                { label: 'Reason', value: detailModal.bookingReason || '—' },
+                { label: 'Resource', value: getBookingResourceLabel(detailModal) },
+                { label: 'Date & Time', value: `${detailModal.date || '—'} · ${detailModal.startTime || '—'}–${detailModal.endTime || '—'}` },
+                { label: 'Expected Attendees', value: detailModal.expectedAttendees || '—' },
+                { label: 'Status', value: detailModal.status || '—' },
+                { label: 'Purpose', value: detailModal.purpose || '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{label}</p>
+                  <p className="mt-0.5 text-sm font-medium text-navy">{value}</p>
+                </div>
+              ))}
+
+              {detailModal.adminNote && (
+                <div className="rounded-xl border border-[#001d45]/20 bg-[#001d45]/8 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Admin Note</p>
+                  <p className="mt-0.5 text-sm font-medium text-[#001d45]">{detailModal.adminNote}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setDetailModal(null)}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
