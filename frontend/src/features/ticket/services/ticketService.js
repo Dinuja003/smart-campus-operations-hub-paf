@@ -40,6 +40,11 @@ export async function updateTicket(ticketId, payload) {
   return res.data;
 }
 
+export async function updateTicketStatus(ticketId, status) {
+  const res = await API.patch(`/tickets/${ticketId}/status?status=${status}`);
+  return res.data;
+}
+
 export async function getAllTickets() {
   const res = await API.get("/tickets");
   return res.data;

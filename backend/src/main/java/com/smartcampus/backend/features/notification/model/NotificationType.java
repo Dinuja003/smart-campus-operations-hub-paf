@@ -6,5 +6,6 @@ public enum NotificationType {
     BOOKING_REJECTED,
     TICKET_SUBMITTED,
     TICKET_ASSIGNED,
-    TICKET_MESSAGE
+    TICKET_MESSAGE,
+    TICKET_UPDATED
 }
