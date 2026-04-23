@@ -144,15 +144,19 @@ export default function AdminBookingsPage() {
                     <td className="px-5 py-3.5"><BookingStatusBadge status={b.status} /></td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
-                        {b.status === 'PENDING' && (
-                          <button
-                            type="button"
-                            onClick={() => openReview(b)}
-                            className="flex items-center gap-1.5 rounded-lg bg-[#001d45] px-3 py-1.5 text-[11px] font-semibold text-white transition-all hover:bg-[#002a66] hover:opacity-90"
-                          >
-                            <Clock className="h-3 w-3" /> Review
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          disabled={b.status !== 'PENDING'}
+                          onClick={() => b.status === 'PENDING' && openReview(b)}
+                          title={b.status !== 'PENDING' ? 'Only pending bookings can be reviewed.' : 'Review booking'}
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                            b.status === 'PENDING'
+                              ? 'bg-[#001d45] text-white hover:bg-[#002a66] hover:opacity-90'
+                              : 'cursor-not-allowed bg-slate-200 text-slate-500'
+                          }`}
+                        >
+                          <Clock className="h-3 w-3" /> Review
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(b.id)}
