@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { AlertCircle, CalendarCheck2, CheckCircle2, ChevronRight, Clock3, Eye, Loader2, Pencil, Plus, X } from 'lucide-react';
+import { AlertCircle, BriefcaseBusiness, Building2, CalendarCheck2, CheckCircle2, ChevronRight, Clock3, Eye, FlaskConical, Loader2, Pencil, Plus, Presentation, Settings2, X } from 'lucide-react';
 import { useBooking } from '@/hooks/useBooking';
 import bookingService from '@/features/booking/Services/BookingService';
 import BookingStatusBadge from '@/components/BookingStatusBadge';
@@ -23,7 +23,13 @@ const createEmpty = () => ({ date: todayISO(), startTime: '09:00', endTime: '10:
 const inputCls = "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm text-navy outline-none placeholder-slate-400 transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10";
 const labelCls = "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]";
 
-const typeIcons = { LAB: '🔬', MEETING_ROOM: '💼', LECTURE_HALL: '🏛️', AUDITORIUM: '🎭', EQUIPMENT: '⚙️' };
+const typeIcons = {
+  LAB: FlaskConical,
+  MEETING_ROOM: BriefcaseBusiness,
+  LECTURE_HALL: Presentation,
+  AUDITORIUM: Building2,
+  EQUIPMENT: Settings2,
+};
 
 export default function MyBookingsPage() {
   const { getMyBookings, cancelBooking, createBooking, updateBooking, loading, error } = useBooking();
@@ -43,6 +49,7 @@ export default function MyBookingsPage() {
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [editingId, setEditingId]       = useState(null);
   const [detailModal, setDetailModal]   = useState(null);
+  const [showFullViewModal, setShowFullViewModal] = useState(false);
   const [form, setForm]                 = useState(() => createEmpty());
   const navigate = useNavigate();
 
@@ -76,6 +83,11 @@ export default function MyBookingsPage() {
   }, [resources, form.expectedAttendees, form.resourceType]);
 
   const catResources = useMemo(() => !form.resourceType ? [] : resources.filter(r => getTypeLabel(r.type) === form.resourceType).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))), [resources, form.resourceType]);
+
+  const allResourcesSorted = useMemo(
+    () => [...resources].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))),
+    [resources],
+  );
 
   const displayed = availChecked ? availResources : quickAvail;
 
@@ -160,6 +172,19 @@ export default function MyBookingsPage() {
     setCancelling(null);
   };
 
+  const handleQuickBookResource = (resource) => {
+    setEditingId(null);
+    setSubmitError('');
+    setSubmitSuccess('');
+    resetAvail();
+    setForm((prev) => ({
+      ...prev,
+      resourceType: getTypeLabel(resource.type),
+      resourceId: resource.id,
+    }));
+    setShowForm(true);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === 'expectedAttendees') { setForm(p => ({ ...p, expectedAttendees: value.replace(/\D/g, '') })); resetAvail(); return; }
@@ -231,10 +256,19 @@ export default function MyBookingsPage() {
       )}
 
       {/* ── Category Cards ── */}
-      <section className="rounded-[26px] border border-white/60 bg-white p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+      <section className="rounded-[26px] border border-white/60 bg-gradient-to-br from-white to-slate-50 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-navy">Resource Categories</h3>
-          <button type="button" onClick={() => navigate('/resources')} className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+          <div>
+            <h3 className="text-base font-bold text-navy">Resource Categories</h3>
+            <p className="mt-0.5 text-xs text-[#8494c2]">Choose a category to narrow available resources.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShowFullViewModal(true);
+            }}
+            className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+          >
             Full View <ChevronRight className="h-3 w-3" />
           </button>
         </div>
@@ -245,20 +279,34 @@ export default function MyBookingsPage() {
           <p className="text-xs text-[#8494c2]">No resource categories found.</p>
         ) : (
           <>
-            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
               {typeCounts.map(([type, count]) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => { setForm(p => ({ ...p, resourceType: p.resourceType === type ? '' : type, resourceId: '' })); resetAvail(); }}
-                  className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${form.resourceType === type ? 'border-brand/30 bg-brand/8 shadow-sm' : 'border-slate-200 bg-slate-50/60 hover:border-brand/20 hover:bg-brand/5'}`}
-                >
-                  <span className="text-xl">{typeIcons[type] || '📦'}</span>
-                  <div>
-                    <p className={`text-xs font-bold ${form.resourceType === type ? 'text-brand' : 'text-navy'}`}>{type}</p>
-                    <p className="text-[10px] text-[#8494c2]">{count} resource{count !== 1 ? 's' : ''}</p>
-                  </div>
-                </button>
+                (() => {
+                  const TypeIcon = typeIcons[type] || Building2;
+                  const selected = form.resourceType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setForm(p => ({ ...p, resourceType: selected ? '' : type, resourceId: '' }));
+                        resetAvail();
+                      }}
+                      className={`group relative overflow-hidden rounded-xl border p-3 text-left transition-all ${selected ? 'border-brand/35 bg-brand/10 shadow-[0_8px_20px_rgba(244,94,43,0.12)]' : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-sm'}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${selected ? 'bg-brand text-white' : 'bg-[#001d45]/8 text-[#001d45]'}`}>
+                          <TypeIcon className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className={`truncate text-sm font-bold ${selected ? 'text-brand' : 'text-navy'}`}>{type.replaceAll('_', ' ')}</p>
+                          <p className="text-xs text-[#8494c2]">{count} resource{count !== 1 ? 's' : ''}</p>
+                        </div>
+                        {selected && <span className="ml-auto rounded-full bg-brand/15 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-brand">Selected</span>}
+                      </div>
+                    </button>
+                  );
+                })()
               ))}
             </div>
 
@@ -271,12 +319,25 @@ export default function MyBookingsPage() {
                 {catResources.map(r => (
                   <div key={r.id} className="flex items-center justify-between gap-3 border-b border-slate-50 px-4 py-3 last:border-0 hover:bg-slate-50/60 transition-colors">
                     <div>
-                      <p className="text-xs font-semibold text-navy">{r.name || 'Unnamed'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-navy">{r.name || 'Unnamed'}</p>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${isAvailable(r.status) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                          {r.status || 'UNKNOWN'}
+                        </span>
+                      </div>
                       <p className="mt-0.5 text-[10px] text-[#8494c2]">Cap: {r.capacity || 0}{r.location ? ` · ${[r.location.building, r.location.floor, r.location.room].filter(Boolean).join(' / ')}` : ''}</p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${isAvailable(r.status) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
-                      {r.status || 'UNKNOWN'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {isAvailable(r.status) && (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickBookResource(r)}
+                          className="rounded-lg bg-brand px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white transition hover:opacity-90"
+                        >
+                          Book Resource
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -284,6 +345,70 @@ export default function MyBookingsPage() {
           </>
         )}
       </section>
+
+      {showFullViewModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
+          onClick={() => setShowFullViewModal(false)}
+        >
+          <div
+            className="w-full max-w-4xl overflow-hidden rounded-[26px] border border-white/60 bg-white shadow-[0_30px_80px_rgba(21,32,85,0.25)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Resources</p>
+                <h3 className="mt-0.5 text-lg font-bold text-navy">All Resources</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFullViewModal(false)}
+                className="rounded-xl p-2 text-[#8494c2] transition-colors hover:bg-slate-100 hover:text-navy"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
+              <div className="mb-3 text-xs text-[#8494c2]">{allResourcesSorted.length} resources found</div>
+              {allResourcesSorted.length === 0 ? (
+                <p className="text-sm text-[#8494c2]">No resources available.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {allResourcesSorted.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-navy">{r.name || 'Unnamed'}</p>
+                          <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#5a6b98]">
+                            {getTypeLabel(r.type)}
+                          </span>
+                          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${isAvailable(r.status) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                            {r.status || 'UNKNOWN'}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-[#8494c2]">Cap: {r.capacity || 0}{r.location ? ` · ${[r.location.building, r.location.floor, r.location.room].filter(Boolean).join(' / ')}` : ''}</p>
+                      </div>
+                      {isAvailable(r.status) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleQuickBookResource(r);
+                            setShowFullViewModal(false);
+                          }}
+                          className="rounded-lg bg-brand px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white transition hover:opacity-90"
+                        >
+                          Book Resource
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Booking Form ── */}
       {showForm && (

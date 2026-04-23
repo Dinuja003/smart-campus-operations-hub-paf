@@ -116,40 +116,47 @@ export default function AdminBookingsPage() {
       {/* ── Table ── */}
       {bookings.length > 0 && (
         <div className="overflow-hidden rounded-[26px] border border-white/60 bg-white shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="w-full">
+            <table className="w-full table-fixed text-[13px]">
               <thead>
                 <tr className="border-b border-slate-100">
-                  {['Reason', 'Resource', 'Date', 'Time', 'Requested By', 'Attendees', 'Status', 'Actions'].map(h => (
-                    <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{h}</th>
-                  ))}
+                  <th className="w-[25%] px-2.5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2] md:px-3">Reason</th>
+                  <th className="w-[13%] px-2.5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2] md:px-3">Resource</th>
+                  <th className="w-[12%] px-2.5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2] md:px-3">Date</th>
+                  <th className="w-[12%] px-2.5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2] md:px-3">Time</th>
+                  <th className="hidden w-[12%] px-2.5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2] 2xl:table-cell md:px-3">Requested By</th>
+                  <th className="w-[8%] px-2.5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2] md:px-3">Attendees</th>
+                  <th className="w-[10%] px-2.5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2] md:px-3">Status</th>
+                  <th className="w-[14%] px-2.5 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-[#8494c2] md:px-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {bookings.map((b, idx) => (
                   <tr key={b.id} className={idx < bookings.length - 1 ? 'border-b border-slate-50 hover:bg-slate-50/60 transition-colors' : 'hover:bg-slate-50/60 transition-colors'}>
-                    <td className="px-5 py-3.5">
-                      <p className="font-semibold text-navy">{b.bookingReason}</p>
-                      <p className="mt-0.5 text-[11px] text-[#8494c2]">{b.purpose?.slice(0, 55)}{b.purpose?.length > 55 ? '…' : ''}</p>
+                    <td className="px-2.5 py-3 md:px-3">
+                      <p className="truncate font-semibold text-navy">{b.bookingReason}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-[#8494c2]">{b.purpose?.slice(0, 55)}{b.purpose?.length > 55 ? '…' : ''}</p>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-2.5 py-3 md:px-3">
                       <span className="rounded-lg bg-brand/10 px-2.5 py-1 text-[11px] font-semibold text-brand">{b.resourceType || '—'}</span>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-[#6677a4]">{b.date}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-[#6677a4]">{b.startTime} – {b.endTime}</td>
-                    <td className="px-5 py-3.5 text-[#6677a4]">{b.requestedBy?.slice(0, 14)}…</td>
-                    <td className="px-5 py-3.5">
+                    <td className="whitespace-nowrap px-2.5 py-3 text-[#6677a4] md:px-3">{b.date}</td>
+                    <td className="whitespace-nowrap px-2.5 py-3 text-[#6677a4] md:px-3">{b.startTime} – {b.endTime}</td>
+                    <td className="hidden px-2.5 py-3 text-[#6677a4] 2xl:table-cell md:px-3">
+                      <span className="block truncate">{b.requestedBy?.slice(0, 14)}…</span>
+                    </td>
+                    <td className="px-2.5 py-3 md:px-3">
                       <span className="font-semibold text-brand">{b.expectedAttendees}</span>
                     </td>
-                    <td className="px-5 py-3.5"><BookingStatusBadge status={b.status} /></td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
+                    <td className="px-2.5 py-3 md:px-3"><BookingStatusBadge status={b.status} /></td>
+                    <td className="px-2.5 py-3 md:px-3">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
                           disabled={b.status !== 'PENDING'}
                           onClick={() => b.status === 'PENDING' && openReview(b)}
                           title={b.status !== 'PENDING' ? 'Only pending bookings can be reviewed.' : 'Review booking'}
-                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                          className={`flex items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-semibold transition-all md:px-2.5 ${
                             b.status === 'PENDING'
                               ? 'bg-[#001d45] text-white hover:bg-[#002a66] hover:opacity-90'
                               : 'cursor-not-allowed bg-slate-200 text-slate-500'
