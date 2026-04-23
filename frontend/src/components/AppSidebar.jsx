@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom"
+import { useNotifications } from "@/features/notification/context/NotificationContext"
 import {
   BarChart3,
   Bell,
@@ -118,6 +119,7 @@ export function AppSidebar() {
   const displayName = deriveDisplayName(email)
   const initials = deriveInitials(displayName)
   const navSections = navSectionsByRole[role] || navSectionsByRole.USER
+  const { unreadCount } = useNotifications()
 
   return (
     <Sidebar>
@@ -166,7 +168,12 @@ export function AppSidebar() {
                           }`}
                       >
                         <Icon className="h-4 w-4 shrink-0" />
-                        <span className="text-sm font-medium">{item.label}</span>
+                        <span className="text-sm font-medium flex-1">{item.label}</span>
+                        {item.path === "/notifications" && unreadCount > 0 && (
+                          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-bold text-white">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )
