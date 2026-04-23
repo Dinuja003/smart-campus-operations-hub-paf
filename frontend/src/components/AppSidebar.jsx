@@ -66,7 +66,7 @@ const navSectionsByRole = {
     {
       section: "WORKSPACE",
       items: [
-        { label: "Tickets", path: "/tickets", icon: Ticket },
+        { label: "Tickets", path: "/admin/tickets", icon: Ticket },
         { label: "Notifications", path: "/notifications", icon: Bell },
         { label: "My Profile", path: "/profile", icon: User },
       ],
@@ -83,7 +83,7 @@ const navSectionsByRole = {
     {
       section: "WORKSPACE",
       items: [
-        { label: "Tickets", path: "/tickets", icon: Ticket },
+        { label: "Tickets", path: "/admin/tickets", icon: Ticket },
         { label: "Notifications", path: "/notifications", icon: Bell },
         { label: "My Profile", path: "/profile", icon: User },
       ],

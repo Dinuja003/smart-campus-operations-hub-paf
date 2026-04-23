@@ -32,6 +32,10 @@ import AdminResourcesInterface from "./features/resources/AdminResourcesInterfac
 import CreateTicketPage from "./features/ticket/pages/CreateTicketPage"
 import AnalyticsPage from "./features/booking/pages/AnalyticsPage"
 import UserManagementPage from "./features/users/pages/UserManagementPage.jsx"
+import MyTicketsPage from "./features/ticket/pages/MyTicketsPage"
+import AdminTicketsPage from "./features/ticket/pages/AdminTicketsPage"
+import TicketDetailPage from "./features/ticket/pages/TicketDetailPage"
+import { Toaster } from "sonner"
 import ChatBot from "./components/ChatBot"   // ← NEW
 
 const actionConfigByRole = {
@@ -100,7 +104,7 @@ const actionConfigByRole = {
       label: "Tickets",
       subtitle: "Open technical task queue",
       icon: Ticket,
-      path: "/tickets",
+      path: "/admin/tickets",
       gradient: "from-slate-700 to-slate-800",
       light: false,
     },
@@ -738,6 +742,7 @@ function AppShell() {
       <div className="flex min-h-screen w-full bg-[#eef2fb]">
         <AppSidebar />
         <main className="flex-1 overflow-y-auto p-6 sm:p-8">
+          <Toaster position="top-right" richColors />
           <div className="mx-auto w-full max-w-6xl">
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
@@ -774,7 +779,25 @@ function AppShell() {
                   </RoleRoute>
                 }
               />
-              <Route path="/tickets" element={<CreateTicketPage />} />
+              <Route path="/tickets" element={<MyTicketsPage />} />
+              <Route path="/tickets/create" element={<CreateTicketPage />} />
+              <Route path="/tickets/:id" element={<TicketDetailPage />} />
+              <Route
+                path="/admin/tickets"
+                element={
+                  <RoleRoute allowedRoles={["ADMIN", "TECHNICIAN"]}>
+                    <AdminTicketsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/admin/tickets/:id"
+                element={
+                  <RoleRoute allowedRoles={["ADMIN", "TECHNICIAN"]}>
+                    <TicketDetailPage />
+                  </RoleRoute>
+                }
+              />
               <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
               <Route path="/profile" element={<ComingSoon title="My Profile" />} />
               <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
