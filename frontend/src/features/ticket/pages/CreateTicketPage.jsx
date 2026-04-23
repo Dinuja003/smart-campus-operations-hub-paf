@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   FileText,
   Image as ImageIcon,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react"
 import { createTicket } from "@/features/ticket/services/ticketService.js"
 import bookingService from "@/features/booking/Services/BookingService"
+import resourceService from "@/features/resources/services/resourceService"
 import { toast } from "sonner"
 
 import axios from "axios"
@@ -25,6 +27,7 @@ const priorityColors = {
 }
 
 function CreateTicketPage() {
+  const navigate = useNavigate()
   const initialForm = {
     resourceId: "",
     category: "HARDWARE",
@@ -139,8 +142,14 @@ function CreateTicketPage() {
       const validationError = validate()
       if (validationError) throw new Error(validationError)
 
+      const userId = sessionStorage.getItem("userId")
+      if (!userId) {
+        toast.error("You must be logged in to create a ticket")
+        return
+      }
+
       const payload = {
-        userId: TEMP_USER_ID,
+        userId,
         resourceId: formData.resourceId.trim() || null,
         category: formData.category,
         subject: formData.subject.trim(),
@@ -150,12 +159,12 @@ function CreateTicketPage() {
         preferredContact: formData.preferredContact.trim(),
       }
 
-      const data = await createTicket(payload, files)
-      toast.success(`Ticket created successfully! ID: ${data.id.slice(-6)}`)
-      setFormData(initialForm)
-      setFiles([])
+      await createTicket(payload, files)
+      toast.success("Ticket created successfully!")
+      navigate("/tickets")
     } catch (err) {
-      toast.error(err.message || "Failed to create ticket")
+      console.error("Ticket creation error:", err)
+      toast.error(err.response?.data?.message || err.message || "Failed to create ticket")
     } finally {
       setLoading(false)
     }
@@ -187,7 +196,7 @@ function CreateTicketPage() {
             </div>
 
             <ul className="space-y-2 text-xs leading-relaxed text-[#6677a4]">
-              <li className="flex gap-2"><span className="mt-0.5 text-[#001d45]">•</span> A temporary user ID is used until login is implemented.</li>
+              <li className="flex gap-2"><span className="mt-0.5 text-[#001d45]">•</span> Tickets are automatically linked to your authenticated account.</li>
               <li className="flex gap-2"><span className="mt-0.5 text-[#001d45]">•</span> Provide a resource ID if the issue relates to a specific resource.</li>
               <li className="flex gap-2"><span className="mt-0.5 text-[#001d45]">•</span> Keep subject short and descriptive.</li>
               <li className="flex gap-2"><span className="mt-0.5 text-[#001d45]">•</span> Explain the issue thoroughly in description.</li>
@@ -195,8 +204,8 @@ function CreateTicketPage() {
             </ul>
 
             <div className="mt-4 rounded-xl border border-[#001d45]/20 bg-[#001d45]/8 px-3 py-2.5">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-[#001d45]/60">Temp User ID</p>
-              <p className="mt-0.5 break-all text-[10px] font-mono font-semibold text-[#001d45]">{TEMP_USER_ID}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[#001d45]/60">Your User ID</p>
+              <p className="mt-0.5 break-all text-[10px] font-mono font-semibold text-[#001d45]">{sessionStorage.getItem("userId")}</p>
             </div>
           </div>
 
@@ -263,9 +272,7 @@ function CreateTicketPage() {
                     <option value={formData.resourceId}>
                       {resources.find(r => r.id === formData.resourceId)?.name || "Selected Resource"}
                     </option>
-                  ) : (
-                    <option value="" disabled>Select from bookings above or enter manually below</option>
-                  )}
+                  ))}
                 </select>
               </div>
             </div>

@@ -13,9 +13,7 @@ import {
   ChevronRight,
   MessageSquare
 } from "lucide-react"
-import { getUserTickets, deleteTicket } from "@/features/ticket/services/ticketService.js"
-
-const TEMP_USER_ID = "69c038632d897c2ee8880785"
+import { getAllTickets, deleteTicket } from "@/features/ticket/services/ticketService.js"
 
 const statusColors = {
   OPEN: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -41,10 +39,12 @@ export default function MyTicketsPage() {
     setLoading(true)
     setError("")
     try {
-      const data = await getUserTickets(TEMP_USER_ID)
+      // getAllTickets() in the backend already filters based on the authenticated user's role/ID
+      const data = await getAllTickets()
       setTickets(Array.isArray(data) ? data : [])
     } catch (err) {
-      setError(err.message || "Failed to load tickets")
+      console.error("Failed to load tickets:", err)
+      setError(err.response?.data?.message || "Failed to load tickets")
     } finally {
       setLoading(false)
     }
@@ -58,7 +58,7 @@ export default function MyTicketsPage() {
     if (!window.confirm("Are you sure you want to delete this ticket?")) return
     setCancelling(id)
     try {
-      await deleteTicket(id, TEMP_USER_ID)
+      await deleteTicket(id)
       setTickets((prev) => prev.filter((t) => t.id !== id))
     } catch (err) {
       alert(err.message || "Failed to delete ticket")
