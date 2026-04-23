@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   FileText,
   Image as ImageIcon,
@@ -10,10 +11,10 @@ import {
 } from "lucide-react"
 import { createTicket } from "@/features/ticket/services/ticketService.js"
 import bookingService from "@/features/booking/Services/BookingService"
+import resourceService from "@/features/resources/services/resourceService"
 import { toast } from "sonner"
 
-const TEMP_USER_ID = "69c038632d897c2ee8880785"
-const CATEGORIES = ["HARDWARE", "SOFTWARE", "NETWORK", "FACILITY"]
+const CATEGORIES = ["ELECTRICAL", "HARDWARE", "SOFTWARE", "FURNITURE", "NETWORK", "OTHER"]
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH"]
 
 const priorityColors = {
@@ -23,6 +24,7 @@ const priorityColors = {
 }
 
 function CreateTicketPage() {
+  const navigate = useNavigate()
   const initialForm = {
     resourceId: "",
     category: "HARDWARE",
@@ -38,21 +40,39 @@ function CreateTicketPage() {
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(false)
   const [bookings, setBookings] = useState([])
-  const [fetchingBookings, setFetchingBookings] = useState(false)
+  const [resources, setResources] = useState([])
+  const [fetchingData, setFetchingData] = useState(false)
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      setFetchingBookings(true)
+    const fetchData = async () => {
+      setFetchingData(true)
       try {
-        const data = await bookingService.getMyBookings()
-        setBookings(Array.isArray(data) ? data : [])
+        // Fetch bookings and resources in parallel, but handle their results individually
+        const [bookingsRes, resourcesRes] = await Promise.allSettled([
+          bookingService.getMyBookings(),
+          resourceService.getAllResources()
+        ])
+
+        if (bookingsRes.status === 'fulfilled') {
+          setBookings(Array.isArray(bookingsRes.value) ? bookingsRes.value : [])
+        } else {
+          console.error("Failed to fetch bookings:", bookingsRes.reason)
+          toast.error("Could not load your bookings")
+        }
+
+        if (resourcesRes.status === 'fulfilled') {
+          setResources(Array.isArray(resourcesRes.value) ? resourcesRes.value : [])
+        } else {
+          console.error("Failed to fetch resources:", resourcesRes.reason)
+          toast.error("Could not load campus resources")
+        }
       } catch (err) {
-        console.error("Failed to load bookings:", err)
+        console.error("Critical error loading page data:", err)
       } finally {
-        setFetchingBookings(false)
+        setFetchingData(false)
       }
     }
-    fetchBookings()
+    fetchData()
   }, [])
 
   const handleChange = (e) => {
@@ -126,8 +146,14 @@ function CreateTicketPage() {
       const validationError = validate()
       if (validationError) throw new Error(validationError)
 
+      const userId = sessionStorage.getItem("userId")
+      if (!userId) {
+        toast.error("You must be logged in to create a ticket")
+        return
+      }
+
       const payload = {
-        userId: TEMP_USER_ID,
+        userId,
         resourceId: formData.resourceId.trim() || null,
         category: formData.category,
         subject: formData.subject.trim(),
@@ -137,12 +163,12 @@ function CreateTicketPage() {
         preferredContact: formData.preferredContact.trim(),
       }
 
-      const data = await createTicket(payload, files)
-      toast.success(`Ticket created successfully! ID: ${data.id.slice(-6)}`)
-      setFormData(initialForm)
-      setFiles([])
+      await createTicket(payload, files)
+      toast.success("Ticket created successfully!")
+      navigate("/tickets")
     } catch (err) {
-      toast.error(err.message || "Failed to create ticket")
+      console.error("Ticket creation error:", err)
+      toast.error(err.response?.data?.message || err.message || "Failed to create ticket")
     } finally {
       setLoading(false)
     }
@@ -174,7 +200,7 @@ function CreateTicketPage() {
             </div>
 
             <ul className="space-y-2 text-xs leading-relaxed text-[#6677a4]">
-              <li className="flex gap-2"><span className="mt-0.5 text-[#001d45]">•</span> A temporary user ID is used until login is implemented.</li>
+              <li className="flex gap-2"><span className="mt-0.5 text-[#001d45]">•</span> Tickets are automatically linked to your authenticated account.</li>
               <li className="flex gap-2"><span className="mt-0.5 text-[#001d45]">•</span> Provide a resource ID if the issue relates to a specific resource.</li>
               <li className="flex gap-2"><span className="mt-0.5 text-[#001d45]">•</span> Keep subject short and descriptive.</li>
               <li className="flex gap-2"><span className="mt-0.5 text-[#001d45]">•</span> Explain the issue thoroughly in description.</li>
@@ -182,8 +208,8 @@ function CreateTicketPage() {
             </ul>
 
             <div className="mt-4 rounded-xl border border-[#001d45]/20 bg-[#001d45]/8 px-3 py-2.5">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-[#001d45]/60">Temp User ID</p>
-              <p className="mt-0.5 break-all text-[10px] font-mono font-semibold text-[#001d45]">{TEMP_USER_ID}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[#001d45]/60">Your User ID</p>
+              <p className="mt-0.5 break-all text-[10px] font-mono font-semibold text-[#001d45]">{sessionStorage.getItem("userId")}</p>
             </div>
           </div>
 
@@ -222,7 +248,7 @@ function CreateTicketPage() {
                   value={formData.bookingId} 
                   onChange={handleChange} 
                   className={inputCls}
-                  disabled={fetchingBookings}
+                  disabled={fetchingData}
                 >
                   <option value="">No related booking</option>
                   {bookings.map(b => (
@@ -242,17 +268,14 @@ function CreateTicketPage() {
                   value={formData.resourceId} 
                   onChange={handleChange} 
                   className={inputCls}
-                  disabled={!!formData.bookingId} // Disable if a booking is selected (auto-filled)
+                  disabled={fetchingData}
                 >
                   <option value="">Select a resource...</option>
-                  {/* If a booking is selected, show its resource as the only option */}
-                  {formData.bookingId ? (
-                    <option value={formData.resourceId}>
-                      {bookings.find(b => b.id === formData.bookingId)?.resourceName || "Selected Resource"}
+                  {resources.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} {r.location ? `(${r.location.building}, Floor ${r.location.floor}, ${r.location.room})` : ''}
                     </option>
-                  ) : (
-                    <option value="" disabled>Select from bookings above or enter manually below</option>
-                  )}
+                  ))}
                 </select>
               </div>
             </div>

@@ -36,7 +36,7 @@ export default function TicketDetailPage() {
   const [showAssign, setShowAssign] = useState(false)
   const chatEndRef = useRef(null)
 
-  const currentUserId = "69c038632d897c2ee8880785" // TEMP_USER_ID
+  const currentUserId = sessionStorage.getItem("userId")
   const currentUserRole = sessionStorage.getItem("role") || "USER"
   const isTechnician = currentUserRole === "TECHNICIAN" || currentUserRole === "ADMIN"
 
@@ -98,7 +98,7 @@ export default function TicketDetailPage() {
 
   const handleStatusChange = async (newStatus) => {
     try {
-      await updateTicket(id, ticket.userId, { status: newStatus })
+      await updateTicket(id, { status: newStatus })
       loadTicket()
     } catch (err) {
       alert("Failed to update status")

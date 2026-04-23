@@ -79,7 +79,7 @@ public class TicketService {
     }
 
     public List<TicketResponse> getTicketsByUser(String userId) {
-        List<Ticket> tickets = ticketRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        List<Ticket> tickets = ticketRepository.findByUserIdOrderByCreatedAtDesc(new org.bson.types.ObjectId(userId));
         Map<String, String> techNames = getTechnicianNameMap();
         
         return tickets.stream()
@@ -162,7 +162,7 @@ public class TicketService {
                     .filter(t -> user.getId().equals(t.getAssignedTechnicianId()))
                     .toList();
         } else {
-            tickets = ticketRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+            tickets = ticketRepository.findByUserIdOrderByCreatedAtDesc(new org.bson.types.ObjectId(user.getId()));
         }
 
         Map<String, String> techNames = getTechnicianNameMap();

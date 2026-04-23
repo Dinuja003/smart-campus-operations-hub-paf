@@ -27,6 +27,7 @@ public class Ticket {
     private String preferredContact;
     @Field("ticketStatus")
     private TicketStatus status;
+    @Field(targetType = FieldType.OBJECT_ID)
     private String assignedTechnicianId;
     private String resolutionNotes;
     private List<Attachment> attachments = new ArrayList<>();
