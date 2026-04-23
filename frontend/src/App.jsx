@@ -37,6 +37,8 @@ import AdminTicketsPage from "./features/ticket/pages/AdminTicketsPage"
 import TicketDetailPage from "./features/ticket/pages/TicketDetailPage"
 import { Toaster } from "sonner"
 import ChatBot from "./components/ChatBot"   // ← NEW
+import { NotificationProvider } from "./features/notification/context/NotificationContext"
+import NotificationsPage from "./features/notification/pages/NotificationsPage"
 
 const actionConfigByRole = {
   USER: [
@@ -738,6 +740,7 @@ function RoleRoute({ allowedRoles, children }) {
 
 function AppShell() {
   return (
+    <NotificationProvider>
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-[#eef2fb]">
         <AppSidebar />
@@ -798,7 +801,7 @@ function AppShell() {
                   </RoleRoute>
                 }
               />
-              <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/profile" element={<ComingSoon title="My Profile" />} />
               <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -809,6 +812,7 @@ function AppShell() {
       {/* ── UniBot Chatbot — floats on every page ── */}
       <ChatBot />
     </SidebarProvider>
+    </NotificationProvider>
   )
 }
 
