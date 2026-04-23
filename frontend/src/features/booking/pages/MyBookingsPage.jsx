@@ -328,15 +328,14 @@ export default function MyBookingsPage() {
                       <p className="mt-0.5 text-[10px] text-[#8494c2]">Cap: {r.capacity || 0}{r.location ? ` · ${[r.location.building, r.location.floor, r.location.room].filter(Boolean).join(' / ')}` : ''}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {isAvailable(r.status) && (
-                        <button
-                          type="button"
-                          onClick={() => handleQuickBookResource(r)}
-                          className="rounded-lg bg-brand px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white transition hover:opacity-90"
-                        >
-                          Book Resource
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        disabled={!isAvailable(r.status)}
+                        onClick={() => isAvailable(r.status) && handleQuickBookResource(r)}
+                        className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide transition ${isAvailable(r.status) ? 'bg-brand text-white hover:opacity-90' : 'cursor-not-allowed bg-slate-200 text-slate-500'}`}
+                      >
+                        Book Resource
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -389,18 +388,18 @@ export default function MyBookingsPage() {
                         </div>
                         <p className="mt-0.5 text-xs text-[#8494c2]">Cap: {r.capacity || 0}{r.location ? ` · ${[r.location.building, r.location.floor, r.location.room].filter(Boolean).join(' / ')}` : ''}</p>
                       </div>
-                      {isAvailable(r.status) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleQuickBookResource(r);
-                            setShowFullViewModal(false);
-                          }}
-                          className="rounded-lg bg-brand px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white transition hover:opacity-90"
-                        >
-                          Book Resource
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        disabled={!isAvailable(r.status)}
+                        onClick={() => {
+                          if (!isAvailable(r.status)) return;
+                          handleQuickBookResource(r);
+                          setShowFullViewModal(false);
+                        }}
+                        className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide transition ${isAvailable(r.status) ? 'bg-brand text-white hover:opacity-90' : 'cursor-not-allowed bg-slate-200 text-slate-500'}`}
+                      >
+                        Book Resource
+                      </button>
                     </div>
                   ))}
                 </div>
