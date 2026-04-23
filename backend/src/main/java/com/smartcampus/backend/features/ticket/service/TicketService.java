@@ -12,6 +12,8 @@ import com.smartcampus.backend.features.auth.model.User;
 import com.smartcampus.backend.features.auth.dto.UserResponse;
 import com.smartcampus.backend.features.auth.repository.UserRepository;
 import com.smartcampus.backend.features.auth.model.UserRole;
+import com.smartcampus.backend.features.notification.model.NotificationType;
+import com.smartcampus.backend.features.notification.service.NotificationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -33,6 +35,7 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
 
     @Value("${app.ticket.upload-dir:uploads/tickets}")
     private String uploadDir;
@@ -41,10 +44,12 @@ public class TicketService {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
     private static final long EDIT_DELETE_WINDOW_MINUTES = 15;
 
-    public TicketService(TicketRepository ticketRepository, UserRepository userRepository, ObjectMapper objectMapper) {
+    public TicketService(TicketRepository ticketRepository, UserRepository userRepository,
+                         ObjectMapper objectMapper, NotificationService notificationService) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
+        this.notificationService = notificationService;
     }
 
     public TicketResponse createTicket(String ticketJson, MultipartFile[] files) throws IOException {
@@ -69,6 +74,17 @@ public class TicketService {
             ticket.setAttachments(attachments);
 
             Ticket saved = ticketRepository.save(ticket);
+
+            userRepository.findByRole(UserRole.ADMIN).forEach(admin ->
+                    notificationService.send(
+                            admin.getId(),
+                            NotificationType.TICKET_SUBMITTED,
+                            "New Support Ticket",
+                            "A new ticket has been submitted: " + saved.getSubject(),
+                            "/admin/tickets"
+                    )
+            );
+
             return TicketResponse.from(saved, true, true, null);
         } catch (Exception e) {
             e.printStackTrace();
@@ -164,10 +180,46 @@ public class TicketService {
     public TicketResponse addMessage(String ticketId, com.smartcampus.backend.features.ticket.model.TicketMessage message) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
-        
+
         message.setTimestamp(LocalDateTime.now());
         ticket.getMessages().add(message);
         Ticket saved = ticketRepository.save(ticket);
+
+        String senderRole = message.getSenderRole();
+        String senderName = message.getSenderName();
+        String subject = saved.getSubject();
+
+        if ("USER".equals(senderRole)) {
+            // Notify all admins
+            userRepository.findByRole(UserRole.ADMIN).forEach(admin ->
+                    notificationService.send(
+                            admin.getId(),
+                            NotificationType.TICKET_MESSAGE,
+                            "New Message on Ticket",
+                            senderName + " replied on: " + subject,
+                            "/admin/tickets/" + ticketId
+                    )
+            );
+            // Notify assigned technician if present
+            if (saved.getAssignedTechnicianId() != null) {
+                notificationService.send(
+                        saved.getAssignedTechnicianId(),
+                        NotificationType.TICKET_MESSAGE,
+                        "New Message on Ticket",
+                        senderName + " replied on: " + subject,
+                        "/admin/tickets/" + ticketId
+                );
+            }
+        } else {
+            // ADMIN or TECHNICIAN replied — notify the ticket creator
+            notificationService.send(
+                    saved.getUserId(),
+                    NotificationType.TICKET_MESSAGE,
+                    "New Reply on Your Ticket",
+                    senderName + " replied on: " + subject,
+                    "/tickets/" + ticketId
+            );
+        }
 
         return TicketResponse.from(saved, canEditOrDelete(saved), canEditOrDelete(saved), resolveTechnicianName(saved.getAssignedTechnicianId()));
     }
@@ -199,6 +251,15 @@ public class TicketService {
         }
 
         Ticket saved = ticketRepository.save(ticket);
+
+        notificationService.send(
+                technicianId,
+                NotificationType.TICKET_ASSIGNED,
+                "Ticket Assigned to You",
+                "You have been assigned to ticket: " + saved.getSubject(),
+                "/admin/tickets/" + ticketId
+        );
+
         return TicketResponse.from(saved, false, false, resolveTechnicianName(technicianId));
     }
 
