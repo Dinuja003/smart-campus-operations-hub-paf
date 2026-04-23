@@ -83,6 +83,19 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.updateTicket(id, userId, request));
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<TicketResponse> updateTicketStatus(
+            @PathVariable String id,
+            @RequestParam com.smartcampus.backend.features.ticket.model.TicketStatus status,
+            Authentication authentication
+    ) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof String)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String userId = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(ticketService.updateTicketStatus(id, userId, status));
+    }
+
     @GetMapping
     public ResponseEntity<?> getAllTickets(Authentication authentication) {
         try {

@@ -14,7 +14,7 @@ import {
   Paperclip,
   CheckCircle2
 } from "lucide-react"
-import { getTicketById, addTicketMessage, updateTicket, getTechnicians, assignTechnician } from "@/features/ticket/services/ticketService.js"
+import { getTicketById, addTicketMessage, updateTicket, updateTicketStatus, getTechnicians, assignTechnician } from "@/features/ticket/services/ticketService.js"
 import { toast } from "sonner"
 
 const statusColors = {
@@ -98,10 +98,13 @@ export default function TicketDetailPage() {
 
   const handleStatusChange = async (newStatus) => {
     try {
-      await updateTicket(id, { status: newStatus })
+      await updateTicketStatus(id, newStatus)
+      if (newStatus === 'IN_PROGRESS') toast.success("Ticket is now in progress")
+      if (newStatus === 'RESOLVED') toast.success("Ticket successfully resolved!")
       loadTicket()
     } catch (err) {
-      alert("Failed to update status")
+      console.error("Status update error:", err)
+      alert("Failed to update status: " + (err.response?.data?.message || err.message))
     }
   }
 
@@ -145,14 +148,14 @@ export default function TicketDetailPage() {
                 <h1 className="mt-3 text-2xl font-bold text-navy sm:text-3xl">{ticket.subject}</h1>
               </div>
               
-              {isTechnician && (
+              {(currentUserRole === "ADMIN" || currentUserId === ticket.assignedTechnicianId) && (
                 <div className="flex gap-2">
                   {ticket.status === 'OPEN' && (
                     <button 
                       onClick={() => handleStatusChange('IN_PROGRESS')}
                       className="rounded-xl bg-[#001d45] px-4 py-2 text-xs font-bold text-white hover:opacity-90"
                     >
-                      Take Ticket
+                      Start Work
                     </button>
                   )}
                   {ticket.status === 'IN_PROGRESS' && (
@@ -324,7 +327,7 @@ export default function TicketDetailPage() {
                 {[
                   { label: 'Created', status: 'COMPLETED', time: ticket.createdAt },
                   { label: ticket.assignedTechnicianName ? `Assigned to: ${ticket.assignedTechnicianName}` : 'Technician Assigned', status: ticket.assignedTechnicianId ? 'COMPLETED' : 'PENDING' },
-                  { label: 'Work In Progress', status: ticket.status === 'IN_PROGRESS' || ticket.status === 'RESOLVED' ? 'COMPLETED' : 'PENDING' },
+                  { label: 'Work In Progress', status: (ticket.status === 'IN_PROGRESS' || ticket.status === 'RESOLVED') ? 'COMPLETED' : 'PENDING' },
                   { label: 'Resolved', status: ticket.status === 'RESOLVED' ? 'COMPLETED' : 'PENDING' },
                 ].map((step, idx) => (
                  <div key={idx} className="relative pl-8">

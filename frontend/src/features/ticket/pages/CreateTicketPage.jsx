@@ -182,11 +182,14 @@ function CreateTicketPage() {
                   disabled={fetchingData}
                 >
                   <option value="">No related booking</option>
-                  {bookings.map(b => (
-                    <option key={b.id} value={b.id}>
-                      {b.date} - {b.resourceType} ({b.status})
-                    </option>
-                  ))}
+                  {bookings
+                    .filter(b => b.status === "APPROVED")
+                    .map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.date} - {b.resourceType}
+                      </option>
+                    ))
+                  }
                 </select>
               </div>
 

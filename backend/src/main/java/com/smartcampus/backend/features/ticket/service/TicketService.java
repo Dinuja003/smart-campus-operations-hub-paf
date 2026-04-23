@@ -114,6 +114,39 @@ public class TicketService {
         return TicketResponse.from(ticket, canEditOrDelete(ticket), canEditOrDelete(ticket), resolveTechnicianName(ticket.getAssignedTechnicianId()));
     }
 
+    public TicketResponse updateTicketStatus(String id, String userId, TicketStatus status) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+
+        User user = userRepository.findById(userId)
+                .or(() -> userRepository.findByEmailIgnoreCase(userId))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Only Admin or the assigned technician can update status
+        if (user.getRole() != UserRole.ADMIN && !userId.equals(ticket.getAssignedTechnicianId())) {
+            throw new RuntimeException("Unauthorized: Only Admin or the assigned technician can update status");
+        }
+
+        ticket.setStatus(status);
+        ticket.setUpdatedAt(LocalDateTime.now());
+        Ticket updated = ticketRepository.save(ticket);
+
+        // Notify user about status change - wrap in try-catch to prevent 500 if notification fails
+        try {
+            notificationService.send(
+                    updated.getUserId(),
+                    NotificationType.TICKET_UPDATED,
+                    "Ticket Status Updated",
+                    "Your ticket status has been changed to: " + status,
+                    "/tickets/" + id
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send notification: " + e.getMessage());
+        }
+
+        return TicketResponse.from(updated, false, false, resolveTechnicianName(updated.getAssignedTechnicianId()));
+    }
+
     public TicketResponse updateTicket(String id, String userId, TicketUpdateRequest request) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
