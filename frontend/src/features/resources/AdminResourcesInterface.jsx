@@ -59,6 +59,8 @@ const getFormValues = (r = {}) => {
   return { name: r.name||"", type: r.type||"MEETING_ROOM", eqCount: String(r.eqCount??""), capacity: String(r.capacity||1), building: r.location?.building||"", floor: r.location?.floor||"", room: r.location?.room||"", status: r.status||"AVAILABLE", description: r.description||"", imageUrl: r.imageUrl||"", createdBy: r.createdBy||"", availabilityWindows: windows };
 };
 
+const resourceStatusOptions = ["AVAILABLE", "MAINTENANCE", "UNAVAILABLE"];
+
 const buildPayload = (f) => {
   const eq = f.type === "EQUIPMENT";
   const windows = Array.isArray(f.availabilityWindows) ? f.availabilityWindows : [];
@@ -136,7 +138,7 @@ export default function AdminResourcesInterface() {
 
   const resourceTypes    = useMemo(() => ["All Types", ...new Set(resources.map((r) => r.type).filter(Boolean))], [resources]);
   const resourceStatuses = useMemo(() => {
-    const pref = ["BOOKED","AVAILABLE","MAINTENANCE","UNAVAILABLE"];
+    const pref = ["AVAILABLE","MAINTENANCE","UNAVAILABLE"];
     const existing = new Set(resources.map((r) => r.status).filter(Boolean));
     return ["All Status", ...pref.filter((s) => existing.has(s)), ...[...existing].filter((s) => !pref.includes(s))];
   }, [resources]);
@@ -510,7 +512,7 @@ export default function AdminResourcesInterface() {
                 <div>
                   <label className={labelCls}>Status *</label>
                   <select value={form.status} onChange={(e) => updateForm("status",e.target.value)} required className={inputCls}>
-                    {["AVAILABLE","BOOKED","MAINTENANCE","UNAVAILABLE"].map((s) => <option key={s}>{s}</option>)}
+                    {resourceStatusOptions.map((s) => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 {form.type !== "EQUIPMENT"
