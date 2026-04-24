@@ -14,16 +14,24 @@ import {
   Paperclip,
   CheckCircle2,
   Pencil,
-  Trash2
+  Trash2,
+  Globe,
+  Zap,
+  Timer,
+  Sparkles,
+  Activity,
+  Brain,
+  TrendingUp,
+  Target
 } from "lucide-react"
-import { getTicketById, addTicketMessage, updateTicket, updateTicketStatus, getTechnicians, assignTechnician, deleteTicket } from "@/features/ticket/services/ticketService.js"
+import { getTicketById, addTicketMessage, updateTicket, updateTicketStatus, getTechnicians, assignTechnician, deleteTicket, deleteTicketMessage } from "@/features/ticket/services/ticketService.js"
 import { toast } from "sonner"
 
 const statusColors = {
-  OPEN: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  IN_PROGRESS: "bg-[#f5b800]/15 text-[#b08800] border-[#f5b800]/30",
-  RESOLVED: "bg-blue-100 text-blue-700 border-blue-200",
-  CLOSED: "bg-slate-100 text-slate-600 border-slate-200",
+  OPEN: "bg-emerald-500 text-white shadow-emerald-500/20",
+  IN_PROGRESS: "bg-brand text-white shadow-brand/20",
+  RESOLVED: "bg-[#001d45] text-white shadow-navy/20",
+  CLOSED: "bg-slate-700 text-white"
 }
 
 export default function TicketDetailPage() {
@@ -38,6 +46,7 @@ export default function TicketDetailPage() {
   const [sending, setSending] = useState(false)
   const [technicians, setTechnicians] = useState([])
   const [showAssign, setShowAssign] = useState(false)
+  const [showPrediction, setShowPrediction] = useState(false)
   const chatEndRef = useRef(null)
 
   const currentUserId = sessionStorage.getItem("userId")
@@ -141,9 +150,44 @@ export default function TicketDetailPage() {
     }
   }
 
+  const calculateDuration = (start, end) => {
+    if (!start || !end) return null
+    const s = new Date(start)
+    const e = new Date(end)
+    const diff = e - s
+    if (diff < 0) return "—"
+    
+    const minutes = Math.floor(diff / 60000)
+    if (minutes < 60) return `${minutes}m`
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    if (hours < 24) return `${hours}h ${mins}m`
+    const days = Math.floor(hours / 24)
+    const hrs = hours % 24
+    return `${days}d ${hrs}h`
+  }
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!messageId) {
+      toast.error("Cannot delete legacy messages without ID")
+      return
+    }
+    
+    try {
+      const updatedTicket = await deleteTicketMessage(id, messageId)
+      setTicket(updatedTicket)
+      toast.success("Message removed")
+    } catch (err) {
+      toast.error("Failed to delete message")
+    }
+  }
+
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-brand" /></div>
   if (error) return <div className="p-10 text-center text-red-500"><AlertCircle className="mx-auto mb-2 h-10 w-10" />{error}</div>
   if (!ticket) return null
+
+  const responseTime = calculateDuration(ticket.createdAt, ticket.firstResponseAt)
+  const resolutionTime = calculateDuration(ticket.createdAt, ticket.resolvedAt)
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -159,6 +203,21 @@ export default function TicketDetailPage() {
       >
         <ArrowLeft className="h-4 w-4" /> Back to List
       </button>
+
+      <div className="grid gap-4 sm:grid-cols-4">
+        {[
+          { label: "Current Status", value: ticket.status, icon: Zap, cls: statusColors[ticket.status] || "bg-[#001d45] text-white" },
+          { label: "Priority", value: ticket.priority, icon: AlertCircle, cls: ticket.priority === 'HIGH' ? "bg-[#b91c1c] text-white shadow-red-500/20" : "bg-[#ea580c] text-white shadow-orange-500/20" },
+          { label: "Response Time", value: responseTime || "Awaiting...", icon: Timer, cls: "bg-[#001d45] text-white shadow-navy/20 border border-white/10" },
+          { label: "Resolution Time", value: resolutionTime || "In Progress", icon: Timer, cls: "bg-[#001d45] text-white shadow-navy/20 border border-white/10" },
+        ].map((s) => (
+          <div key={s.label} className={`rounded-[22px] px-5 py-6 relative overflow-hidden transition-transform hover:-translate-y-1 ${s.cls}`}>
+            <s.icon className="absolute -right-3 -top-3 h-16 w-16 opacity-10" />
+            <p className="relative z-10 text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">{s.label}</p>
+            <p className="relative z-10 text-2xl font-black leading-none">{s.value}</p>
+          </div>
+        ))}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_350px]">
         {/* ── Left Column: Details ── */}
@@ -303,6 +362,21 @@ export default function TicketDetailPage() {
                   <p className="text-sm font-semibold text-navy">{ticket.location || "Not specified"}</p>
                 </div>
               </div>
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-50 bg-slate-50/50 p-4 sm:col-span-2">
+                <AlertCircle className="h-5 w-5 text-brand" />
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Priority Level</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-1000 ${
+                        ticket.priority === 'HIGH' ? 'bg-red-500 w-full' : 
+                        ticket.priority === 'MEDIUM' ? 'bg-[#f5b800] w-2/3' : 'bg-emerald-500 w-1/3'
+                      }`} />
+                    </div>
+                    <span className="text-[10px] font-bold text-navy">{ticket.priority}</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="mt-6">
@@ -363,10 +437,19 @@ export default function TicketDetailPage() {
                       <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                         isMe ? 'bg-[#001d45] text-white' : 'bg-white border border-slate-100 text-navy shadow-sm'
                       }`}>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center justify-between gap-4 mb-1">
                           <span className={`text-[9px] font-bold uppercase tracking-widest ${isMe ? 'text-white/60' : 'text-[#8494c2]'}`}>
                             {msg.senderName} • {msg.senderRole}
                           </span>
+                          {(isMe || currentUserRole === 'ADMIN') && msg.id && (
+                            <button 
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className={`p-1 rounded-md transition-colors ${isMe ? 'hover:bg-white/10 text-white/40 hover:text-white' : 'hover:bg-slate-100 text-[#8494c2] hover:text-red-500'}`}
+                              title="Delete Message"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
                         <p className="text-sm leading-relaxed">{msg.content}</p>
                         <p className={`mt-1 text-[8px] ${isMe ? 'text-white/40 text-right' : 'text-[#8494c2]'}`}>
@@ -403,37 +486,6 @@ export default function TicketDetailPage() {
 
         {/* ── Right Column: Info & Progress ── */}
         <div className="space-y-6">
-          <section className="rounded-[26px] border border-white/60 bg-white p-6 shadow-sm">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Requestor Info</h3>
-            <div className="mt-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-brand/10 flex items-center justify-center">
-                <User className="h-5 w-5 text-brand" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-navy">{ticket.userId.split('@')[0]}</p>
-                <p className="text-[10px] text-[#8494c2]">{ticket.userId}</p>
-              </div>
-            </div>
-            
-            <div className="mt-6 pt-6 border-t border-slate-50 space-y-4">
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-[#8494c2]">Priority Level</p>
-                <div className="mt-1 flex items-center gap-2">
-                  <div className={`h-2 w-full rounded-full bg-slate-100 overflow-hidden`}>
-                    <div className={`h-full rounded-full ${
-                      ticket.priority === 'HIGH' ? 'bg-red-500 w-full' : 
-                      ticket.priority === 'MEDIUM' ? 'bg-[#f5b800] w-2/3' : 'bg-emerald-500 w-1/3'
-                    }`} />
-                  </div>
-                  <span className="text-[10px] font-bold text-navy">{ticket.priority}</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-[#8494c2]">Resource Link</p>
-                <p className="mt-1 text-xs font-medium text-navy">{ticket.resourceId || "Campus General"}</p>
-              </div>
-            </div>
-          </section>
 
           <section className="rounded-[26px] border border-white/60 bg-[#001d45] p-6 text-white shadow-lg">
              <div className="flex items-center gap-3 mb-6">
@@ -489,7 +541,122 @@ export default function TicketDetailPage() {
                 </div>
               )}
            </section>
+
+           {/* ── Smart AI Insights & Health ── */}
+           <section className="rounded-[32px] border border-white/60 bg-gradient-to-br from-[#001d45] to-[#0f2e63] p-6 text-white shadow-xl relative overflow-hidden group">
+             <div className="absolute -right-4 -top-4 h-24 w-24 bg-brand/20 blur-3xl group-hover:bg-brand/40 transition-all duration-700" />
+             <div className="relative">
+               <div className="flex items-center justify-between mb-4">
+                 <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-white/60">
+                   <Sparkles className="h-4 w-4 text-[#f5b800]" /> Smart Insights
+                 </h3>
+                 <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                   ticket.healthScore > 70 ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10' : 
+                   ticket.healthScore > 40 ? 'border-[#f5b800]/50 text-[#f5b800] bg-[#f5b800]/10' : 'border-red-500/50 text-red-400 bg-red-500/10'
+                 }`}>
+                   {ticket.healthScore}% HEALTHY
+                 </div>
+               </div>
+
+               <div className="mb-6">
+                 <div className="flex items-center justify-between mb-2">
+                   <span className="text-[10px] font-medium text-white/50">Incident Health Meter</span>
+                   <span className="text-[10px] font-bold text-white">{ticket.healthScore}%</span>
+                 </div>
+                 <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                   <div 
+                     className={`h-full rounded-full transition-all duration-1000 ${
+                       ticket.healthScore > 70 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 
+                       ticket.healthScore > 40 ? 'bg-[#f5b800] shadow-[0_0_10px_rgba(245,184,0,0.5)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+                     }`} 
+                     style={{ width: `${ticket.healthScore}%` }}
+                   />
+                 </div>
+               </div>
+
+               <div className="rounded-2xl bg-white/5 border border-white/10 p-4 backdrop-blur-sm">
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-brand mb-1">System Suggestion</p>
+                 <p className="text-sm leading-relaxed text-white/90 italic font-medium">
+                   "{ticket.aiInsight}"
+                 </p>
+               </div>
+               
+               <button 
+                 onClick={() => setShowPrediction(true)}
+                 className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-[10px] font-bold uppercase tracking-widest transition-colors"
+               >
+                 <Activity className="h-3 w-3" /> View Prediction Model
+               </button>
+             </div>
+           </section>
         </div>
+
+        {/* ── Predictive Model Modal ── */}
+        {showPrediction && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-navy/60 backdrop-blur-md" onClick={() => setShowPrediction(false)} />
+            <div className="relative w-full max-w-lg rounded-[40px] border border-white/20 bg-[#001d45] p-8 shadow-[0_40px_100px_rgba(0,0,0,0.5)] overflow-hidden">
+              <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand/20 blur-3xl" />
+              <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
+              
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="h-12 w-12 rounded-2xl bg-brand/20 flex items-center justify-center">
+                    <Brain className="h-6 w-6 text-brand" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">AI Resolution Forecast</h2>
+                    <p className="text-xs text-white/40 font-medium uppercase tracking-widest">Model: UniSlot-Predict v2.4</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                  <div className="rounded-[24px] bg-white/5 border border-white/10 p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="h-4 w-4 text-[#f5b800]" />
+                      <span className="text-[10px] font-bold text-white/60 uppercase">Est. Resolution</span>
+                    </div>
+                    <p className="text-2xl font-black text-white">{ticket.estimatedResolutionHours} Hours</p>
+                    <p className="text-[10px] text-white/40 mt-1">Based on historical {ticket.category} trends</p>
+                  </div>
+                  <div className="rounded-[24px] bg-white/5 border border-white/10 p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="h-4 w-4 text-emerald-500" />
+                      <span className="text-[10px] font-bold text-white/60 uppercase">Success Rate</span>
+                    </div>
+                    <p className="text-2xl font-black text-white">{(ticket.successProbability * 100).toFixed(1)}%</p>
+                    <p className="text-[10px] text-white/40 mt-1">Confidence in current triage path</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <div className="flex items-center gap-3">
+                      <Activity className="h-5 w-5 text-brand" />
+                      <span className="text-sm font-medium text-white/80">Similar Incidents Detected</span>
+                    </div>
+                    <span className="text-lg font-bold text-white">{ticket.similarIncidents}</span>
+                  </div>
+                  
+                  <div className="p-5 rounded-[24px] bg-brand/10 border border-brand/20">
+                    <p className="text-[10px] font-bold text-brand uppercase tracking-widest mb-2">Model Commentary</p>
+                    <p className="text-sm leading-relaxed text-white/90">
+                      Our predictive model suggests this incident aligns with standard {ticket.category.toLowerCase()} maintenance patterns. 
+                      Optimal resolution path involves verifying physical connection stability within the first 2 hours of assignment.
+                    </p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setShowPrediction(false)}
+                  className="mt-8 w-full py-4 rounded-2xl bg-white text-[#001d45] font-black text-sm uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 shadow-xl"
+                >
+                  Close Forecast
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

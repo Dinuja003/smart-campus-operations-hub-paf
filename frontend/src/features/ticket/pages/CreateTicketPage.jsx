@@ -30,6 +30,7 @@ function CreateTicketPage() {
   const [bookings, setBookings] = useState([])
   const [resources, setResources] = useState([])
   const [fetchingData, setFetchingData] = useState(false)
+  const [errors, setErrors] = useState({})
 
   useEffect(() => {
     const loadData = async () => {
@@ -105,6 +106,14 @@ function CreateTicketPage() {
     }
 
     setFormData(prev => ({ ...prev, [name]: value }))
+    // Clear error for this field if any
+    if (errors[name]) {
+      setErrors(prev => {
+        const next = { ...prev }
+        delete next[name]
+        return next
+      })
+    }
   }
 
   const handleFileChange = (e) => {
@@ -121,21 +130,29 @@ function CreateTicketPage() {
   }
 
   const validate = () => {
-    if (!formData.subject.trim()) return "Subject is required."
-    if (!formData.description.trim()) return "Description is required."
-    if (!formData.location.trim()) return "Location is required."
-    if (!formData.preferredContact.trim()) return "Preferred contact is required."
-    if (files.length > 3) return "You can upload up to 3 images only."
-    return ""
+    const newErrors = {}
+    if (!formData.subject.trim()) newErrors.subject = "Subject is required"
+    else if (formData.subject.length < 5) newErrors.subject = "Subject must be at least 5 characters"
+
+    if (!formData.description.trim()) newErrors.description = "Description is required"
+    else if (formData.description.length < 10) newErrors.description = "Description must be at least 10 characters"
+
+    if (!formData.location.trim()) newErrors.location = "Location is required"
+    if (!formData.preferredContact.trim()) newErrors.preferredContact = "Preferred contact is required"
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    if (!validate()) {
+      setLoading(false)
+      return
+    }
 
     try {
-      const validationError = validate()
-      if (validationError) throw new Error(validationError)
 
       const userId = sessionStorage.getItem("userId")
       if (!userId) {
@@ -278,8 +295,9 @@ function CreateTicketPage() {
                   value={formData.subject}
                   onChange={handleChange}
                   placeholder="e.g. Monitor not working"
-                  className={inputCls}
+                  className={`${inputCls} ${errors.subject ? 'border-red-500 focus:border-red-500 focus:ring-red-500/5' : ''}`}
                 />
+                {errors.subject && <p className="mt-1 text-[10px] font-bold text-red-500">{errors.subject}</p>}
               </div>
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Description</label>
@@ -289,8 +307,9 @@ function CreateTicketPage() {
                   onChange={handleChange}
                   placeholder="Describe the issue clearly..."
                   rows={4}
-                  className={`${inputCls} resize-vertical`}
+                  className={`${inputCls} resize-vertical ${errors.description ? 'border-red-500 focus:border-red-500 focus:ring-red-500/5' : ''}`}
                 />
+                {errors.description && <p className="mt-1 text-[10px] font-bold text-red-500">{errors.description}</p>}
               </div>
             </div>
 
@@ -305,8 +324,9 @@ function CreateTicketPage() {
                   value={formData.location}
                   onChange={handleChange}
                   placeholder="e.g. Lab 04, Level 2"
-                  className={inputCls}
+                  className={`${inputCls} ${errors.location ? 'border-red-500 focus:border-red-500 focus:ring-red-500/5' : ''}`}
                 />
+                {errors.location && <p className="mt-1 text-[10px] font-bold text-red-500">{errors.location}</p>}
               </div>
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Preferred Contact</label>
@@ -316,8 +336,9 @@ function CreateTicketPage() {
                   value={formData.preferredContact}
                   onChange={handleChange}
                   placeholder="Email or Phone number"
-                  className={inputCls}
+                  className={`${inputCls} ${errors.preferredContact ? 'border-red-500 focus:border-red-500 focus:ring-red-500/5' : ''}`}
                 />
+                {errors.preferredContact && <p className="mt-1 text-[10px] font-bold text-red-500">{errors.preferredContact}</p>}
               </div>
             </div>
           </section>

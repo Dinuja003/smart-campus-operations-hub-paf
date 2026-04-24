@@ -6,7 +6,6 @@ import {
   Filter,
   Loader2,
   MessageSquare,
-  Plus,
   Search,
   Trash2,
   UserPlus,
@@ -21,9 +20,36 @@ import {
 import { toast } from "sonner"
 
 const STAGES = [
-  { key: "OPEN", label: "Open", dot: "bg-brand", cardBorder: "border-brand/30" },
-  { key: "IN_PROGRESS", label: "In progress", dot: "bg-[#f5b800]", cardBorder: "border-[#f5b800]/30" },
-  { key: "RESOLVED", label: "Resolved", dot: "bg-emerald-500", cardBorder: "border-emerald-200" },
+  {
+    key: "OPEN",
+    label: "Open",
+    dot: "bg-brand",
+    cardBorder: "border-brand/30",
+    columnBg: "bg-gradient-to-b from-[#fff5f1] to-white",
+    columnBorder: "border-brand/15",
+    badgeBg: "bg-brand/10 text-brand",
+    emptyBorder: "border-brand/20",
+  },
+  {
+    key: "IN_PROGRESS",
+    label: "In progress",
+    dot: "bg-[#f5b800]",
+    cardBorder: "border-[#f5b800]/30",
+    columnBg: "bg-gradient-to-b from-[#fff9e8] to-white",
+    columnBorder: "border-[#f5b800]/25",
+    badgeBg: "bg-[#f5b800]/15 text-[#b08800]",
+    emptyBorder: "border-[#f5b800]/25",
+  },
+  {
+    key: "RESOLVED",
+    label: "Resolved",
+    dot: "bg-emerald-500",
+    cardBorder: "border-emerald-200",
+    columnBg: "bg-gradient-to-b from-[#ecfdf5] to-white",
+    columnBorder: "border-emerald-200",
+    badgeBg: "bg-emerald-100 text-emerald-700",
+    emptyBorder: "border-emerald-200",
+  },
 ]
 
 const priorityBadge = {
@@ -172,13 +198,6 @@ export default function AdminTicketsPage() {
               Board view of active support work. Assign technicians, move statuses, and monitor live ticket flow.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate("/tickets/create")}
-            className="flex items-center gap-2 rounded-xl bg-[#001d45] px-4 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,29,69,0.25)] hover:bg-[#002a66] transition-colors"
-          >
-            <Plus className="h-4 w-4" /> New ticket
-          </button>
         </div>
       </div>
 
@@ -225,18 +244,21 @@ export default function AdminTicketsPage() {
           {STAGES.map((stage) => {
             const items = stageMap[stage.key]
             return (
-              <section key={stage.key} className="min-h-[320px] rounded-[20px] border border-white/60 bg-white p-3 shadow-[0_8px_30px_rgba(21,32,85,0.08)]">
+              <section
+                key={stage.key}
+                className={`min-h-[320px] rounded-[20px] border p-3 shadow-[0_8px_30px_rgba(21,32,85,0.08)] ${stage.columnBg} ${stage.columnBorder}`}
+              >
                 <div className="mb-2 flex items-center justify-between border-b border-slate-100 px-1 pb-2">
                   <p className="flex items-center gap-2 text-xs font-bold text-navy">
                     <span className={`h-2 w-2 rounded-full ${stage.dot}`} />
                     {stage.label}
                   </p>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-[#8494c2]">{items.length}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${stage.badgeBg}`}>{items.length}</span>
                 </div>
 
                 <div className="space-y-2">
                   {items.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-slate-200 px-3 py-5 text-center text-xs text-[#8494c2]">
+                    <div className={`rounded-xl border border-dashed px-3 py-5 text-center text-xs text-[#8494c2] ${stage.emptyBorder}`}>
                       No tickets
                     </div>
                   ) : (
@@ -244,7 +266,7 @@ export default function AdminTicketsPage() {
                       <article
                         key={ticket.id}
                         onClick={() => navigate(`/admin/tickets/${ticket.id}`)}
-                        className={`cursor-pointer rounded-xl border bg-white px-3 py-2.5 transition hover:shadow-sm ${stage.cardBorder}`}
+                        className={`cursor-pointer rounded-xl border bg-white px-3 py-2.5 transition hover:shadow-sm hover:-translate-y-0.5 ${stage.cardBorder}`}
                       >
                         <p className="text-[10px] font-mono text-[#97a4c9]">TK-{ticket.id.slice(-4).toUpperCase()}</p>
                         <div className="mt-0.5 flex items-start justify-between gap-2">
