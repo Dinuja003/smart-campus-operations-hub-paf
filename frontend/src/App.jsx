@@ -86,14 +86,6 @@ const actionConfigByRole = {
       gradient: "from-teal-600 to-teal-700",
       light: false,
     },
-    {
-      label: "My Bookings",
-      subtitle: "Open your personal booking workspace",
-      icon: CalendarCheck2,
-      path: "/my-bookings",
-      gradient: "from-slate-700 to-slate-800",
-      light: false,
-    },
   ],
   TECHNICIAN: [
     {
