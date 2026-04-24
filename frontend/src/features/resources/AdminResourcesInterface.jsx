@@ -4,7 +4,6 @@ import {
   AlertCircle,
   Building2,
   CalendarClock,
-  CheckCircle2,
   ChevronDown,
   Download,
   Eye,
@@ -45,23 +44,6 @@ const statusCls = {
   Unavailable: "bg-red-500/90 text-white",
 };
 
-const statusBarCls = {
-  AVAILABLE:   "bg-emerald-500",
-  Available:   "bg-emerald-500",
-  BOOKED:      "bg-[#001d45]",
-  Booked:      "bg-[#001d45]",
-  MAINTENANCE: "bg-brand",
-  Maintenance: "bg-brand",
-  UNAVAILABLE: "bg-red-500",
-  Unavailable: "bg-red-500",
-};
-
-const statusBarPct = {
-  AVAILABLE: "60%", Available: "60%",
-  BOOKED: "88%", Booked: "88%",
-  MAINTENANCE: "100%", Maintenance: "100%",
-  UNAVAILABLE: "30%", Unavailable: "30%",
-};
 
 const typeIcons = { "Lecture Hall": Building2, HALL: Building2, Hall: Building2, "Meeting Room": Users, ROOM: Users, Room: Users, "Computer Lab": Monitor, LAB: Monitor, Lab: Monitor, "Seminar Room": CalendarClock, Auditorium: Building2, AUDITORIUM: Building2 };
 
@@ -150,23 +132,10 @@ export default function AdminResourcesInterface() {
   }, []);
 
   const resourceTypes    = useMemo(() => ["All Types", ...new Set(resources.map((r) => r.type).filter(Boolean))], [resources]);
-  const resourceStatuses = useMemo(() => {
-    const pref = ["All Status","AVAILABLE","MAINTENANCE","UNAVAILABLE"];
-    const existing = new Set(resources.map((r) => r.status).filter(Boolean));
-    return [...pref.filter(s => s === "All Status" || existing.has(s)), ...[...existing].filter(s => !["AVAILABLE","MAINTENANCE","UNAVAILABLE"].includes(s))];
-  }, [resources]);
-
   const filtered = useMemo(() => resources.filter((r) => {
     return (typeFilter === "All Types" || r.type === typeFilter) &&
            (statusFilter === "All Status" || r.status === statusFilter);
   }), [resources, statusFilter, typeFilter]);
-
-  const stats = useMemo(() => ({
-    total:       resources.length,
-    available:   resources.filter((r) => String(r.status||"").toLowerCase() === "available").length,
-    maintenance: resources.filter((r) => String(r.status||"").toLowerCase().includes("maintenance")).length,
-    capacity:    resources.reduce((s, r) => s + Number(r.capacity||0), 0),
-  }), [resources]);
 
   const updateForm  = (field, value) => setForm((c) => ({ ...c, [field]: value }));
   const updateAvailabilityWindow = (index, field, value) => setForm((current) => {
@@ -211,7 +180,7 @@ export default function AdminResourcesInterface() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 px-1">
 
       {/* ── Breadcrumb + Header ── */}
       <div>
@@ -250,33 +219,41 @@ export default function AdminResourcesInterface() {
         </div>
       </div>
 
-      {/* ── Filter dropdowns ── */}
+      {/* ── Status tab filter + Type dropdown ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {/* Stat chips */}
+        {/* Pill tabs */}
+        <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
           {[
-            { label: "Total", value: stats.total, cls: "bg-[#001d45] text-white" },
-            { label: "Available", value: stats.available, cls: "bg-emerald-500 text-white" },
-            { label: "Maintenance", value: stats.maintenance, cls: "bg-brand text-white" },
-          ].map(s => (
-            <div key={s.label} className={`rounded-xl px-3.5 py-1.5 text-sm font-bold ${s.cls}`}>
-              {s.value} <span className="ml-1 text-[10px] font-semibold opacity-70 uppercase tracking-widest">{s.label}</span>
-            </div>
+            { key: "All Status", label: "All", count: resources.length },
+            { key: "AVAILABLE",  label: "Available",   count: resources.filter(r => r.status === "AVAILABLE").length },
+            { key: "MAINTENANCE",label: "Maintenance",  count: resources.filter(r => r.status === "MAINTENANCE").length },
+            { key: "UNAVAILABLE",label: "Unavailable",  count: resources.filter(r => r.status === "UNAVAILABLE").length },
+          ].map(t => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setStatusFilter(t.key)}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-all ${
+                statusFilter === t.key
+                  ? "bg-[#001d45] text-white shadow-sm"
+                  : "text-[#8494c2] hover:text-navy"
+              }`}
+            >
+              {t.label}
+              <span className={`rounded-full px-1.5 py-px text-[10px] font-bold leading-4 ${
+                statusFilter === t.key ? "bg-white/20 text-white" : "bg-slate-100 text-[#8494c2]"
+              }`}>
+                {t.count}
+              </span>
+            </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="bg-transparent text-sm font-semibold text-navy outline-none cursor-pointer">
-              {resourceTypes.map((t) => <option key={t}>{t}</option>)}
-            </select>
-            <ChevronDown className="h-3.5 w-3.5 text-[#8494c2]" />
-          </div>
-          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-transparent text-sm font-semibold text-navy outline-none cursor-pointer">
-              {resourceStatuses.map((s) => <option key={s}>{s}</option>)}
-            </select>
-            <ChevronDown className="h-3.5 w-3.5 text-[#8494c2]" />
-          </div>
+        {/* Type dropdown */}
+        <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="bg-transparent text-sm font-semibold text-navy outline-none cursor-pointer">
+            {resourceTypes.map((t) => <option key={t}>{t}</option>)}
+          </select>
+          <ChevronDown className="h-3.5 w-3.5 text-[#8494c2]" />
         </div>
       </div>
 
@@ -320,10 +297,6 @@ export default function AdminResourcesInterface() {
                       <Icon className="h-10 w-10 text-white/25" />
                     </div>
                   )}
-                  {/* Type tag */}
-                  <span className="absolute left-3 top-3 rounded-full bg-[#001d45]/75 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
-                    {r.type}
-                  </span>
                   {/* Status badge */}
                   <span className={`absolute right-3 top-3 flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase backdrop-blur-sm ${statusCls[r.status] || "bg-slate-700/80 text-white"}`}>
                     <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
@@ -332,29 +305,27 @@ export default function AdminResourcesInterface() {
                 </div>
 
                 {/* Card body */}
-                <div className="p-4">
-                  <h3 className="font-bold text-navy">{r.name || "Unnamed"}</h3>
-                  <div className="mt-1 flex items-center justify-between text-xs text-[#8494c2]">
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-bold text-navy leading-snug">{r.name || "Unnamed"}</h3>
+                    <span className="shrink-0 rounded-lg border border-slate-100 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-[#8494c2]">
+                      {r.type}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-3 text-xs text-[#8494c2]">
                     <span>Capacity {r.type === "EQUIPMENT" ? r.eqCount || "—" : r.capacity || 0}</span>
                     <span className="flex items-center gap-1">
                       <MapPin className="h-3 w-3" />
                       {formatLocation(r.location).split(",")[0] || "—"}
                     </span>
                   </div>
-                  {/* Occupancy bar */}
-                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className={`h-full rounded-full transition-all ${statusBarCls[r.status] || "bg-slate-300"}`}
-                      style={{ width: statusBarPct[r.status] || "30%" }}
-                    />
-                  </div>
-                  <div className="mt-3 flex items-center justify-between">
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setSelectedResource(r); }}
                       className="text-xs font-semibold text-brand hover:underline"
                     >
-                      Book now →
+                      View details →
                     </button>
                     <span className="font-mono text-[10px] text-[#8494c2]">{nameSlug}</span>
                   </div>

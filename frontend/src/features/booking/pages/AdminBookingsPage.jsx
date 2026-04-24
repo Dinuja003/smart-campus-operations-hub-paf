@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CheckCircle, Plus, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
 import { useBooking } from '@/hooks/useBooking';
 
 const toArray = (v) => {
@@ -37,7 +36,6 @@ const TABS = [
 
 export default function AdminBookingsPage() {
   const { getAllBookings, reviewBooking, loading, error } = useBooking();
-  const navigate = useNavigate();
   const [bookings, setBookings]       = useState([]);
   const [tab, setTab]                 = useState('ALL');
   const [sortDesc, setSortDesc]       = useState(true);
@@ -108,13 +106,6 @@ export default function AdminBookingsPage() {
               Review, approve or adjust reservations across the campus. Filters and search refine the list in real time.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/my-bookings')}
-            className="flex items-center gap-2 rounded-xl bg-[#001d45] px-4 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,29,69,0.25)] hover:bg-[#002a66] transition-colors"
-          >
-            <Plus className="h-4 w-4" /> New booking
-          </button>
         </div>
       </div>
 

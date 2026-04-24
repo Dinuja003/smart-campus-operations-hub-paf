@@ -6,7 +6,6 @@ import {
   Filter,
   Loader2,
   MessageSquare,
-  Plus,
   Search,
   Trash2,
   UserPlus,
@@ -172,13 +171,6 @@ export default function AdminTicketsPage() {
               Board view of active support work. Assign technicians, move statuses, and monitor live ticket flow.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate("/tickets/create")}
-            className="flex items-center gap-2 rounded-xl bg-[#001d45] px-4 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,29,69,0.25)] hover:bg-[#002a66] transition-colors"
-          >
-            <Plus className="h-4 w-4" /> New ticket
-          </button>
         </div>
       </div>
 
