@@ -132,6 +132,18 @@ public class TicketService {
 
         ticket.setStatus(status);
         ticket.setUpdatedAt(LocalDateTime.now());
+
+        if (status == TicketStatus.RESOLVED || status == TicketStatus.CLOSED) {
+            if (ticket.getResolvedAt() == null) {
+                ticket.setResolvedAt(LocalDateTime.now());
+            }
+        } else if (status == TicketStatus.OPEN || status == TicketStatus.IN_PROGRESS) {
+            // If ticket is reopened, we might want to clear resolvedAt or keep it?
+            // Usually, resolution time is for the first time it was resolved.
+            // But let's clear it if it's back to in_progress to allow a new resolution timestamp.
+            ticket.setResolvedAt(null);
+        }
+
         Ticket updated = ticketRepository.save(ticket);
 
         // Notify user about status change - wrap in try-catch to prevent 500 if notification fails
@@ -256,10 +268,18 @@ public class TicketService {
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
 
         message.setTimestamp(LocalDateTime.now());
+        if (message.getId() == null) {
+            message.setId(UUID.randomUUID().toString());
+        }
+        
+        String senderRole = message.getSenderRole();
+        if (("ADMIN".equals(senderRole) || "TECHNICIAN".equals(senderRole)) && ticket.getFirstResponseAt() == null) {
+            ticket.setFirstResponseAt(LocalDateTime.now());
+        }
+
         ticket.getMessages().add(message);
         Ticket saved = ticketRepository.save(ticket);
 
-        String senderRole = message.getSenderRole();
         String senderName = message.getSenderName();
         String subject = saved.getSubject();
 
@@ -296,6 +316,27 @@ public class TicketService {
         }
 
         return TicketResponse.from(saved, canEdit(saved), canDelete(saved, message.getSenderId()), resolveTechnicianName(saved.getAssignedTechnicianId()));
+    }
+
+    public TicketResponse deleteMessage(String ticketId, String messageId, String userId) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+
+        User user = userRepository.findById(userId)
+                .or(() -> userRepository.findByEmailIgnoreCase(userId))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean removed = ticket.getMessages().removeIf(m -> 
+            messageId.equals(m.getId()) && 
+            (user.getRole() == UserRole.ADMIN || user.getId().equals(m.getSenderId()))
+        );
+
+        if (!removed) {
+            throw new RuntimeException("Message not found or unauthorized deletion");
+        }
+
+        Ticket saved = ticketRepository.save(ticket);
+        return TicketResponse.from(saved, canEdit(saved), canDelete(saved, userId), resolveTechnicianName(saved.getAssignedTechnicianId()));
     }
 
     public List<UserResponse> getTechnicians() {
