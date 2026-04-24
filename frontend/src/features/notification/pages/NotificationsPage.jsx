@@ -24,6 +24,7 @@ const typeLabel = {
 export default function NotificationsPage() {
   const { notifications, unreadCount, markAsRead, markAllRead } = useNotifications()
   const navigate = useNavigate()
+  const readCount = notifications.length - unreadCount
 
   async function handleClick(n) {
     if (!n.isRead) await markAsRead(n.id)
@@ -32,26 +33,40 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-navy">Notifications</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
-          </p>
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">WORKSPACE · NOTIFICATIONS</p>
+        <div className="mt-1.5 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[2rem] font-bold leading-tight text-navy">Updates, in one feed.</h1>
+            <p className="mt-1 text-sm text-[#5a6b98]">
+              Track booking and ticket events in real time across your workspace.
+            </p>
+          </div>
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllRead}
+              className="flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand/5 px-3 py-2 text-sm font-semibold text-brand hover:bg-brand/10 transition-colors"
+            >
+              <CheckCheck className="h-4 w-4" />
+              Mark all as read
+            </button>
+          )}
         </div>
-        {unreadCount > 0 && (
-          <button
-            onClick={markAllRead}
-            className="flex items-center gap-1.5 rounded-xl border border-brand/30 bg-brand/5 px-3 py-1.5 text-sm font-medium text-brand hover:bg-brand/10 transition-colors"
-          >
-            <CheckCheck className="h-4 w-4" />
-            Mark all as read
-          </button>
-        )}
       </div>
 
-      {/* List */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Total", value: notifications.length, cls: "bg-[#001d45] text-white" },
+          { label: "Unread", value: unreadCount, cls: "bg-brand text-white" },
+          { label: "Read", value: readCount, cls: "bg-emerald-500 text-white" },
+        ].map((s) => (
+          <div key={s.label} className={`rounded-xl px-4 py-3 ${s.cls}`}>
+            <p className="text-xl font-bold leading-none">{s.value}</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest opacity-75">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="rounded-[20px] border border-white/60 bg-white shadow-[0_14px_40px_rgba(21,32,85,0.08)] overflow-hidden">
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
