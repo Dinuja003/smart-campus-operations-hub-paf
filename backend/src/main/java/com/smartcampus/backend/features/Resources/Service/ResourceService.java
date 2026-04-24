@@ -9,16 +9,18 @@ import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class ResourceService {
+    private static final Set<String> ALLOWED_STATUSES = Set.of("AVAILABLE", "MAINTENANCE", "UNAVAILABLE");
 
     private final ResourceRepository resourceRepository;
 
@@ -75,7 +77,7 @@ public class ResourceService {
     private void validateResource(Resource resource) {
         boolean isEquipment = "EQUIPMENT".equalsIgnoreCase(resource.getType());
 
-        if (resource.getCapacity() <= 0) {
+        if (!isEquipment && resource.getCapacity() <= 0) {
             throw new IllegalArgumentException("Capacity must be greater than 0");
         }
 
@@ -87,9 +89,15 @@ public class ResourceService {
             throw new IllegalArgumentException("Availability window is required");
         }
 
+        if (!ALLOWED_STATUSES.contains(resource.getStatus())) {
+            throw new IllegalArgumentException("Status must be one of: " + String.join(", ", ALLOWED_STATUSES));
+        }
+
         for (AvailabilityWindow window : resource.getAvailabilityWindows()) {
             validateAvailabilityWindow(window);
         }
+
+        validateAvailabilityWindowOverlaps(resource.getAvailabilityWindows());
     }
 
     private void validateAvailabilityWindow(AvailabilityWindow window) {
@@ -100,17 +108,27 @@ public class ResourceService {
             if (!endTime.isAfter(startTime)) {
                 throw new IllegalArgumentException("End time must be later than start time");
             }
-
-            DayOfWeek selectedDay = DayOfWeek.valueOf(window.getDay().toUpperCase());
-            DayOfWeek today = LocalDate.now(ZoneId.systemDefault()).getDayOfWeek();
-
-            if (selectedDay == today && startTime.isBefore(LocalTime.now(ZoneId.systemDefault()))) {
-                throw new IllegalArgumentException("Start time must be the current time or a future time");
-            }
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("Start time and end time must use HH:mm format");
         } catch (IllegalArgumentException e) {
             throw e;
+        }
+    }
+
+    private void validateAvailabilityWindowOverlaps(List<AvailabilityWindow> windows) {
+        for (DayOfWeek day : DayOfWeek.values()) {
+            List<AvailabilityWindow> dayWindows = windows.stream()
+                    .filter(window -> day.name().equalsIgnoreCase(window.getDay()))
+                    .sorted(Comparator.comparing(window -> LocalTime.parse(window.getStartTime())))
+                    .toList();
+
+            for (int i = 1; i < dayWindows.size(); i++) {
+                LocalTime previousEnd = LocalTime.parse(dayWindows.get(i - 1).getEndTime());
+                LocalTime currentStart = LocalTime.parse(dayWindows.get(i).getStartTime());
+                if (!currentStart.isAfter(previousEnd)) {
+                    throw new IllegalArgumentException("Availability windows cannot overlap on the same day");
+                }
+            }
         }
     }
 
@@ -121,12 +139,32 @@ public class ResourceService {
         resource.setEqCount(dto.getEqCount());
         resource.setCapacity(dto.getCapacity());
         resource.setLocation(dto.getLocation());
-        resource.setAvailabilityWindows(dto.getAvailabilityWindows());
-        resource.setStatus(dto.getStatus());
+        resource.setAvailabilityWindows(normalizeAvailabilityWindows(dto.getAvailabilityWindows()));
+        resource.setStatus(normalizeStatus(dto.getStatus()));
         resource.setDescription(dto.getDescription());
         resource.setImageUrl(dto.getImageUrl());
         resource.setCreatedBy(dto.getCreatedBy());
         return resource;
+    }
+
+    private String normalizeStatus(String status) {
+        return status == null ? null : status.trim().toUpperCase();
+    }
+
+    private List<AvailabilityWindow> normalizeAvailabilityWindows(List<AvailabilityWindow> windows) {
+        if (windows == null) {
+            return List.of();
+        }
+
+        List<AvailabilityWindow> normalized = new ArrayList<>();
+        for (AvailabilityWindow window : windows) {
+            AvailabilityWindow cleanWindow = new AvailabilityWindow();
+            cleanWindow.setDay(window.getDay() == null ? null : window.getDay().trim().toUpperCase());
+            cleanWindow.setStartTime(window.getStartTime() == null ? null : window.getStartTime().trim());
+            cleanWindow.setEndTime(window.getEndTime() == null ? null : window.getEndTime().trim());
+            normalized.add(cleanWindow);
+        }
+        return normalized;
     }
 
     private ResourceResponseDto toResponseDto(Resource resource) {

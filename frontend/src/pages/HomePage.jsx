@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import {
   Bell,
   LogIn,
+  LogOut,
   UserPlus,
   ArrowRight,
   CalendarCheck2,
@@ -21,13 +22,24 @@ import {
   Sparkles,
   ChevronRight,
   ChevronLeft,
+  User,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { clearAuth } from "@/features/auth/services/authService"
+import { useUserProfile } from "@/features/users/context/UserProfileContext"
 
 export default function HomePage() {
   const navigate = useNavigate()
   const token = sessionStorage.getItem("token")
   const email = sessionStorage.getItem("email") || ""
   const isLoggedIn = !!token
+  const { profile, setProfile } = useUserProfile()
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -241,14 +253,38 @@ export default function HomePage() {
                     <Bell className="h-4 w-4" />
                     <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-orange-500" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/profile")}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-xs font-bold text-brand transition-colors hover:bg-brand/20"
-                    aria-label="Profile"
-                  >
-                    {initials}
-                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="h-9 w-9 overflow-hidden rounded-full bg-brand/10 text-xs font-bold text-brand transition-colors hover:bg-brand/20"
+                        aria-label="Profile"
+                      >
+                        {profile?.profileImage ? (
+                          <img src={profile.profileImage} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center">{initials}</span>
+                        )}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-40 bg-white border border-slate-200 shadow-xl">
+                      <DropdownMenuItem
+                        onClick={() => navigate("/profile")}
+                        className="cursor-pointer gap-2"
+                      >
+                        <User className="h-4 w-4" />
+                        My Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => { clearAuth(); setProfile(null); navigate("/", { replace: true }) }}
+                        className="cursor-pointer gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Log out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               ) : (
                 <>

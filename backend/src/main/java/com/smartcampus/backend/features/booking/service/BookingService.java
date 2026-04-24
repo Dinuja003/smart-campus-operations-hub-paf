@@ -2,12 +2,18 @@ package com.smartcampus.backend.features.booking.service;
 
 import com.smartcampus.backend.features.Resources.Model.Resource;
 import com.smartcampus.backend.features.Resources.Repository.ResourceRepository;
+import com.smartcampus.backend.features.auth.model.User;
+import com.smartcampus.backend.features.auth.model.UserRole;
+import com.smartcampus.backend.features.auth.repository.UserRepository;
 import com.smartcampus.backend.features.booking.dto.BookingRequestDto;
 import com.smartcampus.backend.features.booking.dto.BookingResponseDto;
 import com.smartcampus.backend.features.booking.dto.BookingReviewDto;
 import com.smartcampus.backend.features.booking.model.Booking;
 import com.smartcampus.backend.features.booking.model.BookingStatus;
 import com.smartcampus.backend.features.booking.repository.BookingRepository;
+import com.smartcampus.backend.features.email.service.EmailService;
+import com.smartcampus.backend.features.notification.model.NotificationType;
+import com.smartcampus.backend.features.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,6 +30,9 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final ResourceRepository resourceRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final EmailService emailService;
 
     // ─── Helper: convert "HH:mm" to total minutes since midnight ───────────────
     private int toMinutes(String time) {
@@ -101,6 +110,17 @@ public class BookingService {
 
         Booking saved = bookingRepository.save(booking);
         log.info("Booking created: {} by user {}", saved.getId(), userId);
+
+        userRepository.findByRole(UserRole.ADMIN).forEach(admin ->
+                notificationService.send(
+                        admin.getId(),
+                        NotificationType.BOOKING_SUBMITTED,
+                        "New Booking Request",
+                        "A new " + resource.getType() + " booking has been submitted for " + dto.getDate(),
+                        "/admin/bookings"
+                )
+        );
+
         return toDto(saved);
     }
 
@@ -227,8 +247,24 @@ public class BookingService {
         b.setReviewedBy(adminId);
 
         Booking saved = bookingRepository.save(b);
-        log.info("Booking {} {} by admin {}", bookingId,
-                saved.getStatus(), adminId);
+        log.info("Booking {} {} by admin {}", bookingId, saved.getStatus(), adminId);
+
+        boolean approved = dto.getApproved();
+        NotificationType type = approved ? NotificationType.BOOKING_APPROVED : NotificationType.BOOKING_REJECTED;
+        String statusWord = approved ? "approved" : "rejected";
+
+        notificationService.send(
+                saved.getRequestedBy(),
+                type,
+                "Booking " + (approved ? "Approved" : "Rejected"),
+                "Your " + saved.getResourceType() + " booking for " + saved.getDate() + " has been " + statusWord,
+                "/my-bookings"
+        );
+
+        userRepository.findById(saved.getRequestedBy()).ifPresent(user ->
+                emailService.sendBookingStatusEmail(user.getEmail(), user.getFirstName(), saved, approved)
+        );
+
         return toDto(saved);
     }
 

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { AlertCircle, CalendarCheck2, CheckCircle2, ChevronRight, Clock3, Loader2, Pencil, Plus, X } from 'lucide-react';
+import { AlertCircle, BriefcaseBusiness, Building2, CalendarCheck2, CheckCircle2, ChevronRight, Clock3, Eye, FlaskConical, Loader2, Pencil, Plus, Presentation, Settings2, X } from 'lucide-react';
 import { useBooking } from '@/hooks/useBooking';
 import bookingService from '@/features/booking/Services/BookingService';
 import BookingStatusBadge from '@/components/BookingStatusBadge';
@@ -23,7 +23,13 @@ const createEmpty = () => ({ date: todayISO(), startTime: '09:00', endTime: '10:
 const inputCls = "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm text-navy outline-none placeholder-slate-400 transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10";
 const labelCls = "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]";
 
-const typeIcons = { LAB: '🔬', MEETING_ROOM: '💼', LECTURE_HALL: '🏛️', AUDITORIUM: '🎭', EQUIPMENT: '⚙️' };
+const typeIcons = {
+  LAB: FlaskConical,
+  MEETING_ROOM: BriefcaseBusiness,
+  LECTURE_HALL: Presentation,
+  AUDITORIUM: Building2,
+  EQUIPMENT: Settings2,
+};
 
 export default function MyBookingsPage() {
   const { getMyBookings, cancelBooking, createBooking, updateBooking, loading, error } = useBooking();
@@ -42,6 +48,8 @@ export default function MyBookingsPage() {
   const [scheduleItems, setScheduleItems]   = useState([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [editingId, setEditingId]       = useState(null);
+  const [detailModal, setDetailModal]   = useState(null);
+  const [showFullViewModal, setShowFullViewModal] = useState(false);
   const [form, setForm]                 = useState(() => createEmpty());
   const navigate = useNavigate();
 
@@ -76,6 +84,11 @@ export default function MyBookingsPage() {
 
   const catResources = useMemo(() => !form.resourceType ? [] : resources.filter(r => getTypeLabel(r.type) === form.resourceType).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))), [resources, form.resourceType]);
 
+  const allResourcesSorted = useMemo(
+    () => [...resources].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))),
+    [resources],
+  );
+
   const displayed = availChecked ? availResources : quickAvail;
 
   const selectedResource = useMemo(() => {
@@ -87,6 +100,12 @@ export default function MyBookingsPage() {
   }, [displayed, form.resourceId, resources, catResources]);
 
   const editingBooking = useMemo(() => bookings.find(b => b.id === editingId) || null, [bookings, editingId]);
+
+  const getBookingResourceLabel = (booking) => {
+    const resource = resources.find((r) => r.id === booking.resourceId);
+    if (resource?.name) return resource.name;
+    return booking.resourceType || 'Unassigned Resource';
+  };
 
   const daySlots = useMemo(() => ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'], []);
 
@@ -153,6 +172,19 @@ export default function MyBookingsPage() {
     setCancelling(null);
   };
 
+  const handleQuickBookResource = (resource) => {
+    setEditingId(null);
+    setSubmitError('');
+    setSubmitSuccess('');
+    resetAvail();
+    setForm((prev) => ({
+      ...prev,
+      resourceType: getTypeLabel(resource.type),
+      resourceId: resource.id,
+    }));
+    setShowForm(true);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === 'expectedAttendees') { setForm(p => ({ ...p, expectedAttendees: value.replace(/\D/g, '') })); resetAvail(); return; }
@@ -189,27 +221,22 @@ export default function MyBookingsPage() {
 
   return (
     <div className="space-y-5">
-
-      {/* ── Header ── */}
-      <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-6">
-        <div className="pointer-events-none absolute -left-10 top-6 h-36 w-36 rounded-full bg-[#001d45]/12 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">WORKSPACE · BOOKINGS</p>
+        <div className="mt-1.5 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-0.5 text-[10px] font-semibold tracking-wide text-brand">
-              <CalendarCheck2 className="h-3 w-3" /> Booking Workspace
-            </p>
-            <h1 className="mt-1.5 text-2xl font-bold text-navy sm:text-3xl">My Bookings</h1>
-            <p className="mt-0.5 text-sm text-[#5a6b98]">Review requests, edit pending bookings, and schedule campus resources.</p>
+            <h1 className="text-[2rem] font-bold leading-tight text-navy">My reservations, organized.</h1>
+            <p className="mt-1 text-sm text-[#5a6b98]">Review requests, edit pending bookings, and schedule resources faster.</p>
           </div>
           <button
             type="button"
             onClick={() => { if (showForm) { setShowForm(false); cancelEdit(); } else startNew(); }}
-            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${showForm ? 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' : 'bg-brand text-white shadow-[0_4px_12px_rgba(244,94,43,0.30)] hover:opacity-90'}`}
+            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${showForm ? 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' : 'bg-[#001d45] text-white shadow-[0_4px_14px_rgba(0,29,69,0.25)] hover:bg-[#002a66]'}`}
           >
             {showForm ? <><X className="h-4 w-4" /> Close Form</> : <><Plus className="h-4 w-4" /> New Booking</>}
           </button>
         </div>
-      </section>
+      </div>
 
       {/* ── Alerts ── */}
       {(error || resourcesError) && (
@@ -224,10 +251,19 @@ export default function MyBookingsPage() {
       )}
 
       {/* ── Category Cards ── */}
-      <section className="rounded-[26px] border border-white/60 bg-white p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
+      <section className="rounded-[26px] border border-white/60 bg-gradient-to-br from-white to-slate-50 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-navy">Resource Categories</h3>
-          <button type="button" onClick={() => navigate('/resources')} className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+          <div>
+            <h3 className="text-base font-bold text-navy">Resource Categories</h3>
+            <p className="mt-0.5 text-xs text-[#8494c2]">Choose a category to narrow available resources.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShowFullViewModal(true);
+            }}
+            className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+          >
             Full View <ChevronRight className="h-3 w-3" />
           </button>
         </div>
@@ -238,20 +274,34 @@ export default function MyBookingsPage() {
           <p className="text-xs text-[#8494c2]">No resource categories found.</p>
         ) : (
           <>
-            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
               {typeCounts.map(([type, count]) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => { setForm(p => ({ ...p, resourceType: p.resourceType === type ? '' : type, resourceId: '' })); resetAvail(); }}
-                  className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${form.resourceType === type ? 'border-brand/30 bg-brand/8 shadow-sm' : 'border-slate-200 bg-slate-50/60 hover:border-brand/20 hover:bg-brand/5'}`}
-                >
-                  <span className="text-xl">{typeIcons[type] || '📦'}</span>
-                  <div>
-                    <p className={`text-xs font-bold ${form.resourceType === type ? 'text-brand' : 'text-navy'}`}>{type}</p>
-                    <p className="text-[10px] text-[#8494c2]">{count} resource{count !== 1 ? 's' : ''}</p>
-                  </div>
-                </button>
+                (() => {
+                  const TypeIcon = typeIcons[type] || Building2;
+                  const selected = form.resourceType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setForm(p => ({ ...p, resourceType: selected ? '' : type, resourceId: '' }));
+                        resetAvail();
+                      }}
+                      className={`group relative overflow-hidden rounded-xl border p-3 text-left transition-all ${selected ? 'border-brand/35 bg-brand/10 shadow-[0_8px_20px_rgba(244,94,43,0.12)]' : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-sm'}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${selected ? 'bg-brand text-white' : 'bg-[#001d45]/8 text-[#001d45]'}`}>
+                          <TypeIcon className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className={`truncate text-sm font-bold ${selected ? 'text-brand' : 'text-navy'}`}>{type.replaceAll('_', ' ')}</p>
+                          <p className="text-xs text-[#8494c2]">{count} resource{count !== 1 ? 's' : ''}</p>
+                        </div>
+                        {selected && <span className="ml-auto rounded-full bg-brand/15 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-brand">Selected</span>}
+                      </div>
+                    </button>
+                  );
+                })()
               ))}
             </div>
 
@@ -264,12 +314,24 @@ export default function MyBookingsPage() {
                 {catResources.map(r => (
                   <div key={r.id} className="flex items-center justify-between gap-3 border-b border-slate-50 px-4 py-3 last:border-0 hover:bg-slate-50/60 transition-colors">
                     <div>
-                      <p className="text-xs font-semibold text-navy">{r.name || 'Unnamed'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-navy">{r.name || 'Unnamed'}</p>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${isAvailable(r.status) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                          {r.status || 'UNKNOWN'}
+                        </span>
+                      </div>
                       <p className="mt-0.5 text-[10px] text-[#8494c2]">Cap: {r.capacity || 0}{r.location ? ` · ${[r.location.building, r.location.floor, r.location.room].filter(Boolean).join(' / ')}` : ''}</p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${isAvailable(r.status) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
-                      {r.status || 'UNKNOWN'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={!isAvailable(r.status)}
+                        onClick={() => isAvailable(r.status) && handleQuickBookResource(r)}
+                        className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide transition ${isAvailable(r.status) ? 'bg-brand text-white hover:opacity-90' : 'cursor-not-allowed bg-slate-200 text-slate-500'}`}
+                      >
+                        Book Resource
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -277,6 +339,70 @@ export default function MyBookingsPage() {
           </>
         )}
       </section>
+
+      {showFullViewModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
+          onClick={() => setShowFullViewModal(false)}
+        >
+          <div
+            className="w-full max-w-4xl overflow-hidden rounded-[26px] border border-white/60 bg-white shadow-[0_30px_80px_rgba(21,32,85,0.25)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Resources</p>
+                <h3 className="mt-0.5 text-lg font-bold text-navy">All Resources</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFullViewModal(false)}
+                className="rounded-xl p-2 text-[#8494c2] transition-colors hover:bg-slate-100 hover:text-navy"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
+              <div className="mb-3 text-xs text-[#8494c2]">{allResourcesSorted.length} resources found</div>
+              {allResourcesSorted.length === 0 ? (
+                <p className="text-sm text-[#8494c2]">No resources available.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {allResourcesSorted.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-navy">{r.name || 'Unnamed'}</p>
+                          <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#5a6b98]">
+                            {getTypeLabel(r.type)}
+                          </span>
+                          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${isAvailable(r.status) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                            {r.status || 'UNKNOWN'}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-[#8494c2]">Cap: {r.capacity || 0}{r.location ? ` · ${[r.location.building, r.location.floor, r.location.room].filter(Boolean).join(' / ')}` : ''}</p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!isAvailable(r.status)}
+                        onClick={() => {
+                          if (!isAvailable(r.status)) return;
+                          handleQuickBookResource(r);
+                          setShowFullViewModal(false);
+                        }}
+                        className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide transition ${isAvailable(r.status) ? 'bg-brand text-white hover:opacity-90' : 'cursor-not-allowed bg-slate-200 text-slate-500'}`}
+                      >
+                        Book Resource
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Booking Form ── */}
       {showForm && (
@@ -464,6 +590,11 @@ export default function MyBookingsPage() {
                     <Pencil className="h-3 w-3" /> Edit Booking
                   </button>
                 )}
+                {b.status === 'APPROVED' && (
+                  <button type="button" onClick={() => setDetailModal(b)} className="flex items-center gap-1.5 rounded-lg border border-[#001d45]/20 bg-[#001d45]/8 px-3.5 py-2 text-xs font-semibold text-[#001d45] transition hover:bg-[#001d45]/15">
+                    <Eye className="h-3 w-3" /> View Details
+                  </button>
+                )}
                 {(b.status === 'PENDING' || b.status === 'APPROVED') && (
                   <button type="button" disabled={cancelling === b.id} onClick={() => handleCancel(b.id)} className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60">
                     <X className="h-3 w-3" />{cancelling === b.id ? 'Cancelling…' : 'Cancel Booking'}
@@ -472,6 +603,66 @@ export default function MyBookingsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Approved Booking Details Modal ── */}
+      {detailModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setDetailModal(null)}
+        >
+          <div
+            className="w-full max-w-xl overflow-hidden rounded-[26px] bg-white shadow-[0_30px_80px_rgba(21,32,85,0.25)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Booking Details</p>
+                <h3 className="mt-0.5 text-lg font-bold text-navy">Approved Booking</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailModal(null)}
+                className="rounded-xl p-2 text-[#8494c2] transition-colors hover:bg-slate-100 hover:text-navy"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 px-6 py-5">
+              {[
+                { label: 'Reason', value: detailModal.bookingReason || '—' },
+                { label: 'Resource', value: getBookingResourceLabel(detailModal) },
+                { label: 'Date & Time', value: `${detailModal.date || '—'} · ${detailModal.startTime || '—'}–${detailModal.endTime || '—'}` },
+                { label: 'Expected Attendees', value: detailModal.expectedAttendees || '—' },
+                { label: 'Status', value: detailModal.status || '—' },
+                { label: 'Purpose', value: detailModal.purpose || '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{label}</p>
+                  <p className="mt-0.5 text-sm font-medium text-navy">{value}</p>
+                </div>
+              ))}
+
+              {detailModal.adminNote && (
+                <div className="rounded-xl border border-[#001d45]/20 bg-[#001d45]/8 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Admin Note</p>
+                  <p className="mt-0.5 text-sm font-medium text-[#001d45]">{detailModal.adminNote}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setDetailModal(null)}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

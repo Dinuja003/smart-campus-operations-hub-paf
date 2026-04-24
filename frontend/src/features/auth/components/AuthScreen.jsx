@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { persistAuth, signIn, signUp } from "@/features/auth/services/authService"
+import { useUserProfile } from "@/features/users/context/UserProfileContext"
 
 function GoogleMark() {
   return (
@@ -29,9 +30,10 @@ export default function AuthScreen({ initialMode = "login" }) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [mode, setMode] = useState(initialMode)
+  const { refreshProfile } = useUserProfile()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" })
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", confirmPassword: "" })
 
   const isLogin = mode === "login"
   const backendOrigin = import.meta.env.VITE_BACKEND_ORIGIN || "http://localhost:8081"
@@ -46,6 +48,10 @@ export default function AuthScreen({ initialMode = "login" }) {
   const submit = async (e) => {
     e.preventDefault()
     setError("")
+    if (!isLogin && form.password !== form.confirmPassword) {
+      setError("Passwords do not match")
+      return
+    }
     setLoading(true)
     try {
       const payload = isLogin
@@ -53,6 +59,7 @@ export default function AuthScreen({ initialMode = "login" }) {
         : { firstName: form.firstName, lastName: form.lastName, email: form.email, password: form.password }
       const data = isLogin ? await signIn(payload) : await signUp(payload)
       persistAuth(data)
+      await refreshProfile()
       navigate("/", { replace: true })
     } catch (err) {
       setError(err?.response?.data?.message || err?.response?.data?.error || "Authentication failed")
@@ -65,6 +72,7 @@ export default function AuthScreen({ initialMode = "login" }) {
     setMode(nextMode)
     navigate(nextMode === "login" ? "/login" : "/signup", { replace: true })
     setError("")
+    setForm({ firstName: "", lastName: "", email: "", password: "", confirmPassword: "" })
   }
 
   return (
@@ -279,6 +287,27 @@ export default function AuthScreen({ initialMode = "login" }) {
                     />
                   </div>
                 </div>
+
+                {!isLogin && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-[#001d45]/60" htmlFor="confirm-password">
+                      Re-enter Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        required
+                        minLength={8}
+                        value={form.confirmPassword}
+                        onChange={(e) => setForm((p) => ({ ...p, confirmPassword: e.target.value }))}
+                        placeholder="Confirm your password"
+                        className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 text-sm shadow-none focus-visible:border-[#f45e2b]/60 focus-visible:ring-[#f45e2b]/20"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <Button
                   type="submit"

@@ -1,8 +1,9 @@
 export default function TechnicianDashboardPage() {
   return (
-    <div className="space-y-2">
-      <h3 className="text-2xl font-semibold text-slate-900">Technician Dashboard</h3>
-      <p className="text-slate-600">Track maintenance tasks, service queues, and technical operations.</p>
+    <div className="space-y-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">TECHNICIAN · DASHBOARD</p>
+      <h1 className="text-[2rem] font-bold leading-tight text-navy">Maintenance queue snapshot.</h1>
+      <p className="text-sm text-[#5a6b98]">Track active tasks, ticket flow, and technical operations status in real time.</p>
     </div>
   )
 }

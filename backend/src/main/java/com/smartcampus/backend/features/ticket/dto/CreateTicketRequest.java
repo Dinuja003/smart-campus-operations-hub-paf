@@ -1,92 +1,106 @@
 package com.smartcampus.backend.features.ticket.dto;
 
+import com.smartcampus.backend.features.ticket.model.TicketCategory;
+import com.smartcampus.backend.features.ticket.model.TicketPriority;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public class CreateTicketRequest {
 
-    @NotBlank(message = "userId is required")
+    @NotBlank(message = "User ID is required")
     private String userId;
 
     private String resourceId;
 
-    @NotBlank(message = "category is required")
-    private String category;
+    @NotNull(message = "Category is required")
+    private TicketCategory category;
 
-    @NotBlank(message = "subject is required")
+    @NotBlank(message = "Subject is required")
     private String subject;
 
-    @NotBlank(message = "description is required")
+    @NotBlank(message = "Description is required")
     private String description;
 
-    @NotBlank(message = "priority is required")
-    private String priority;
+    @NotNull(message = "Priority is required")
+    private TicketPriority priority;
 
-    @NotBlank(message = "location is required")
+    @NotBlank(message = "Location is required")
     private String location;
 
+    @NotBlank(message = "Preferred contact is required")
     private String preferredContact;
 
+    private String bookingId;
+
     public CreateTicketRequest() {
+    }
+
+    public String getBookingId() {
+        return bookingId;
+    }
+
+    public void setBookingId(String bookingId) {
+        this.bookingId = bookingId;
     }
 
     public String getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
     public String getResourceId() {
         return resourceId;
     }
 
-    public void setResourceId(String resourceId) {
-        this.resourceId = resourceId;
-    }
-
-    public String getCategory() {
+    public TicketCategory getCategory() {
         return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
     }
 
     public String getSubject() {
         return subject;
     }
 
-    public void setSubject(String subject) {
-        this.subject = subject;
-    }
-
     public String getDescription() {
         return description;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getPriority() {
+    public TicketPriority getPriority() {
         return priority;
-    }
-
-    public void setPriority(String priority) {
-        this.priority = priority;
     }
 
     public String getLocation() {
         return location;
     }
 
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
     public String getPreferredContact() {
         return preferredContact;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public void setResourceId(String resourceId) {
+        this.resourceId = resourceId;
+    }
+
+    public void setCategory(TicketCategory category) {
+        this.category = category;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setPriority(TicketPriority priority) {
+        this.priority = priority;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     public void setPreferredContact(String preferredContact) {
