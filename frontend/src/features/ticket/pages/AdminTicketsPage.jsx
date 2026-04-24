@@ -10,7 +10,7 @@ import {
   Search,
   Filter
 } from "lucide-react"
-import { getAllTickets, getTechnicians, assignTechnician } from "@/features/ticket/services/ticketService.js"
+import { getAllTickets, getTechnicians, assignTechnician, updateTicketStatus } from "@/features/ticket/services/ticketService.js"
 import { toast } from "sonner"
 
 const statusColors = {
@@ -77,6 +77,18 @@ export default function AdminTicketsPage() {
       setTickets(data)
     } catch (err) {
       toast.error(err.message || "Assignment failed")
+    }
+  }
+
+  const handleStartWork = async (ticketId) => {
+    try {
+      await updateTicketStatus(ticketId, 'IN_PROGRESS')
+      toast.success("Ticket is now in progress")
+      // Reload tickets
+      const data = await getAllTickets()
+      setTickets(data)
+    } catch (err) {
+      toast.error(err.message || "Failed to start work")
     }
   }
 

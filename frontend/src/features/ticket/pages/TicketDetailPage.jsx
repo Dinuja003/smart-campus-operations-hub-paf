@@ -148,7 +148,7 @@ export default function TicketDetailPage() {
                 <h1 className="mt-3 text-2xl font-bold text-navy sm:text-3xl">{ticket.subject}</h1>
               </div>
               
-              {(currentUserRole === "ADMIN" || currentUserId === ticket.assignedTechnicianId) && (
+              {currentUserRole === "TECHNICIAN" && currentUserId === ticket.assignedTechnicianId && (
                 <div className="flex gap-2">
                   {ticket.status === 'OPEN' && (
                     <button 
