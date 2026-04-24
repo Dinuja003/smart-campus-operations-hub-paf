@@ -1,5 +1,6 @@
 package com.smartcampus.backend.features.notification.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.smartcampus.backend.features.notification.model.Notification;
 import com.smartcampus.backend.features.notification.model.NotificationType;
 import lombok.Builder;
@@ -15,6 +16,7 @@ public class NotificationResponse {
     private String title;
     private String message;
     private String link;
+    @JsonProperty("isRead")
     private boolean isRead;
     private Instant createdAt;
 

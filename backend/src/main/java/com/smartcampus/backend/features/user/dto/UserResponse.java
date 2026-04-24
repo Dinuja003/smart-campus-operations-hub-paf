@@ -17,6 +17,7 @@ public class UserResponse {
     private UserRole role;
     private boolean isActive;
     private AuthProvider authProvider;
+    private String profileImage;
     private Instant createdAt;
     private Instant updatedAt;
 }

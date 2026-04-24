@@ -26,6 +26,8 @@ import LoginPage from "./features/auth/pages/LoginPage"
 import SignupPage from "./features/auth/pages/SignupPage"
 import OAuth2CallbackPage from "./features/auth/pages/OAuth2CallbackPage"
 import ProtectedRoute from "./features/auth/components/ProtectedRoute"
+import ProfilePage from "./features/auth/pages/ProfilePage"
+import { UserProfileProvider } from "./features/users/context/UserProfileContext"
 import bookingService from "./features/booking/Services/BookingService"
 import resourceService from "./features/resources/services/resourceService"
 import AdminResourcesInterface from "./features/resources/AdminResourcesInterface.jsx"
@@ -803,7 +805,7 @@ function AppShell() {
                 }
               />
               <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/profile" element={<ComingSoon title="My Profile" />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/invoices" element={<ComingSoon title="Invoices" />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
@@ -817,10 +819,14 @@ function AppShell() {
   )
 }
 
-function App() {
+function AuthRoute({ children }) {
   const token = sessionStorage.getItem("token")
+  return token ? <Navigate to="/dashboard" replace /> : children
+}
 
+function App() {
   return (
+    <UserProfileProvider>
     <BrowserRouter>
       <Routes>
         <Route
@@ -841,8 +847,8 @@ function App() {
             </>
           }
         />
-        <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
-        <Route path="/signup" element={token ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
+        <Route path="/login" element={<AuthRoute><LoginPage /></AuthRoute>} />
+        <Route path="/signup" element={<AuthRoute><SignupPage /></AuthRoute>} />
         <Route path="/oauth2/callback" element={<OAuth2CallbackPage />} />
         <Route
           path="/*"
@@ -854,6 +860,7 @@ function App() {
         />
       </Routes>
     </BrowserRouter>
+    </UserProfileProvider>
   )
 }
 
