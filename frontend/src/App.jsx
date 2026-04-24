@@ -784,6 +784,7 @@ function AppShell() {
               />
               <Route path="/tickets" element={<MyTicketsPage />} />
               <Route path="/tickets/create" element={<CreateTicketPage />} />
+              <Route path="/tickets/edit/:id" element={<CreateTicketPage />} />
               <Route path="/tickets/:id" element={<TicketDetailPage />} />
               <Route
                 path="/admin/tickets"

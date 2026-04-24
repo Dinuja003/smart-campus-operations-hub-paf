@@ -34,6 +34,7 @@ public class Ticket {
     private List<TicketMessage> messages = new ArrayList<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<String> hiddenBy = new ArrayList<>();
 
     public Ticket() {
     }
@@ -164,5 +165,13 @@ public class Ticket {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<String> getHiddenBy() {
+        return hiddenBy;
+    }
+
+    public void setHiddenBy(List<String> hiddenBy) {
+        this.hiddenBy = hiddenBy;
     }
 }

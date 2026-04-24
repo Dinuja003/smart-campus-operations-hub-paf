@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import {
   FileText,
   Image as ImageIcon,
@@ -10,7 +10,7 @@ import {
   X,
   CalendarCheck2
 } from "lucide-react"
-import { createTicket } from "@/features/ticket/services/ticketService.js"
+import { createTicket, getTicketById, updateTicket } from "@/features/ticket/services/ticketService.js"
 import bookingService from "@/features/booking/Services/BookingService"
 import resourceService from "@/features/resources/services/resourceService"
 import { toast } from "sonner"
@@ -26,6 +26,8 @@ const priorityColors = {
 
 function CreateTicketPage() {
   const navigate = useNavigate()
+  const { id } = useParams()
+  const isEdit = !!id
   const initialForm = {
     resourceId: "",
     category: "HARDWARE",
@@ -68,15 +70,42 @@ function CreateTicketPage() {
     loadData()
   }, [])
 
+  useEffect(() => {
+    if (isEdit) {
+      const fetchTicket = async () => {
+        setFetchingData(true)
+        try {
+          const ticket = await getTicketById(id)
+          setFormData({
+            resourceId: ticket.resourceId || "",
+            category: ticket.category,
+            subject: ticket.subject,
+            description: ticket.description,
+            priority: ticket.priority,
+            location: ticket.location || "",
+            preferredContact: ticket.preferredContact || "",
+            bookingId: ""
+          })
+        } catch (err) {
+          toast.error("Failed to load ticket for editing")
+          navigate("/tickets")
+        } finally {
+          setFetchingData(false)
+        }
+      }
+      fetchTicket()
+    }
+  }, [id, isEdit])
+
   const handleChange = (e) => {
     const { name, value } = e.target
-    
+
     if (name === "bookingId") {
       const selectedBooking = bookings.find(b => b.id === value)
       if (selectedBooking) {
         const res = resources.find(r => r.id === selectedBooking.resourceId)
         const locStr = res?.location ? [res.location.building, res.location.floor, res.location.room].filter(Boolean).join(", ") : ""
-        
+
         setFormData(prev => ({
           ...prev,
           bookingId: value,
@@ -140,8 +169,13 @@ function CreateTicketPage() {
         preferredContact: formData.preferredContact.trim(),
       }
 
-      await createTicket(payload, files)
-      toast.success("Ticket created successfully!")
+      if (isEdit) {
+        await updateTicket(id, payload)
+        toast.success("Ticket updated successfully!")
+      } else {
+        await createTicket(payload, files)
+        toast.success("Ticket created successfully!")
+      }
       setTimeout(() => navigate("/tickets"), 1500)
     } catch (err) {
       console.error("Ticket creation error:", err)
@@ -161,8 +195,14 @@ function CreateTicketPage() {
           <p className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-0.5 text-[10px] font-semibold tracking-wide text-brand uppercase">
             <Ticket className="h-3.5 w-3.5" /> Support Desk
           </p>
-          <h1 className="mt-2 text-2xl font-bold text-navy sm:text-3xl">Create Support Ticket</h1>
-          <p className="mt-1 text-sm text-[#5a6b98]">Report an issue or request technical assistance from the campus facilities team.</p>
+          <h1 className="mt-2 text-2xl font-bold text-navy sm:text-3xl">
+            {isEdit ? "Edit Support Ticket" : "Create Support Ticket"}
+          </h1>
+          <p className="mt-1 text-sm text-[#5a6b98]">
+            {isEdit 
+              ? "Update the details of your existing report below." 
+              : "Report an issue or request technical assistance from the campus facilities team."}
+          </p>
         </div>
       </section>
 
@@ -174,10 +214,10 @@ function CreateTicketPage() {
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">
                   Related Booking <span className="normal-case text-slate-400">(optional)</span>
                 </label>
-                <select 
-                  name="bookingId" 
-                  value={formData.bookingId} 
-                  onChange={handleChange} 
+                <select
+                  name="bookingId"
+                  value={formData.bookingId}
+                  onChange={handleChange}
                   className={inputCls}
                   disabled={fetchingData}
                 >
@@ -197,10 +237,10 @@ function CreateTicketPage() {
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">
                   Affected Resource
                 </label>
-                <select 
-                  name="resourceId" 
-                  value={formData.resourceId} 
-                  onChange={handleChange} 
+                <select
+                  name="resourceId"
+                  value={formData.resourceId}
+                  onChange={handleChange}
                   className={inputCls}
                   disabled={fetchingData}
                 >
@@ -287,7 +327,7 @@ function CreateTicketPage() {
           <section className="rounded-[26px] border border-white/60 bg-white p-6 shadow-sm">
             <h3 className="text-sm font-bold text-navy uppercase tracking-widest text-[10px]">Attachments</h3>
             <p className="mt-1 text-xs text-[#8494c2]">Up to 3 image attachments are allowed.</p>
-            
+
             <div className="mt-4 space-y-3">
               {files.map((file, idx) => (
                 <div key={idx} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-3">
@@ -305,7 +345,7 @@ function CreateTicketPage() {
                   </button>
                 </div>
               ))}
-              
+
               {files.length < 3 && (
                 <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-100 py-6 transition hover:border-brand/30 hover:bg-brand/5">
                   <ImageIcon className="h-6 w-6 text-[#8494c2]" />
@@ -336,7 +376,7 @@ function CreateTicketPage() {
               className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(244,94,43,0.3)] transition-all hover:opacity-90 disabled:opacity-50"
             >
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-4 w-4" />}
-              {loading ? "Creating..." : "Create Ticket"}
+              {loading ? (isEdit ? "Updating..." : "Creating...") : (isEdit ? "Save Changes" : "Create Ticket")}
             </button>
           </section>
         </aside>
