@@ -94,12 +94,31 @@ export default function ProfilePage() {
     .toUpperCase()
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="w-full space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-navy">My Profile</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Manage your personal information</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">ACCOUNT · PROFILE</p>
+        <h1 className="mt-1.5 text-[2rem] font-bold leading-tight text-navy">Identity & access.</h1>
+        <p className="mt-1 text-sm text-[#5a6b98]">Manage your profile details, image, and account information.</p>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Role", value: profile?.role || "USER", cls: "bg-[#001d45] text-white" },
+          { label: "Auth", value: profile?.authProvider === "GOOGLE" ? "Google" : "Local", cls: "bg-brand text-white" },
+          {
+            label: "Joined",
+            value: profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "—",
+            cls: "bg-emerald-500 text-white",
+          },
+        ].map((s) => (
+          <div key={s.label} className={`rounded-xl px-4 py-3 ${s.cls}`}>
+            <p className="truncate text-base font-bold leading-none">{s.value}</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest opacity-75">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[1.1fr_1fr]">
       {/* Avatar card */}
       <div className="rounded-[20px] border border-white/60 bg-white p-6 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
         <div className="flex items-center gap-6">
@@ -232,6 +251,7 @@ export default function ProfilePage() {
           </Button>
         </div>
       </form>
+      </div>
 
       {/* Account details */}
       <div className="rounded-[20px] border border-white/60 bg-white p-6 shadow-[0_14px_40px_rgba(21,32,85,0.08)]">

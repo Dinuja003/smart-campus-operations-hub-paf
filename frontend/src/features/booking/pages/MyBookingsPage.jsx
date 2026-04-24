@@ -221,27 +221,22 @@ export default function MyBookingsPage() {
 
   return (
     <div className="space-y-5">
-
-      {/* ── Header ── */}
-      <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-6">
-        <div className="pointer-events-none absolute -left-10 top-6 h-36 w-36 rounded-full bg-[#001d45]/12 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">WORKSPACE · BOOKINGS</p>
+        <div className="mt-1.5 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-0.5 text-[10px] font-semibold tracking-wide text-brand">
-              <CalendarCheck2 className="h-3 w-3" /> Booking Workspace
-            </p>
-            <h1 className="mt-1.5 text-2xl font-bold text-navy sm:text-3xl">My Bookings</h1>
-            <p className="mt-0.5 text-sm text-[#5a6b98]">Review requests, edit pending bookings, and schedule campus resources.</p>
+            <h1 className="text-[2rem] font-bold leading-tight text-navy">My reservations, organized.</h1>
+            <p className="mt-1 text-sm text-[#5a6b98]">Review requests, edit pending bookings, and schedule resources faster.</p>
           </div>
           <button
             type="button"
             onClick={() => { if (showForm) { setShowForm(false); cancelEdit(); } else startNew(); }}
-            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${showForm ? 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' : 'bg-brand text-white shadow-[0_4px_12px_rgba(244,94,43,0.30)] hover:opacity-90'}`}
+            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${showForm ? 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' : 'bg-[#001d45] text-white shadow-[0_4px_14px_rgba(0,29,69,0.25)] hover:bg-[#002a66]'}`}
           >
             {showForm ? <><X className="h-4 w-4" /> Close Form</> : <><Plus className="h-4 w-4" /> New Booking</>}
           </button>
         </div>
-      </section>
+      </div>
 
       {/* ── Alerts ── */}
       {(error || resourcesError) && (

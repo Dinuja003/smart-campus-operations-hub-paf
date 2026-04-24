@@ -1,15 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import {
-  FileText,
-  Image as ImageIcon,
-  Loader2,
-  MapPin,
-  Send,
-  Ticket,
-  X,
-  CalendarCheck2
-} from "lucide-react"
+import { Image as ImageIcon, Loader2, MapPin, Send, X } from "lucide-react"
 import { createTicket, getTicketById, updateTicket } from "@/features/ticket/services/ticketService.js"
 import bookingService from "@/features/booking/Services/BookingService"
 import resourceService from "@/features/resources/services/resourceService"
@@ -17,12 +8,6 @@ import { toast } from "sonner"
 
 const CATEGORIES = ["ELECTRICAL", "HARDWARE", "SOFTWARE", "FURNITURE", "NETWORK", "OTHER"]
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH"]
-
-const priorityColors = {
-  LOW: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  MEDIUM: "bg-[#f5b800]/15 text-[#b08800] border-[#f5b800]/30",
-  HIGH: "bg-red-100 text-red-600 border-red-200",
-}
 
 function CreateTicketPage() {
   const navigate = useNavigate()
@@ -189,20 +174,35 @@ function CreateTicketPage() {
 
   return (
     <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-6">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand/8 blur-3xl" />
-        <div className="relative">
-          <p className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-0.5 text-[10px] font-semibold tracking-wide text-brand uppercase">
-            <Ticket className="h-3.5 w-3.5" /> Support Desk
-          </p>
-          <h1 className="mt-2 text-2xl font-bold text-navy sm:text-3xl">
-            {isEdit ? "Edit Support Ticket" : "Create Support Ticket"}
-          </h1>
-          <p className="mt-1 text-sm text-[#5a6b98]">
-            {isEdit 
-              ? "Update the details of your existing report below." 
-              : "Report an issue or request technical assistance from the campus facilities team."}
-          </p>
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">WORKSPACE · TICKETS</p>
+        <h1 className="mt-1.5 text-[2rem] font-bold leading-tight text-navy">
+          {isEdit ? "Refine the ticket details." : "Raise an issue, clearly."}
+        </h1>
+        <p className="mt-1 text-sm text-[#5a6b98]">
+          {isEdit
+            ? "Update ticket information before the final handoff."
+            : "Share context, location and priority to speed up technician response."}
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Mode", value: isEdit ? "Edit" : "Create", cls: "bg-[#001d45] text-white" },
+          { label: "Bookings", value: bookings.length, cls: "bg-brand text-white" },
+          { label: "Resources", value: resources.length, cls: "bg-emerald-500 text-white" },
+        ].map((s) => (
+          <div key={s.label} className={`rounded-xl px-4 py-3 ${s.cls}`}>
+            <p className="text-xl font-bold leading-none">{s.value}</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest opacity-75">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <section className="rounded-[20px] border border-white/60 bg-white p-5 shadow-[0_8px_30px_rgba(21,32,85,0.08)] sm:p-6">
+        <div>
+          <h2 className="m-0 text-base font-bold text-navy">{isEdit ? "Edit Ticket" : "Create Ticket"}</h2>
+          <p className="mt-1 text-xs text-[#8494c2]">Fill all required fields for quicker triage.</p>
         </div>
       </section>
 

@@ -1,8 +1,9 @@
 export default function AdminDashboardPage() {
   return (
-    <div className="space-y-2">
-      <h3 className="text-2xl font-semibold text-slate-900">Admin Dashboard</h3>
-      <p className="text-slate-600">Manage users, bookings, and platform operations.</p>
+    <div className="space-y-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">ADMIN · DASHBOARD</p>
+      <h1 className="text-[2rem] font-bold leading-tight text-navy">Operations overview.</h1>
+      <p className="text-sm text-[#5a6b98]">Manage users, bookings, and system operations from a single control surface.</p>
     </div>
   )
 }

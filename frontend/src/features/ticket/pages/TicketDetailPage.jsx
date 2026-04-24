@@ -42,8 +42,6 @@ export default function TicketDetailPage() {
 
   const currentUserId = sessionStorage.getItem("userId")
   const currentUserRole = sessionStorage.getItem("role") || "USER"
-  const isTechnician = currentUserRole === "TECHNICIAN" || currentUserRole === "ADMIN"
-
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -149,7 +147,12 @@ export default function TicketDetailPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      {/* ── Header ── */}
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">WORKSPACE · TICKET DETAIL</p>
+        <h1 className="mt-1.5 text-[2rem] font-bold leading-tight text-navy">Incident timeline & actions.</h1>
+        <p className="mt-1 text-sm text-[#5a6b98]">Track updates, collaborate in-thread, and move resolution forward.</p>
+      </div>
+
       <button 
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-sm font-semibold text-[#8494c2] hover:text-brand"
