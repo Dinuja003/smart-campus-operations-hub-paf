@@ -5,14 +5,13 @@ import {
   Building2,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   Download,
   Eye,
-  Filter,
   MapPin,
   Monitor,
   Pencil,
   Plus,
-  Search,
   Trash2,
   Users,
   Wrench,
@@ -36,20 +35,37 @@ const formatAvailability = (windows = []) => { if (!Array.isArray(windows) || !w
 const addMinutes = (time, mins) => { if (!time) return ""; const [h, m] = time.split(":").map(Number); const d = new Date(); d.setHours(h, m + mins, 0, 0); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
 
 const statusCls = {
-  AVAILABLE:   "bg-emerald-100 text-emerald-700 border-emerald-200",
-  Available:   "bg-emerald-100 text-emerald-700 border-emerald-200",
-  BOOKED:      "bg-[#001d45]/10 text-[#001d45] border-[#001d45]/20",
-  Booked:      "bg-[#001d45]/10 text-[#001d45] border-[#001d45]/20",
-  MAINTENANCE: "bg-brand/10 text-brand border-brand/20",
-  Maintenance: "bg-brand/10 text-brand border-brand/20",
-  UNAVAILABLE: "bg-red-100 text-red-600 border-red-200",
-  Unavailable: "bg-red-100 text-red-600 border-red-200",
+  AVAILABLE:   "bg-emerald-500/90 text-white",
+  Available:   "bg-emerald-500/90 text-white",
+  BOOKED:      "bg-[#001d45]/80 text-white",
+  Booked:      "bg-[#001d45]/80 text-white",
+  MAINTENANCE: "bg-brand/90 text-white",
+  Maintenance: "bg-brand/90 text-white",
+  UNAVAILABLE: "bg-red-500/90 text-white",
+  Unavailable: "bg-red-500/90 text-white",
+};
+
+const statusBarCls = {
+  AVAILABLE:   "bg-emerald-500",
+  Available:   "bg-emerald-500",
+  BOOKED:      "bg-[#001d45]",
+  Booked:      "bg-[#001d45]",
+  MAINTENANCE: "bg-brand",
+  Maintenance: "bg-brand",
+  UNAVAILABLE: "bg-red-500",
+  Unavailable: "bg-red-500",
+};
+
+const statusBarPct = {
+  AVAILABLE: "60%", Available: "60%",
+  BOOKED: "88%", Booked: "88%",
+  MAINTENANCE: "100%", Maintenance: "100%",
+  UNAVAILABLE: "30%", Unavailable: "30%",
 };
 
 const typeIcons = { "Lecture Hall": Building2, HALL: Building2, Hall: Building2, "Meeting Room": Users, ROOM: Users, Room: Users, "Computer Lab": Monitor, LAB: Monitor, Lab: Monitor, "Seminar Room": CalendarClock, Auditorium: Building2, AUDITORIUM: Building2 };
 
 const createAvailabilityWindow = (overrides = {}) => ({ day:"MONDAY", startTime:"09:00", endTime:"17:00", ...overrides });
-
 const emptyForm = { name:"", type:"MEETING_ROOM", eqCount:"", capacity:"1", building:"", floor:"", room:"", status:"AVAILABLE", description:"", imageUrl:"", createdBy:"", availabilityWindows:[createAvailabilityWindow()] };
 
 const getFormValues = (r = {}) => {
@@ -58,6 +74,8 @@ const getFormValues = (r = {}) => {
     : [createAvailabilityWindow()];
   return { name: r.name||"", type: r.type||"MEETING_ROOM", eqCount: String(r.eqCount??""), capacity: String(r.capacity||1), building: r.location?.building||"", floor: r.location?.floor||"", room: r.location?.room||"", status: r.status||"AVAILABLE", description: r.description||"", imageUrl: r.imageUrl||"", createdBy: r.createdBy||"", availabilityWindows: windows };
 };
+
+const resourceStatusOptions = ["AVAILABLE", "MAINTENANCE", "UNAVAILABLE"];
 
 const buildPayload = (f) => {
   const eq = f.type === "EQUIPMENT";
@@ -76,11 +94,11 @@ const validateForm = (f) => {
   const windows = Array.isArray(f.availabilityWindows) ? f.availabilityWindows : [];
   if (!windows.length) return "At least one availability window is required.";
   for (let i = 0; i < windows.length; i += 1) {
-    const windowItem = windows[i];
-    if (!String(windowItem.day || "").trim()) return `Day is required for window ${i + 1}.`;
-    if (!String(windowItem.startTime || "").trim()) return `Start time is required for window ${i + 1}.`;
-    if (!String(windowItem.endTime || "").trim()) return `End time is required for window ${i + 1}.`;
-    if (windowItem.endTime <= windowItem.startTime) return `End time must be after start time for window ${i + 1}.`;
+    const w = windows[i];
+    if (!String(w.day||"").trim()) return `Day is required for window ${i+1}.`;
+    if (!String(w.startTime||"").trim()) return `Start time is required for window ${i+1}.`;
+    if (!String(w.endTime||"").trim()) return `End time is required for window ${i+1}.`;
+    if (w.endTime <= w.startTime) return `End time must be after start time for window ${i+1}.`;
   }
   return "";
 };
@@ -100,30 +118,27 @@ const replaceById = (list, updated, origId) => {
   return replaced ? next : list;
 };
 
-const formatEqCount = (value) => Number(value) > 0 ? String(value) : "-";
-const formatCapacityValue = (resource) => resource?.type === "EQUIPMENT" ? "-" : `${resource?.capacity || 0} people`;
-const formatCapacityCell = (resource) => resource?.type === "EQUIPMENT" ? "-" : (resource?.capacity || 0);
+const formatCapacityValue = (r) => r?.type === "EQUIPMENT" ? "-" : `${r?.capacity || 0} people`;
+const formatEqCount = (v) => Number(v) > 0 ? String(v) : "-";
 
 const inputCls = "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm text-navy outline-none placeholder-slate-400 transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10";
 const labelCls = "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]";
-const titleCase = (value = "") => value.includes(" ") ? value : `${value.charAt(0)}${value.slice(1).toLowerCase()}`;
 
 export default function AdminResourcesInterface() {
-  const [resources, setResources]         = useState([]);
-  const [query, setQuery]                 = useState("");
-  const [typeFilter, setTypeFilter]       = useState("All Types");
-  const [statusFilter, setStatusFilter]   = useState("All Status");
+  const [resources, setResources]       = useState([]);
+  const [typeFilter, setTypeFilter]     = useState("All Types");
+  const [statusFilter, setStatusFilter] = useState("All Status");
   const [selectedResource, setSelectedResource] = useState(null);
   const [reportPreviewResource, setReportPreviewResource] = useState(null);
   const [directoryReportOpen, setDirectoryReportOpen] = useState(false);
-  const [showForm, setShowForm]           = useState(false);
+  const [showForm, setShowForm]         = useState(false);
   const [editingResource, setEditingResource] = useState(null);
-  const [form, setForm]                   = useState(emptyForm);
-  const [formError, setFormError]         = useState("");
-  const [saving, setSaving]               = useState(false);
-  const [deleting, setDeleting]           = useState(false);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState("");
+  const [form, setForm]                 = useState(emptyForm);
+  const [formError, setFormError]       = useState("");
+  const [saving, setSaving]             = useState(false);
+  const [deleting, setDeleting]         = useState(false);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState("");
 
   useEffect(() => {
     let a = true;
@@ -136,45 +151,34 @@ export default function AdminResourcesInterface() {
 
   const resourceTypes    = useMemo(() => ["All Types", ...new Set(resources.map((r) => r.type).filter(Boolean))], [resources]);
   const resourceStatuses = useMemo(() => {
-    const pref = ["BOOKED","AVAILABLE","MAINTENANCE","UNAVAILABLE"];
+    const pref = ["All Status","AVAILABLE","MAINTENANCE","UNAVAILABLE"];
     const existing = new Set(resources.map((r) => r.status).filter(Boolean));
-    return ["All Status", ...pref.filter((s) => existing.has(s)), ...[...existing].filter((s) => !pref.includes(s))];
+    return [...pref.filter(s => s === "All Status" || existing.has(s)), ...[...existing].filter(s => !["AVAILABLE","MAINTENANCE","UNAVAILABLE"].includes(s))];
   }, [resources]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return resources.filter((r) => {
-      const loc = formatLocation(r.location);
-      const searchableText = [r.name, r.id, r.type, r.status, loc].join(" ").toLowerCase();
-      const match = !q || searchableText.includes(q);
-      return match && (typeFilter === "All Types" || r.type === typeFilter) && (statusFilter === "All Status" || r.status === statusFilter);
-    });
-  }, [query, resources, statusFilter, typeFilter]);
+  const filtered = useMemo(() => resources.filter((r) => {
+    return (typeFilter === "All Types" || r.type === typeFilter) &&
+           (statusFilter === "All Status" || r.status === statusFilter);
+  }), [resources, statusFilter, typeFilter]);
 
   const stats = useMemo(() => ({
-    total: resources.length,
-    available: resources.filter((r) => String(r.status||"").toLowerCase() === "available").length,
+    total:       resources.length,
+    available:   resources.filter((r) => String(r.status||"").toLowerCase() === "available").length,
     maintenance: resources.filter((r) => String(r.status||"").toLowerCase().includes("maintenance")).length,
-    capacity: resources.reduce((s, r) => s + Number(r.capacity||0), 0),
+    capacity:    resources.reduce((s, r) => s + Number(r.capacity||0), 0),
   }), [resources]);
 
   const updateForm  = (field, value) => setForm((c) => ({ ...c, [field]: value }));
   const updateAvailabilityWindow = (index, field, value) => setForm((current) => {
-    const nextWindows = current.availabilityWindows.map((windowItem, windowIndex) => {
-      if (windowIndex !== index) return windowItem;
-      if (field === "startTime") {
-        const minEnd = addMinutes(value, 1);
-        return { ...windowItem, startTime: value, endTime: windowItem.endTime <= value ? minEnd : windowItem.endTime };
-      }
-      return { ...windowItem, [field]: value };
+    const next = current.availabilityWindows.map((w, i) => {
+      if (i !== index) return w;
+      if (field === "startTime") { const minEnd = addMinutes(value, 1); return { ...w, startTime: value, endTime: w.endTime <= value ? minEnd : w.endTime }; }
+      return { ...w, [field]: value };
     });
-    return { ...current, availabilityWindows: nextWindows };
+    return { ...current, availabilityWindows: next };
   });
-  const addAvailabilityWindow = () => setForm((current) => ({ ...current, availabilityWindows: [...current.availabilityWindows, createAvailabilityWindow()] }));
-  const removeAvailabilityWindow = (index) => setForm((current) => {
-    if (current.availabilityWindows.length === 1) return current;
-    return { ...current, availabilityWindows: current.availabilityWindows.filter((_, windowIndex) => windowIndex !== index) };
-  });
+  const addAvailabilityWindow    = () => setForm((c) => ({ ...c, availabilityWindows: [...c.availabilityWindows, createAvailabilityWindow()] }));
+  const removeAvailabilityWindow = (index) => setForm((c) => c.availabilityWindows.length === 1 ? c : { ...c, availabilityWindows: c.availabilityWindows.filter((_, i) => i !== index) });
   const updateImage = async (file) => { if (!file) return; if (!file.type.startsWith("image/")) { setFormError("Select a valid image."); return; } try { const url = await readImage(file); setForm((c) => ({ ...c, imageUrl: url })); setFormError(""); } catch (e) { setFormError(e.message); } };
 
   const closeForm  = () => { if (saving) return; setShowForm(false); setEditingResource(null); setForm(emptyForm); setFormError(""); };
@@ -188,7 +192,7 @@ export default function AdminResourcesInterface() {
     setSaving(true); setFormError("");
     try {
       const payload = buildPayload(form);
-      const saved   = editingResource
+      const saved = editingResource
         ? await API.put(`/resources/${editingResource.id}`, payload).then((r) => r.data)
         : await API.post("/resources", payload).then((r) => r.data);
       setResources((c) => editingResource ? replaceById(c, saved, editingResource.id) : [saved, ...c]);
@@ -209,98 +213,21 @@ export default function AdminResourcesInterface() {
   return (
     <div className="space-y-5">
 
-      {/* ── Header ── */}
-      <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-6">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand/8 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
+      {/* ── Breadcrumb + Header ── */}
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">
+          CAMPUS · RESOURCES
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-0.5 text-[10px] font-semibold tracking-wide text-brand">
-              <Wrench className="h-3 w-3" /> Resource Operations
-            </p>
-            <h1 className="mt-1.5 text-2xl font-bold text-navy sm:text-3xl">Resource Control Center</h1>
-            <p className="mt-0.5 text-sm text-[#5a6b98]">Manage campus resources — capacity, location, availability, and operational status.</p>
-          </div>
-          <div className="flex gap-3">
-            <div className="rounded-2xl border border-white/70 bg-white px-5 py-3 text-center shadow-sm">
-              <p className="text-2xl font-bold text-navy">{resources.length}</p>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8494c2]">Total</p>
-            </div>
-            <div className="rounded-2xl border border-emerald-200/60 bg-emerald-50/60 px-5 py-3 text-center">
-              <p className="text-2xl font-bold text-emerald-700">{stats.available}</p>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-500">Available</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Stat cards ── */}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: "Total Resources", value: stats.total,       icon: Building2,    iconBg: "bg-brand" },
-          { label: "Available Now",   value: stats.available,   icon: CheckCircle2, iconBg: "bg-emerald-500" },
-          { label: "Total Capacity",  value: stats.capacity,    icon: Users,        iconBg: "bg-[#f5b800]" },
-          { label: "Maintenance",     value: stats.maintenance, icon: Wrench,       iconBg: "bg-[#152055]" },
-        ].map((stat) => {
-          const StatIcon = stat.icon;
-
-          return (
-            <article key={stat.label} className="rounded-[22px] border border-white/60 bg-white p-4 shadow-[0_8px_30px_rgba(21,32,85,0.07)]">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{stat.label}</p>
-                  <p className="mt-1.5 text-2xl font-bold text-navy">{stat.value}</p>
-                </div>
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stat.iconBg}`}>
-                  <StatIcon className="h-3.5 w-3.5 text-white" />
-                </span>
-              </div>
-            </article>
-          );
-        })}
-      </div>
-
-      {/* ── Toolbar ── */}
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex flex-1 min-w-48 items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
-          <Search className="h-4 w-4 shrink-0 text-[#8494c2]" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, ID, type, location…"
-            className="w-full bg-transparent text-sm text-navy outline-none placeholder-slate-400"
-          />
-        </label>
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-          <Filter className="h-4 w-4 text-[#8494c2]" />
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="bg-transparent text-sm font-semibold text-navy outline-none">
-            {resourceTypes.map((t) => <option key={t}>{t}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {/* ── Status filter tabs ── */}
-      <div className="flex flex-wrap gap-2">
-        {resourceStatuses.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setStatusFilter(s)}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${statusFilter === s ? "bg-brand text-white shadow-[0_4px_12px_rgba(85,120,210,0.30)]" : "border border-slate-200 bg-white text-slate-500 hover:border-brand/30 hover:text-brand"}`}
-          >
-            {titleCase(s)}
-          </button>
-        ))}
-      </div>
-
-      {error && <div className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
-
-      {/* ── Table ── */}
-      <div className="overflow-hidden rounded-[26px] border border-white/60 bg-white shadow-[0_14px_40px_rgba(21,32,85,0.08)]">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div>
-            <h3 className="text-sm font-bold text-navy">Resource Directory</h3>
-            <p className="mt-0.5 text-[11px] text-[#8494c2]">
-              {loading ? "Loading…" : `${filtered.length} resource${filtered.length !== 1 ? "s" : ""} matching current view`}
+            <h1 className="text-[2rem] font-bold leading-tight text-navy">
+              Rooms, labs{' '}
+              <em className="not-italic font-bold text-brand" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+                &amp; spaces.
+              </em>
+            </h1>
+            <p className="mt-1 text-sm text-[#5a6b98]">
+              Live occupancy, capacity and maintenance state for every bookable resource on campus.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -308,90 +235,135 @@ export default function AdminResourcesInterface() {
               type="button"
               onClick={() => setDirectoryReportOpen(true)}
               disabled={loading || filtered.length === 0}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-[#5a6b98] shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#5a6b98] shadow-sm hover:bg-slate-50 transition disabled:opacity-60"
             >
               <Download className="h-4 w-4" /> Export PDF
             </button>
             <button
               type="button"
               onClick={openCreate}
-              className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white shadow-[0_4px_12px_rgba(85,120,210,0.25)] transition hover:opacity-90"
+              className="flex items-center gap-2 rounded-xl bg-[#001d45] px-4 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,29,69,0.25)] hover:bg-[#002a66] transition"
             >
               <Plus className="h-4 w-4" /> Add Resource
             </button>
           </div>
         </div>
-
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-[#8494c2]">
-            <div className="h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-brand" />
-            <p className="mt-3 text-sm">Loading resources…</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10">
-              <Search className="h-5 w-5 text-brand" />
-            </div>
-            <p className="mt-3 text-sm font-semibold text-navy">No resources found</p>
-            <p className="mt-1 text-xs text-[#8494c2]">{resources.length === 0 ? "No records in the database." : "Try adjusting your filters."}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  {["Resource","Type","Location","Capacity","Status","Availability",""].map((h) => (
-                    <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => {
-                  const Icon = typeIcons[r.type] || Building2;
-                  return (
-                    <tr key={r.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/60 last:border-0">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/10">
-                            <Icon className="h-4 w-4 text-brand" />
-                          </span>
-                          <div>
-                            <p className="font-semibold text-navy">{r.name || "Unnamed"}</p>
-                            <p className="text-[10px] text-[#8494c2] font-mono">{(r.id||"").slice(0,16)}…</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-1 text-[11px] font-semibold text-[#6677a4]">{r.type || "—"}</span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="flex items-center gap-1.5 text-xs text-[#6677a4]">
-                          <MapPin className="h-3 w-3 shrink-0 text-[#8494c2]" />
-                          {formatLocation(r.location)}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 font-bold text-navy">{formatCapacityCell(r)}</td>
-                      <td className="px-5 py-3.5">
-                        <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${statusCls[r.status] || "bg-slate-100 text-slate-600 border-slate-200"}`}>{r.status || "—"}</span>
-                      </td>
-                      <td className="px-5 py-3.5 text-xs text-[#8494c2]">{formatAvailability(r.availabilityWindows)}</td>
-                      <td className="px-5 py-3.5">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedResource(r)}
-                          className="flex items-center gap-1.5 rounded-lg bg-brand/10 px-3 py-1.5 text-[11px] font-semibold text-brand transition hover:bg-brand/20"
-                        >
-                          <Eye className="h-3.5 w-3.5" /> Details
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
+
+      {/* ── Filter dropdowns ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {/* Stat chips */}
+          {[
+            { label: "Total", value: stats.total, cls: "bg-[#001d45] text-white" },
+            { label: "Available", value: stats.available, cls: "bg-emerald-500 text-white" },
+            { label: "Maintenance", value: stats.maintenance, cls: "bg-brand text-white" },
+          ].map(s => (
+            <div key={s.label} className={`rounded-xl px-3.5 py-1.5 text-sm font-bold ${s.cls}`}>
+              {s.value} <span className="ml-1 text-[10px] font-semibold opacity-70 uppercase tracking-widest">{s.label}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="bg-transparent text-sm font-semibold text-navy outline-none cursor-pointer">
+              {resourceTypes.map((t) => <option key={t}>{t}</option>)}
+            </select>
+            <ChevronDown className="h-3.5 w-3.5 text-[#8494c2]" />
+          </div>
+          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-transparent text-sm font-semibold text-navy outline-none cursor-pointer">
+              {resourceStatuses.map((s) => <option key={s}>{s}</option>)}
+            </select>
+            <ChevronDown className="h-3.5 w-3.5 text-[#8494c2]" />
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}
+        </div>
+      )}
+
+      {/* ── Card Grid ── */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-brand" />
+          <p className="mt-3 text-sm text-[#8494c2]">Loading resources…</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-[26px] border-2 border-dashed border-slate-200 bg-white py-20 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10">
+            <Wrench className="h-5 w-5 text-brand" />
+          </div>
+          <p className="mt-3 text-sm font-semibold text-navy">No resources found</p>
+          <p className="mt-1 text-xs text-[#8494c2]">{resources.length === 0 ? "No records in the database." : "Try adjusting your filters."}</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((r) => {
+            const Icon = typeIcons[r.type] || Building2;
+            const nameSlug = (r.name || "resource").toLowerCase().replace(/\s+/g, "-");
+            return (
+              <div
+                key={r.id}
+                onClick={() => setSelectedResource(r)}
+                className="group cursor-pointer overflow-hidden rounded-[20px] border border-white/60 bg-white shadow-[0_8px_30px_rgba(21,32,85,0.08)] transition-all hover:shadow-[0_14px_40px_rgba(21,32,85,0.14)] hover:-translate-y-0.5"
+              >
+                {/* Image area */}
+                <div className="relative h-44 overflow-hidden bg-slate-100">
+                  {r.imageUrl ? (
+                    <img src={r.imageUrl} alt={r.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#001d45] to-[#001d45]/60">
+                      <Icon className="h-10 w-10 text-white/25" />
+                    </div>
+                  )}
+                  {/* Type tag */}
+                  <span className="absolute left-3 top-3 rounded-full bg-[#001d45]/75 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+                    {r.type}
+                  </span>
+                  {/* Status badge */}
+                  <span className={`absolute right-3 top-3 flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase backdrop-blur-sm ${statusCls[r.status] || "bg-slate-700/80 text-white"}`}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                    {r.status}
+                  </span>
+                </div>
+
+                {/* Card body */}
+                <div className="p-4">
+                  <h3 className="font-bold text-navy">{r.name || "Unnamed"}</h3>
+                  <div className="mt-1 flex items-center justify-between text-xs text-[#8494c2]">
+                    <span>Capacity {r.type === "EQUIPMENT" ? r.eqCount || "—" : r.capacity || 0}</span>
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {formatLocation(r.location).split(",")[0] || "—"}
+                    </span>
+                  </div>
+                  {/* Occupancy bar */}
+                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full transition-all ${statusBarCls[r.status] || "bg-slate-300"}`}
+                      style={{ width: statusBarPct[r.status] || "30%" }}
+                    />
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSelectedResource(r); }}
+                      className="text-xs font-semibold text-brand hover:underline"
+                    >
+                      Book now →
+                    </button>
+                    <span className="font-mono text-[10px] text-[#8494c2]">{nameSlug}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Details Modal ── */}
       {selectedResource && (
@@ -418,7 +390,7 @@ export default function AdminResourcesInterface() {
             <div className="grid grid-cols-2 gap-3 px-6 pb-4 sm:grid-cols-4">
               {[
                 { label:"Type",       value: selectedResource.type || "—" },
-                { label:"Status",     value: <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${statusCls[selectedResource.status] || "bg-slate-100 text-slate-600 border-slate-200"}`}>{selectedResource.status||"—"}</span> },
+                { label:"Status",     value: <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${statusCls[selectedResource.status] || "bg-slate-100 text-slate-600"}`}>{selectedResource.status||"—"}</span> },
                 { label:"Capacity",   value: formatCapacityValue(selectedResource) },
                 { label:"Eq Count",   value: formatEqCount(selectedResource.eqCount) },
                 { label:"Location",   value: formatLocation(selectedResource.location) },
@@ -449,17 +421,16 @@ export default function AdminResourcesInterface() {
             </div>
 
             <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
-              <button
-                type="button"
-                onClick={() => setReportPreviewResource(selectedResource)}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#5a6b98] transition hover:bg-slate-100"
-              >
+              <button type="button" onClick={() => setReportPreviewResource(selectedResource)}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#5a6b98] transition hover:bg-slate-100">
                 <Eye className="h-4 w-4" /> Print
               </button>
-              <button type="button" disabled={deleting} onClick={() => handleDelete(selectedResource)} className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60">
+              <button type="button" disabled={deleting} onClick={() => handleDelete(selectedResource)}
+                className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60">
                 <Trash2 className="h-4 w-4" />{deleting ? "Deleting…" : "Delete"}
               </button>
-              <button type="button" onClick={() => openEdit(selectedResource)} className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white transition hover:opacity-90">
+              <button type="button" onClick={() => openEdit(selectedResource)}
+                className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-bold text-white transition hover:opacity-90">
                 <Pencil className="h-4 w-4" /> Update
               </button>
             </div>
@@ -467,7 +438,7 @@ export default function AdminResourcesInterface() {
         </div>
       )}
 
-      {/* ── Create / Edit Modal ── */}
+      {/* ── Reports ── */}
       {directoryReportOpen && (
         <ResourceDirectoryReportPreview resources={filtered} onClose={() => setDirectoryReportOpen(false)} />
       )}
@@ -475,6 +446,7 @@ export default function AdminResourcesInterface() {
         <ResourceReportPreview resource={reportPreviewResource} onClose={() => setReportPreviewResource(null)} />
       )}
 
+      {/* ── Create / Edit Form Modal ── */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={closeForm}>
           <form
@@ -510,7 +482,7 @@ export default function AdminResourcesInterface() {
                 <div>
                   <label className={labelCls}>Status *</label>
                   <select value={form.status} onChange={(e) => updateForm("status",e.target.value)} required className={inputCls}>
-                    {["AVAILABLE","BOOKED","MAINTENANCE","UNAVAILABLE"].map((s) => <option key={s}>{s}</option>)}
+                    {resourceStatusOptions.map((s) => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 {form.type !== "EQUIPMENT"
@@ -537,8 +509,8 @@ export default function AdminResourcesInterface() {
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {form.availabilityWindows.map((windowItem, index) => (
-                    <div key={`${index}-${windowItem.day}-${windowItem.startTime}`} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+                  {form.availabilityWindows.map((w, index) => (
+                    <div key={`${index}-${w.day}-${w.startTime}`} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Window {index + 1}</p>
                         {form.availabilityWindows.length > 1 && (
@@ -550,12 +522,12 @@ export default function AdminResourcesInterface() {
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div>
                           <label className={labelCls}>Day *</label>
-                          <select value={windowItem.day} onChange={(e) => updateAvailabilityWindow(index,"day",e.target.value)} required className={inputCls}>
+                          <select value={w.day} onChange={(e) => updateAvailabilityWindow(index,"day",e.target.value)} required className={inputCls}>
                             {["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"].map((d) => <option key={d}>{d}</option>)}
                           </select>
                         </div>
-                        <div><label className={labelCls}>Start Time *</label><input type="time" value={windowItem.startTime} onChange={(e) => updateAvailabilityWindow(index,"startTime",e.target.value)} required className={inputCls} /></div>
-                        <div><label className={labelCls}>End Time *</label><input type="time" value={windowItem.endTime} min={addMinutes(windowItem.startTime,1)} onChange={(e) => updateAvailabilityWindow(index,"endTime",e.target.value)} required className={inputCls} /></div>
+                        <div><label className={labelCls}>Start Time *</label><input type="time" value={w.startTime} onChange={(e) => updateAvailabilityWindow(index,"startTime",e.target.value)} required className={inputCls} /></div>
+                        <div><label className={labelCls}>End Time *</label><input type="time" value={w.endTime} min={addMinutes(w.startTime,1)} onChange={(e) => updateAvailabilityWindow(index,"endTime",e.target.value)} required className={inputCls} /></div>
                       </div>
                     </div>
                   ))}

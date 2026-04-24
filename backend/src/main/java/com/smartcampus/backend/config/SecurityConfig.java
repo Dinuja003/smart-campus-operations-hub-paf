@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/api/resources/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/schedule").hasAnyRole("USER", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.GET, "/api/bookings/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

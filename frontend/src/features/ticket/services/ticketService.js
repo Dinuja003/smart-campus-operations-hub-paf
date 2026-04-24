@@ -35,10 +35,13 @@ export async function getTicketById(id) {
   return res.data;
 }
 
-export async function updateTicket(ticketId, userId, payload) {
-  const res = await API.patch(`/tickets/${ticketId}`, payload, {
-    params: { userId },
-  });
+export async function updateTicket(ticketId, payload) {
+  const res = await API.patch(`/tickets/${ticketId}`, payload);
+  return res.data;
+}
+
+export async function updateTicketStatus(ticketId, status) {
+  const res = await API.patch(`/tickets/${ticketId}/status?status=${status}`);
   return res.data;
 }
 
@@ -52,10 +55,8 @@ export async function addTicketMessage(ticketId, message) {
   return res.data;
 }
 
-export async function deleteTicket(ticketId, userId) {
-  await API.delete(`/tickets/${ticketId}`, {
-    params: { userId },
-  });
+export async function deleteTicket(ticketId) {
+  await API.delete(`/tickets/${ticketId}`);
 }
 
 export async function getTechnicians() {

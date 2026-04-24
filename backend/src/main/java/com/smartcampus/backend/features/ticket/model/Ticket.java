@@ -27,12 +27,14 @@ public class Ticket {
     private String preferredContact;
     @Field("ticketStatus")
     private TicketStatus status;
+    @Field(targetType = FieldType.OBJECT_ID)
     private String assignedTechnicianId;
     private String resolutionNotes;
     private List<Attachment> attachments = new ArrayList<>();
     private List<TicketMessage> messages = new ArrayList<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<String> hiddenBy = new ArrayList<>();
 
     public Ticket() {
     }
@@ -163,5 +165,13 @@ public class Ticket {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<String> getHiddenBy() {
+        return hiddenBy;
+    }
+
+    public void setHiddenBy(List<String> hiddenBy) {
+        this.hiddenBy = hiddenBy;
     }
 }

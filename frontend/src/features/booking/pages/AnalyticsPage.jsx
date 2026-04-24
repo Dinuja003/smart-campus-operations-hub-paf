@@ -118,18 +118,11 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-5">
-
-      {/* Header */}
-      <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-5 shadow-[0_14px_40px_rgba(21,32,85,0.10)] backdrop-blur-sm sm:p-6">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand/8 blur-3xl" />
-        <div className="relative">
-          <p className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-0.5 text-[10px] font-semibold tracking-wide text-brand">
-            <BarChart3 className="h-3 w-3" /> Analytics
-          </p>
-          <h1 className="mt-1.5 text-2xl font-bold text-navy sm:text-3xl">Booking Analytics</h1>
-          <p className="mt-0.5 text-sm text-[#5a6b98]">Understand booking demand, peak hours and resource utilization.</p>
-        </div>
-      </section>
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">OPERATIONS · ANALYTICS</p>
+        <h1 className="mt-1.5 text-[2rem] font-bold leading-tight text-navy">Booking insights, visualized.</h1>
+        <p className="mt-1 text-sm text-[#5a6b98]">Understand demand, peak hours, and resource utilization trends.</p>
+      </div>
 
       {/* Stat cards */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

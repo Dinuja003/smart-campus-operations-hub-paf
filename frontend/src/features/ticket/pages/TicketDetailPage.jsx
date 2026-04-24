@@ -12,9 +12,11 @@ import {
   MapPin,
   Tag,
   Paperclip,
-  CheckCircle2
+  CheckCircle2,
+  Pencil,
+  Trash2
 } from "lucide-react"
-import { getTicketById, addTicketMessage, updateTicket, getTechnicians, assignTechnician } from "@/features/ticket/services/ticketService.js"
+import { getTicketById, addTicketMessage, updateTicket, updateTicketStatus, getTechnicians, assignTechnician, deleteTicket } from "@/features/ticket/services/ticketService.js"
 import { toast } from "sonner"
 
 const statusColors = {
@@ -27,6 +29,8 @@ const statusColors = {
 export default function TicketDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [cancelling, setCancelling] = useState(false)
+  const [confirmModal, setConfirmModal] = useState(null)
   const [ticket, setTicket] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -36,10 +40,8 @@ export default function TicketDetailPage() {
   const [showAssign, setShowAssign] = useState(false)
   const chatEndRef = useRef(null)
 
-  const currentUserId = "69c038632d897c2ee8880785" // TEMP_USER_ID
+  const currentUserId = sessionStorage.getItem("userId")
   const currentUserRole = sessionStorage.getItem("role") || "USER"
-  const isTechnician = currentUserRole === "TECHNICIAN" || currentUserRole === "ADMIN"
-
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -98,10 +100,13 @@ export default function TicketDetailPage() {
 
   const handleStatusChange = async (newStatus) => {
     try {
-      await updateTicket(id, ticket.userId, { status: newStatus })
+      await updateTicketStatus(id, newStatus)
+      if (newStatus === 'IN_PROGRESS') toast.success("Ticket is now in progress")
+      if (newStatus === 'RESOLVED') toast.success("Ticket successfully resolved!")
       loadTicket()
     } catch (err) {
-      alert("Failed to update status")
+      console.error("Status update error:", err)
+      alert("Failed to update status: " + (err.response?.data?.message || err.message))
     }
   }
 
@@ -116,13 +121,38 @@ export default function TicketDetailPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!confirmModal) return
+    const ticketData = confirmModal
+    const isHardDelete = !ticketData.assignedTechnicianId
+    
+    setCancelling(true)
+    setConfirmModal(null)
+    try {
+      await deleteTicket(id)
+      toast.success(isHardDelete ? "Ticket permanently deleted" : "Ticket removed from view", {
+        description: isHardDelete ? "The report has been removed." : "The ticket is hidden from your dashboard."
+      })
+      navigate("/tickets")
+    } catch (err) {
+      toast.error(err.message || "Failed to process request")
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-brand" /></div>
   if (error) return <div className="p-10 text-center text-red-500"><AlertCircle className="mx-auto mb-2 h-10 w-10" />{error}</div>
   if (!ticket) return null
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      {/* ── Header ── */}
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">WORKSPACE · TICKET DETAIL</p>
+        <h1 className="mt-1.5 text-[2rem] font-bold leading-tight text-navy">Incident timeline & actions.</h1>
+        <p className="mt-1 text-sm text-[#5a6b98]">Track updates, collaborate in-thread, and move resolution forward.</p>
+      </div>
+
       <button 
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-sm font-semibold text-[#8494c2] hover:text-brand"
@@ -145,27 +175,118 @@ export default function TicketDetailPage() {
                 <h1 className="mt-3 text-2xl font-bold text-navy sm:text-3xl">{ticket.subject}</h1>
               </div>
               
-              {isTechnician && (
-                <div className="flex gap-2">
-                  {ticket.status === 'OPEN' && (
-                    <button 
-                      onClick={() => handleStatusChange('IN_PROGRESS')}
-                      className="rounded-xl bg-[#001d45] px-4 py-2 text-xs font-bold text-white hover:opacity-90"
-                    >
-                      Take Ticket
-                    </button>
-                  )}
-                  {ticket.status === 'IN_PROGRESS' && (
-                    <button 
-                      onClick={() => handleStatusChange('RESOLVED')}
-                      className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-white hover:opacity-90"
-                    >
-                      Mark Resolved
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="flex gap-2">
+                {/* ── User Edit/Delete ── */}
+                {ticket.userId === currentUserId && (
+                  <>
+                    {ticket.editable ? (
+                      <button 
+                        onClick={() => navigate(`/tickets/edit/${id}`)}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-[#8494c2] hover:bg-slate-50 hover:text-brand transition-colors"
+                        title="Edit Ticket"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => toast.error("Edit Locked", { description: "Technicians have already started work." })}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-200 opacity-40 cursor-not-allowed"
+                        title="Editing is disabled"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    )}
+                    {ticket.deletable ? (
+                      <button 
+                        onClick={() => setConfirmModal(ticket)}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-[#8494c2] hover:bg-red-50 hover:text-red-500 transition-colors"
+                        title="Delete Ticket"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => toast.error("Delete Locked", { description: "Work is currently in progress." })}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-200 opacity-40 cursor-not-allowed"
+                        title="Deletion is disabled"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {/* ── Tech/Admin Actions ── */}
+                {currentUserRole === "TECHNICIAN" && currentUserId === ticket.assignedTechnicianId && (
+                  <div className="flex gap-2">
+                    {ticket.status === 'OPEN' && (
+                      <button 
+                        onClick={() => handleStatusChange('IN_PROGRESS')}
+                        className="rounded-xl bg-[#001d45] px-4 py-2 text-xs font-bold text-white hover:opacity-90"
+                      >
+                        Start Work
+                      </button>
+                    )}
+                    {ticket.status === 'IN_PROGRESS' && (
+                      <button 
+                        onClick={() => handleStatusChange('RESOLVED')}
+                        className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-white hover:opacity-90"
+                      >
+                        Mark Resolved
+                      </button>
+                    )}
+                  </div>
+                )}
+                
+                {/* ── Tech/Admin Cleanup ── */}
+                {(currentUserRole === "ADMIN" || currentUserRole === "TECHNICIAN") && (
+                   <button 
+                     onClick={() => setConfirmModal(ticket)}
+                     className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-[#8494c2] hover:bg-red-50 hover:text-red-500 transition-colors"
+                     title="Hide from dashboard"
+                   >
+                     <Trash2 className="h-4 w-4" />
+                   </button>
+                )}
+              </div>
             </div>
+
+            {/* ── Beautiful Delete Modal ── */}
+            {confirmModal && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={() => setConfirmModal(null)} />
+                <div className="relative w-full max-w-sm rounded-[32px] border border-white/60 bg-white p-8 shadow-[0_30px_70px_rgba(21,32,85,0.25)]">
+                  <div className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl ${!confirmModal.assignedTechnicianId ? "bg-red-50" : "bg-blue-50"}`}>
+                    <Trash2 className={`h-8 w-8 ${!confirmModal.assignedTechnicianId ? "text-red-500" : "text-blue-500"}`} />
+                  </div>
+                  
+                  <h2 className="text-center text-xl font-bold text-navy">
+                    {!confirmModal.assignedTechnicianId ? "Delete for Everyone?" : "Remove from View?"}
+                  </h2>
+                  <p className="mt-2 text-center text-sm leading-relaxed text-[#5a6b98]">
+                    {!confirmModal.assignedTechnicianId 
+                      ? "This ticket hasn't been assigned. It will be permanently removed from the system."
+                      : "This resolved ticket will be hidden from your dashboard but kept in campus records."}
+                  </p>
+                  
+                  <div className="mt-8 flex flex-col gap-3">
+                    <button
+                      onClick={handleDelete}
+                      disabled={cancelling}
+                      className={`w-full rounded-2xl py-3 text-sm font-bold text-white shadow-lg transition hover:opacity-90 disabled:opacity-50 ${!confirmModal.assignedTechnicianId ? "bg-red-500 shadow-red-500/25" : "bg-brand shadow-brand/25"}`}
+                    >
+                      {cancelling ? "Processing..." : (!confirmModal.assignedTechnicianId ? "Yes, Delete Permanently" : "Yes, Hide Ticket")}
+                    </button>
+                    <button
+                      onClick={() => setConfirmModal(null)}
+                      className="w-full rounded-2xl bg-slate-50 py-3 text-sm font-bold text-[#8494c2] transition hover:bg-slate-100 hover:text-navy"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="flex items-center gap-3 rounded-2xl border border-slate-50 bg-slate-50/50 p-4">
@@ -324,7 +445,7 @@ export default function TicketDetailPage() {
                 {[
                   { label: 'Created', status: 'COMPLETED', time: ticket.createdAt },
                   { label: ticket.assignedTechnicianName ? `Assigned to: ${ticket.assignedTechnicianName}` : 'Technician Assigned', status: ticket.assignedTechnicianId ? 'COMPLETED' : 'PENDING' },
-                  { label: 'Work In Progress', status: ticket.status === 'IN_PROGRESS' || ticket.status === 'RESOLVED' ? 'COMPLETED' : 'PENDING' },
+                  { label: 'Work In Progress', status: (ticket.status === 'IN_PROGRESS' || ticket.status === 'RESOLVED') ? 'COMPLETED' : 'PENDING' },
                   { label: 'Resolved', status: ticket.status === 'RESOLVED' ? 'COMPLETED' : 'PENDING' },
                 ].map((step, idx) => (
                  <div key={idx} className="relative pl-8">

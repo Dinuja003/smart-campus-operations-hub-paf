@@ -15,10 +15,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class ResourceService {
+    private static final Set<String> ALLOWED_STATUSES = Set.of("AVAILABLE", "MAINTENANCE", "UNAVAILABLE");
 
     private final ResourceRepository resourceRepository;
 
@@ -87,6 +89,10 @@ public class ResourceService {
             throw new IllegalArgumentException("Availability window is required");
         }
 
+        if (!ALLOWED_STATUSES.contains(resource.getStatus())) {
+            throw new IllegalArgumentException("Status must be one of: " + String.join(", ", ALLOWED_STATUSES));
+        }
+
         for (AvailabilityWindow window : resource.getAvailabilityWindows()) {
             validateAvailabilityWindow(window);
         }
@@ -134,11 +140,15 @@ public class ResourceService {
         resource.setCapacity(dto.getCapacity());
         resource.setLocation(dto.getLocation());
         resource.setAvailabilityWindows(normalizeAvailabilityWindows(dto.getAvailabilityWindows()));
-        resource.setStatus(dto.getStatus());
+        resource.setStatus(normalizeStatus(dto.getStatus()));
         resource.setDescription(dto.getDescription());
         resource.setImageUrl(dto.getImageUrl());
         resource.setCreatedBy(dto.getCreatedBy());
         return resource;
+    }
+
+    private String normalizeStatus(String status) {
+        return status == null ? null : status.trim().toUpperCase();
     }
 
     private List<AvailabilityWindow> normalizeAvailabilityWindows(List<AvailabilityWindow> windows) {
