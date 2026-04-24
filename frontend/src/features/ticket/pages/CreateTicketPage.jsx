@@ -183,7 +183,7 @@ function CreateTicketPage() {
                 >
                   <option value="">No related booking</option>
                   {bookings
-                    .filter(b => b.status === "APPROVED")
+                    .filter(b => b.status && String(b.status).toUpperCase() === "APPROVED")
                     .map(b => (
                       <option key={b.id} value={b.id}>
                         {b.date} - {b.resourceType}

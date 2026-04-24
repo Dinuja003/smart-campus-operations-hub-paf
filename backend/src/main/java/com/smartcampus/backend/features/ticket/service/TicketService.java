@@ -307,11 +307,6 @@ public class TicketService {
         ticket.setAssignedTechnicianId(technicianId);
         ticket.setUpdatedAt(LocalDateTime.now());
         
-        // Optionally set status to IN_PROGRESS if it was OPEN
-        if (ticket.getStatus() == TicketStatus.OPEN) {
-            ticket.setStatus(TicketStatus.IN_PROGRESS);
-        }
-
         Ticket saved = ticketRepository.save(ticket);
 
         notificationService.send(
