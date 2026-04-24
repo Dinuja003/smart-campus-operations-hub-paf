@@ -1,8 +1,9 @@
 export default function UserDashboardPage() {
   return (
-    <div className="space-y-2">
-      <h3 className="text-2xl font-semibold text-slate-900">User Dashboard</h3>
-      <p className="text-slate-600">Access your personal smart-campus workspace and requests.</p>
+    <div className="space-y-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">USER · DASHBOARD</p>
+      <h1 className="text-[2rem] font-bold leading-tight text-navy">Personal workspace summary.</h1>
+      <p className="text-sm text-[#5a6b98]">View your requests, bookings, and updates in one organized dashboard.</p>
     </div>
   )
 }

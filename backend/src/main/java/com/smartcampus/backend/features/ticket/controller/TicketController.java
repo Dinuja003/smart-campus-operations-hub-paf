@@ -34,16 +34,34 @@ public class TicketController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<TicketResponse> createTicket(
+    public ResponseEntity<?> createTicket(
             @RequestPart("ticket") String ticket,
             @RequestPart(value = "files", required = false) MultipartFile[] files
-    ) throws IOException {
-        TicketResponse response = ticketService.createTicket(ticket, files);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    ) {
+        try {
+            TicketResponse response = ticketService.createTicket(ticket, files);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("message", "Error creating ticket: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<TicketResponse>> getUserTickets(@PathVariable String userId) {
+    public ResponseEntity<List<TicketResponse>> getUserTickets(@PathVariable String userId, Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof String)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        String currentUserId = (String) authentication.getPrincipal();
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Only Admin or the user themselves can see their specific tickets
+        if (currentUser.getRole() != UserRole.ADMIN && !currentUserId.equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         return ResponseEntity.ok(ticketService.getTicketsByUser(userId));
     }
 
@@ -55,22 +73,53 @@ public class TicketController {
     @PatchMapping("/{id}")
     public ResponseEntity<TicketResponse> updateTicket(
             @PathVariable String id,
-            @RequestParam String userId,
-            @Valid @RequestBody TicketUpdateRequest request
+            @Valid @RequestBody TicketUpdateRequest request,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(ticketService.updateTicket(id, userId, request));
-    }
-
-    @GetMapping
-    public ResponseEntity<List<TicketResponse>> getAllTickets(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof String)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        
         String userId = (String) authentication.getPrincipal();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(ticketService.getAllTickets(user));
+        return ResponseEntity.ok(ticketService.updateTicket(id, userId, request));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<TicketResponse> updateTicketStatus(
+            @PathVariable String id,
+            @RequestParam com.smartcampus.backend.features.ticket.model.TicketStatus status,
+            Authentication authentication
+    ) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof String)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String userId = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(ticketService.updateTicketStatus(id, userId, status));
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getAllTickets(Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(java.util.Map.of("message", "Not authenticated"));
+            }
+
+            String userId;
+            if (authentication.getPrincipal() instanceof String) {
+                userId = (String) authentication.getPrincipal();
+            } else {
+                userId = authentication.getName(); // Fallback to email/username if principal is an object
+            }
+
+            User user = userRepository.findById(userId)
+                    .or(() -> userRepository.findByEmailIgnoreCase(userId)) // Try finding by email if ID lookup fails
+                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+            return ResponseEntity.ok(ticketService.getAllTickets(user));
+        } catch (Exception e) {
+            e.printStackTrace(); // Log the stack trace
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("message", "Error loading tickets: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/technicians")
@@ -99,8 +148,12 @@ public class TicketController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTicket(
             @PathVariable String id,
-            @RequestParam String userId
+            Authentication authentication
     ) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof String)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String userId = (String) authentication.getPrincipal();
         ticketService.deleteTicket(id, userId);
         return ResponseEntity.noContent().build();
     }

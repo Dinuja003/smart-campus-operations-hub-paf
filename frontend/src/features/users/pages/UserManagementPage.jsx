@@ -123,19 +123,12 @@ export default function UserManagementPage() {
   return (
     <div className="space-y-5">
 
-      {/* ── Header ── */}
-      <section className="relative overflow-hidden rounded-[26px] border border-white/60 bg-white/80 p-5 shadow-[0_14px_40px_rgba(0,29,69,0.10)] backdrop-blur-sm sm:p-6">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#001d45]/6 blur-3xl" />
-        <div className="pointer-events-none absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-[#f45e2b]/6 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">ADMIN · USERS</p>
+        <div className="mt-1.5 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-[#001d45] px-3 py-0.5 text-[10px] font-semibold tracking-wide text-white">
-              <Shield className="h-3 w-3" /> Admin Panel
-            </p>
-            <h1 className="mt-1.5 text-2xl font-bold text-[#001d45] sm:text-3xl" style={{ margin: "6px 0 0" }}>
-              User Management
-            </h1>
-            <p className="mt-0.5 text-sm text-[#5a6b98]">
+            <h1 className="text-[2rem] font-bold leading-tight text-[#001d45]">People & permissions.</h1>
+            <p className="mt-1 text-sm text-[#5a6b98]">
               Create, edit and remove campus accounts. Email cannot be changed after creation.
             </p>
           </div>
@@ -147,7 +140,7 @@ export default function UserManagementPage() {
             <Plus className="h-4 w-4" /> New User
           </button>
         </div>
-      </section>
+      </div>
 
       {/* ── Alerts ── */}
       {error && (

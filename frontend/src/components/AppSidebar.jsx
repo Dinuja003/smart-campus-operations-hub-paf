@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { clearAuth } from "@/features/auth/services/authService"
+import { useUserProfile } from "@/features/users/context/UserProfileContext"
 
 const navSectionsByRole = {
   USER: [
@@ -59,7 +60,6 @@ const navSectionsByRole = {
         { label: "Dashboard",    path: "/dashboard",      icon: LayoutDashboard },
         { label: "All Bookings", path: "/admin/bookings", icon: ShieldCheck     },
         { label: "Analytics",    path: "/analytics",      icon: BarChart3       },
-        { label: "My Bookings",  path: "/my-bookings",    icon: CalendarCheck2  },
         { label: "Resources",    path: "/resources",      icon: Wrench          },
         { label: "Users",        path: "/admin/users",    icon: Users           },
       ],
@@ -120,6 +120,7 @@ export function AppSidebar() {
   const initials = deriveInitials(displayName)
   const navSections = navSectionsByRole[role] || navSectionsByRole.USER
   const { unreadCount } = useNotifications()
+  const { profile, setProfile } = useUserProfile()
 
   return (
     <Sidebar>
@@ -187,8 +188,14 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-white/10 bg-[#001030] p-3">
         <DropdownMenu>
           <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left outline-none transition-colors hover:bg-white/10">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f45e2b] to-[#f45e2b]/60 text-sm font-bold text-white shadow-sm">
-              {initials}
+            <div className="h-9 w-9 shrink-0 rounded-full overflow-hidden shadow-sm">
+              {profile?.profileImage ? (
+                <img src={profile.profileImage} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-[#f45e2b] to-[#f45e2b]/60 text-sm font-bold text-white">
+                  {initials}
+                </div>
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold text-white">{displayName}</div>
@@ -217,6 +224,7 @@ export function AppSidebar() {
               className="text-red-500 focus:bg-red-50 focus:text-red-500 cursor-pointer"
               onClick={() => {
                 clearAuth()
+                setProfile(null)
                 navigate("/", { replace: true })
               }}
             >
