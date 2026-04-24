@@ -5,12 +5,13 @@ import {
   Clock3,
   Loader2,
   Ticket as TicketIcon,
-  ChevronRight,
-  MessageSquare,
-  Search,
+  Trash2, 
+  ChevronRight, 
+  MessageSquare, 
+  Search, 
   Filter
 } from "lucide-react"
-import { getAllTickets, getTechnicians, assignTechnician, updateTicketStatus } from "@/features/ticket/services/ticketService.js"
+import { getAllTickets, getTechnicians, assignTechnician, updateTicketStatus, deleteTicket } from "@/features/ticket/services/ticketService.js"
 import { toast } from "sonner"
 
 const statusColors = {
@@ -34,6 +35,8 @@ export default function AdminTicketsPage() {
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [technicians, setTechnicians] = useState([])
   const [assigningId, setAssigningId] = useState(null)
+  const [confirmModal, setConfirmModal] = useState(null)
+  const [cancelling, setCancelling] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -89,6 +92,27 @@ export default function AdminTicketsPage() {
       setTickets(data)
     } catch (err) {
       toast.error(err.message || "Failed to start work")
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirmModal) return
+    const ticketId = confirmModal.id
+    
+    setCancelling(ticketId)
+    setConfirmModal(null)
+    try {
+      await deleteTicket(ticketId)
+      toast.success("Ticket removed from dashboard", {
+        description: "The ticket is hidden from your queue."
+      })
+      // Reload tickets
+      const ticketsData = await getAllTickets()
+      setTickets(Array.isArray(ticketsData) ? ticketsData : [])
+    } catch (err) {
+      toast.error(err.message || "Failed to remove ticket")
+    } finally {
+      setCancelling(null)
     }
   }
 
@@ -220,11 +244,53 @@ export default function AdminTicketsPage() {
                         )}
                       </div>
                     )}
+                    <button 
+                      onClick={() => setConfirmModal(ticket)}
+                      disabled={cancelling === ticket.id}
+                      className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+                      title="Hide from dashboard"
+                    >
+                      {cancelling === ticket.id ? <Loader2 className="h-4 w-4 animate-spin text-red-500" /> : <Trash2 className="h-4 w-4" />}
+                    </button>
                     <ChevronRight className="h-5 w-5 text-slate-300 transition-transform group-hover:translate-x-1" />
                   </div>
                 </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Beautiful Delete Modal ── */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={() => setConfirmModal(null)} />
+          <div className="relative w-full max-w-sm rounded-[32px] border border-white/60 bg-white p-8 shadow-[0_30px_70px_rgba(21,32,85,0.25)]">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50">
+              <Trash2 className="h-8 w-8 text-blue-500" />
+            </div>
+            
+            <h2 className="text-center text-xl font-bold text-navy">
+              Remove from Dashboard?
+            </h2>
+            <p className="mt-2 text-center text-sm leading-relaxed text-[#5a6b98]">
+              This ticket will be hidden from your technical queue but will remain in campus records.
+            </p>
+            
+            <div className="mt-8 flex flex-col gap-3">
+              <button
+                onClick={handleDelete}
+                className="w-full rounded-2xl bg-[#001d45] py-3 text-sm font-bold text-white shadow-lg transition hover:opacity-90 shadow-[#001d45]/20"
+              >
+                Yes, Hide Ticket
+              </button>
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="w-full rounded-2xl bg-slate-50 py-3 text-sm font-bold text-[#8494c2] transition hover:bg-slate-100 hover:text-navy"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

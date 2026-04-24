@@ -99,10 +99,11 @@ public class TicketService {
         Map<String, String> techNames = getTechnicianNameMap();
         
         return tickets.stream()
+                .filter(t -> t.getHiddenBy() == null || !t.getHiddenBy().contains(userId))
                 .map(ticket -> TicketResponse.from(
                     ticket, 
-                    canEditOrDelete(ticket), 
-                    canEditOrDelete(ticket), 
+                    canEdit(ticket), 
+                    canDelete(ticket, userId), 
                     ticket.getAssignedTechnicianId() != null ? techNames.getOrDefault(ticket.getAssignedTechnicianId(), "Unknown Technician") : null
                 ))
                 .toList();
@@ -111,7 +112,9 @@ public class TicketService {
     public TicketResponse getTicketById(String id) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
-        return TicketResponse.from(ticket, canEditOrDelete(ticket), canEditOrDelete(ticket), resolveTechnicianName(ticket.getAssignedTechnicianId()));
+        // Get userId from context if possible, but for response mapping we use the requestorId if passed
+        // For simplicity in getTicketById, we use a generic check or pass the authenticated user id
+        return TicketResponse.from(ticket, canEdit(ticket), canDelete(ticket, ticket.getUserId()), resolveTechnicianName(ticket.getAssignedTechnicianId()));
     }
 
     public TicketResponse updateTicketStatus(String id, String userId, TicketStatus status) {
@@ -155,8 +158,8 @@ public class TicketService {
             throw new RuntimeException("You can only update your own ticket");
         }
 
-        if (!canEditOrDelete(ticket)) {
-            throw new RuntimeException("Edit time window has expired or ticket is already being processed");
+        if (!canEdit(ticket)) {
+            throw new RuntimeException("Cannot edit ticket: Technician has already started work or ticket is not open.");
         }
 
         if (request.getResourceId() != null) {
@@ -184,22 +187,30 @@ public class TicketService {
         ticket.setUpdatedAt(LocalDateTime.now());
         Ticket updated = ticketRepository.save(ticket);
 
-        return TicketResponse.from(updated, canEditOrDelete(updated), canEditOrDelete(updated), resolveTechnicianName(updated.getAssignedTechnicianId()));
+        return TicketResponse.from(updated, canEdit(updated), canDelete(updated, userId), resolveTechnicianName(updated.getAssignedTechnicianId()));
     }
 
     public void deleteTicket(String id, String userId) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
 
-        if (!ticket.getUserId().equals(userId)) {
-            throw new RuntimeException("You can only delete your own ticket");
-        }
+        User user = userRepository.findById(userId)
+                .or(() -> userRepository.findByEmailIgnoreCase(userId))
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!canEditOrDelete(ticket)) {
-            throw new RuntimeException("Delete time window has expired or ticket is already being processed");
+        // If it's the creator and it's not assigned yet -> Hard Delete
+        if (ticket.getUserId().equals(userId) && ticket.getAssignedTechnicianId() == null) {
+            ticketRepository.delete(ticket);
+        } else {
+            // Otherwise, it's a "Delete for Me" (Hide)
+            if (ticket.getHiddenBy() == null) {
+                ticket.setHiddenBy(new ArrayList<>());
+            }
+            if (!ticket.getHiddenBy().contains(userId)) {
+                ticket.getHiddenBy().add(userId);
+                ticketRepository.save(ticket);
+            }
         }
-
-        ticketRepository.delete(ticket);
     }
 
     public List<TicketResponse> getAllTickets(User user) {
@@ -217,10 +228,11 @@ public class TicketService {
         Map<String, String> techNames = getTechnicianNameMap();
 
         return tickets.stream()
+                .filter(t -> t.getHiddenBy() == null || !t.getHiddenBy().contains(user.getId()))
                 .map(ticket -> TicketResponse.from(
                     ticket, 
-                    false, 
-                    false, 
+                    user.getRole() == UserRole.ADMIN ? false : canEdit(ticket), 
+                    user.getRole() == UserRole.ADMIN ? false : canDelete(ticket, user.getId()), 
                     ticket.getAssignedTechnicianId() != null ? techNames.getOrDefault(ticket.getAssignedTechnicianId(), "Unknown Technician") : null
                 ))
                 .toList();
@@ -283,7 +295,7 @@ public class TicketService {
             );
         }
 
-        return TicketResponse.from(saved, canEditOrDelete(saved), canEditOrDelete(saved), resolveTechnicianName(saved.getAssignedTechnicianId()));
+        return TicketResponse.from(saved, canEdit(saved), canDelete(saved, message.getSenderId()), resolveTechnicianName(saved.getAssignedTechnicianId()));
     }
 
     public List<UserResponse> getTechnicians() {
@@ -331,13 +343,20 @@ public class TicketService {
         }
     }
 
-    private boolean canEditOrDelete(Ticket ticket) {
-        if (ticket.getStatus() != TicketStatus.OPEN) {
-            return false;
-        }
+    private boolean canEdit(Ticket ticket) {
+        // Can edit only if status is OPEN (tech hasn't started work)
+        return ticket.getStatus() == TicketStatus.OPEN;
+    }
 
-        long minutes = Duration.between(ticket.getCreatedAt(), LocalDateTime.now()).toMinutes();
-        return minutes <= EDIT_DELETE_WINDOW_MINUTES;
+    private boolean canDelete(Ticket ticket, String userId) {
+        // Staff can always hide a ticket from their dashboard
+        // Students can hard-delete before assignment OR hide after resolution
+        if (!ticket.getUserId().equals(userId)) return true; // It's staff or another user
+        
+        boolean beforeAssignment = ticket.getAssignedTechnicianId() == null;
+        boolean afterResolution = ticket.getStatus() == TicketStatus.RESOLVED;
+        
+        return beforeAssignment || afterResolution;
     }
 
     private void validateAttachments(MultipartFile[] files) {

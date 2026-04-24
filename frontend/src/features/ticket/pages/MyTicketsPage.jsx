@@ -14,6 +14,7 @@ import {
   MessageSquare
 } from "lucide-react"
 import { getAllTickets, deleteTicket } from "@/features/ticket/services/ticketService.js"
+import { toast } from "sonner"
 
 const statusColors = {
   OPEN: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -33,6 +34,7 @@ export default function MyTicketsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [cancelling, setCancelling] = useState(null)
+  const [confirmModal, setConfirmModal] = useState(null) // Stores ticket to delete
   const navigate = useNavigate()
 
   const loadTickets = async () => {
@@ -54,14 +56,22 @@ export default function MyTicketsPage() {
     loadTickets()
   }, [])
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this ticket?")) return
-    setCancelling(id)
+  const handleDelete = async () => {
+    if (!confirmModal) return
+    const ticket = confirmModal
+    const isHardDelete = !ticket.assignedTechnicianId
+    
+    setCancelling(ticket.id)
+    setConfirmModal(null)
     try {
-      await deleteTicket(id)
-      setTickets((prev) => prev.filter((t) => t.id !== id))
+      await deleteTicket(ticket.id)
+      setTickets((prev) => prev.filter((t) => t.id !== ticket.id))
+      toast.success(isHardDelete ? "Ticket deleted forever" : "Ticket hidden from your view", {
+        icon: isHardDelete ? "🗑️" : "👁️‍🗨️",
+        description: isHardDelete ? "The report has been permanently removed." : "The ticket is archived and hidden from your dashboard."
+      })
     } catch (err) {
-      alert(err.message || "Failed to delete ticket")
+      toast.error(err.message || "Failed to process request")
     } finally {
       setCancelling(null)
     }
@@ -160,23 +170,50 @@ export default function MyTicketsPage() {
                 </div>
                 
                 <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100">
-                  {ticket.canEdit && (
-                    <button 
-                      onClick={() => navigate(`/tickets/edit/${ticket.id}`)}
-                      className="rounded-xl p-2 text-[#8494c2] hover:bg-slate-100 hover:text-brand"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                  )}
-                  {ticket.canDelete && (
-                    <button 
-                      disabled={cancelling === ticket.id}
-                      onClick={() => handleDelete(ticket.id)}
-                      className="rounded-xl p-2 text-[#8494c2] hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
-                    >
-                      {cancelling === ticket.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                    </button>
-                  )}
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!ticket.editable) {
+                        toast.error("Edit Locked", {
+                          description: "You cannot edit a ticket once a technician has started work."
+                        });
+                      } else {
+                        navigate(`/tickets/edit/${ticket.id}`);
+                      }
+                    }}
+                    title={!ticket.editable ? "Cannot edit: Technician has already started work" : "Edit Ticket"}
+                    className={`rounded-xl p-2 transition ${
+                      ticket.editable 
+                        ? "text-[#8494c2] hover:bg-slate-100 hover:text-brand" 
+                        : "text-slate-300 opacity-40 cursor-not-allowed"
+                    }`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (cancelling === ticket.id) return;
+                      if (!ticket.deletable) {
+                        toast.error("Delete Locked", {
+                          description: "This ticket is currently in progress and cannot be removed yet."
+                        });
+                      } else {
+                        setConfirmModal(ticket);
+                      }
+                    }}
+                    title={!ticket.deletable ? "Cannot delete at this stage" : (!ticket.assignedTechnicianId ? "Delete for Everyone" : "Delete for Me")}
+                    className={`rounded-xl p-2 transition ${
+                      ticket.deletable 
+                        ? "text-[#8494c2] hover:bg-red-50 hover:text-red-500" 
+                        : "text-slate-300 opacity-40 cursor-not-allowed"
+                    }`}
+                  >
+                    {cancelling === ticket.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </button>
                   <button className="flex items-center gap-1 rounded-xl bg-slate-50 px-3 py-1.5 text-xs font-semibold text-navy hover:bg-slate-100">
                     Details <ChevronRight className="h-3.5 w-3.5" />
                   </button>
@@ -193,6 +230,42 @@ export default function MyTicketsPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Beautiful Delete Modal ── */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={() => setConfirmModal(null)} />
+          <div className="relative w-full max-w-sm rounded-[32px] border border-white/60 bg-white p-8 shadow-[0_30px_70px_rgba(21,32,85,0.25)]">
+            <div className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl ${!confirmModal.assignedTechnicianId ? "bg-red-50" : "bg-blue-50"}`}>
+              <Trash2 className={`h-8 w-8 ${!confirmModal.assignedTechnicianId ? "text-red-500" : "text-blue-500"}`} />
+            </div>
+            
+            <h2 className="text-center text-xl font-bold text-navy">
+              {!confirmModal.assignedTechnicianId ? "Delete for Everyone?" : "Remove from View?"}
+            </h2>
+            <p className="mt-2 text-center text-sm leading-relaxed text-[#5a6b98]">
+              {!confirmModal.assignedTechnicianId 
+                ? "This ticket hasn't been assigned. It will be permanently removed from the system."
+                : "This resolved ticket will be hidden from your dashboard but kept in campus records."}
+            </p>
+            
+            <div className="mt-8 flex flex-col gap-3">
+              <button
+                onClick={handleDelete}
+                className={`w-full rounded-2xl py-3 text-sm font-bold text-white shadow-lg transition hover:opacity-90 ${!confirmModal.assignedTechnicianId ? "bg-red-500 shadow-red-500/25" : "bg-brand shadow-brand/25"}`}
+              >
+                {!confirmModal.assignedTechnicianId ? "Yes, Delete Permanently" : "Yes, Hide Ticket"}
+              </button>
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="w-full rounded-2xl bg-slate-50 py-3 text-sm font-bold text-[#8494c2] transition hover:bg-slate-100 hover:text-navy"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
