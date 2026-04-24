@@ -55,6 +55,11 @@ export async function addTicketMessage(ticketId, message) {
   return res.data;
 }
 
+export async function deleteTicketMessage(ticketId, messageId) {
+  const res = await API.delete(`/tickets/${ticketId}/messages/${messageId}`);
+  return res.data;
+}
+
 export async function deleteTicket(ticketId) {
   await API.delete(`/tickets/${ticketId}`);
 }

@@ -145,6 +145,19 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.addMessage(id, message));
     }
 
+    @DeleteMapping("/{id}/messages/{messageId}")
+    public ResponseEntity<TicketResponse> deleteMessage(
+            @PathVariable String id,
+            @PathVariable String messageId,
+            Authentication authentication
+    ) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof String)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String userId = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(ticketService.deleteMessage(id, messageId, userId));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTicket(
             @PathVariable String id,

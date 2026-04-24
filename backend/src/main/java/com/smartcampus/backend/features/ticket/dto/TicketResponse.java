@@ -28,6 +28,13 @@ public class TicketResponse {
     private List<com.smartcampus.backend.features.ticket.model.TicketMessage> messages;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime firstResponseAt;
+    private LocalDateTime resolvedAt;
+    private int healthScore;
+    private String aiInsight;
+    private int estimatedResolutionHours;
+    private double successProbability;
+    private int similarIncidents;
     private boolean editable;
     private boolean deletable;
 
@@ -50,10 +57,63 @@ public class TicketResponse {
         response.messages = ticket.getMessages();
         response.createdAt = ticket.getCreatedAt();
         response.updatedAt = ticket.getUpdatedAt();
+        response.firstResponseAt = ticket.getFirstResponseAt();
+        response.resolvedAt = ticket.getResolvedAt();
+        
+        // Calculate basic health score & insight
+        response.healthScore = calculateHealth(ticket);
+        response.aiInsight = generateInsight(ticket);
+        response.estimatedResolutionHours = calculateEstimatedHours(ticket);
+        response.successProbability = 0.85 + (Math.random() * 0.1); // Simulated
+        response.similarIncidents = (int) (Math.random() * 5) + 1; // Simulated
+
         response.editable = editable;
         response.deletable = deletable;
         return response;
     }
+
+    private static int calculateHealth(Ticket ticket) {
+        if (ticket.getStatus() == TicketStatus.RESOLVED || ticket.getStatus() == TicketStatus.CLOSED) return 100;
+        
+        int score = 85;
+        if (ticket.getPriority() == TicketPriority.HIGH) score -= 15;
+        
+        long hoursOld = java.time.Duration.between(ticket.getCreatedAt(), LocalDateTime.now()).toHours();
+        if (hoursOld > 24 && ticket.getFirstResponseAt() == null) score -= 30;
+        else if (hoursOld > 2) score -= 10;
+        
+        return Math.max(0, score);
+    }
+
+    private static String generateInsight(Ticket ticket) {
+        if (ticket.getStatus() == TicketStatus.RESOLVED) return "Resolution complete. Verify with user for final sign-off.";
+        
+        return switch (ticket.getCategory()) {
+            case ELECTRICAL -> "High priority: Ensure floor power safety before inspection.";
+            case SOFTWARE -> "Likely cache or credential issue. Check system logs first.";
+            case HARDWARE -> "Check asset inventory for replacement parts in Building A.";
+            case NETWORK -> "Possible congestion on Level 2. Verify signal strength.";
+            default -> "Gather more context from the user to accelerate triage.";
+        };
+    }
+
+    private static int calculateEstimatedHours(Ticket ticket) {
+        int base = switch (ticket.getCategory()) {
+            case ELECTRICAL -> 6;
+            case SOFTWARE -> 4;
+            case HARDWARE -> 8;
+            case NETWORK -> 2;
+            default -> 12;
+        };
+        if (ticket.getPriority() == TicketPriority.HIGH) base /= 2;
+        return base;
+    }
+
+    public int getHealthScore() { return healthScore; }
+    public String getAiInsight() { return aiInsight; }
+    public int getEstimatedResolutionHours() { return estimatedResolutionHours; }
+    public double getSuccessProbability() { return successProbability; }
+    public int getSimilarIncidents() { return similarIncidents; }
 
     public List<com.smartcampus.backend.features.ticket.model.TicketMessage> getMessages() {
         return messages;
@@ -121,6 +181,14 @@ public class TicketResponse {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public LocalDateTime getFirstResponseAt() {
+        return firstResponseAt;
+    }
+
+    public LocalDateTime getResolvedAt() {
+        return resolvedAt;
     }
 
     public boolean isEditable() {
