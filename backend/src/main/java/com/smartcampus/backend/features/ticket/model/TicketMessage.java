@@ -1,8 +1,10 @@
 package com.smartcampus.backend.features.ticket.model;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class TicketMessage {
+    private String id;
     private String senderId;
     private String senderName;
     private String senderRole;
@@ -10,10 +12,12 @@ public class TicketMessage {
     private LocalDateTime timestamp;
 
     public TicketMessage() {
+        this.id = UUID.randomUUID().toString();
         this.timestamp = LocalDateTime.now();
     }
 
     public TicketMessage(String senderId, String senderName, String senderRole, String content) {
+        this.id = UUID.randomUUID().toString();
         this.senderId = senderId;
         this.senderName = senderName;
         this.senderRole = senderRole;
@@ -22,6 +26,9 @@ public class TicketMessage {
     }
 
     // Getters and Setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
     public String getSenderId() { return senderId; }
     public void setSenderId(String senderId) { this.senderId = senderId; }
 
