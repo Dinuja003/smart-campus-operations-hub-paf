@@ -24,11 +24,11 @@ public class Booking {
     private String resourceId;         // Reference to Resource._id
     private String requestedBy;        // Reference to User._id
     private String bookingReason;      // Short reason/title
-    private String resourceType;       // e.g. LAB, HALL, ROOM, EQUIPMENT
+    private String resourceType;       
 
-    private String date;               // e.g. "2026-04-10"
-    private String startTime;          // e.g. "09:00"
-    private String endTime;            // e.g. "11:00"
+    private String date;               
+    private String startTime;          
+    private String endTime;            
     private int startTimeMinutes;      // 540  (for conflict checking)
     private int endTimeMinutes;        // 660
 

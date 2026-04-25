@@ -30,7 +30,7 @@ const getAllResources = () => API.get("/resources").then((r) => r.data);
 const toArray = (v) => { if (Array.isArray(v)) return v; if (Array.isArray(v?.data)) return v.data; if (Array.isArray(v?.items)) return v.items; return []; };
 const formatLocation = (loc) => { if (!loc) return "Not assigned"; if (typeof loc === "string") return loc; return [loc.building, loc.floor, loc.room].filter(Boolean).join(", ") || "Not assigned"; };
 const formatDate = (v) => { if (!v) return "Not recorded"; const d = new Date(v); if (Number.isNaN(d.getTime())) return v; return new Intl.DateTimeFormat("en", { year: "numeric", month: "short", day: "2-digit" }).format(d); };
-const formatAvailability = (windows = []) => { if (!Array.isArray(windows) || !windows.length) return "Not configured"; return windows.map((w) => [w.day, [w.startTime, w.endTime].filter(Boolean).join(" – ")].filter(Boolean).join(": ")).join(", "); };
+//const formatAvailability = (windows = []) => { if (!Array.isArray(windows) || !windows.length) return "Not configured"; return windows.map((w) => [w.day, [w.startTime, w.endTime].filter(Boolean).join(" – ")].filter(Boolean).join(": ")).join(", "); };
 const addMinutes = (time, mins) => { if (!time) return ""; const [h, m] = time.split(":").map(Number); const d = new Date(); d.setHours(h, m + mins, 0, 0); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
 
 const statusCls = {
