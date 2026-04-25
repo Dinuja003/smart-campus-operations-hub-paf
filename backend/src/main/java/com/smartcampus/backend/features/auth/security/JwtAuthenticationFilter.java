@@ -30,6 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        // Security: skip quickly when request is unauthenticated (no Bearer token).
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -42,6 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String userId = claims.getSubject();
             String role = claims.get("role", String.class);
 
+            // Authorization: install principal + ROLE_* authority for access checks.
             if (userId != null && role != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userId,

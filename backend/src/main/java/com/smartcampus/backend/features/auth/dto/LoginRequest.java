@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
+// Auth Flow: payload for local email/password authentication.
 public class LoginRequest {
 
     @Email(message = "Invalid email format")

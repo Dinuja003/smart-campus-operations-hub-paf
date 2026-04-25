@@ -18,6 +18,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "users")
+// Auth Flow: canonical identity record used by JWT, role checks, and profile APIs.
 public class User {
 
     @Id

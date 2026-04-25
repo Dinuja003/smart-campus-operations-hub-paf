@@ -1,4 +1,5 @@
 export default function UserDashboardPage() {
+  // Authorization: default USER role landing page after successful authentication.
   return (
     <div className="space-y-3">
       <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">USER · DASHBOARD</p>

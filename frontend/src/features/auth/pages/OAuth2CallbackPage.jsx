@@ -10,6 +10,7 @@ export default function OAuth2CallbackPage() {
   const { refreshProfile } = useUserProfile()
 
   useEffect(() => {
+    // Auth Flow: backend success handler redirects here with token + user metadata in query params.
     const params = new URLSearchParams(location.search)
     const token = params.get("token")
     const role = params.get("role")
@@ -26,6 +27,7 @@ export default function OAuth2CallbackPage() {
       userId: params.get("userId") || "",
       email: params.get("email") || "",
     })
+    // Auth Flow: hydrate profile context so role-specific shells render with current user data.
     refreshProfile().finally(() => navigate("/", { replace: true }))
   }, [location.search, navigate])
 

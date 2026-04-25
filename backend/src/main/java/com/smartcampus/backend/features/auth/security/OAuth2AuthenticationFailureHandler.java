@@ -23,6 +23,7 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
             HttpServletResponse response,
             AuthenticationException exception
     ) throws IOException, ServletException {
+        // Auth Flow: normalize OAuth failures to login page with a stable error flag.
         String redirectUrl = UriComponentsBuilder
                 .fromUriString(frontendUrl + "/login")
                 .queryParam("error", "google_auth_failed")

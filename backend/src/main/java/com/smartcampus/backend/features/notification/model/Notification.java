@@ -14,6 +14,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "notifications")
+// Notification Flow: persisted event shown in bell dropdown and notifications page.
 public class Notification {
 
     @Id

@@ -6,6 +6,7 @@ import lombok.Value;
 
 @Value
 @Builder
+// Auth Flow: response contract returned after successful login/signup/oauth completion.
 public class AuthResponse {
     String token;
     String userId;

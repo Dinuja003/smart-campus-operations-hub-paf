@@ -12,6 +12,7 @@ import java.util.List;
 @Configuration
 public class NotificationCollectionSchemaConfig {
 
+    // Notification Flow: enforce Mongo schema so pushed notifications stay structurally valid.
     @Bean
     public CommandLineRunner notificationCollectionValidator(MongoTemplate mongoTemplate) {
         return args -> {

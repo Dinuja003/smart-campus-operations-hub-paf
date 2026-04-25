@@ -33,10 +33,12 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             HttpServletResponse response,
             Authentication authentication
     ) throws IOException, ServletException {
+        // Auth Flow: convert Google principal -> local user -> JWT auth response.
         OAuth2User principal = (OAuth2User) authentication.getPrincipal();
         User user = oAuth2UserService.upsertGoogleUser(principal);
         AuthResponse authResponse = authService.buildAuthResponse(user);
 
+        // Auth Flow: frontend callback receives token/user metadata via query params.
         String redirectUrl = UriComponentsBuilder
                 .fromUriString(frontendUrl + "/oauth2/callback")
                 .queryParam("token", authResponse.getToken())

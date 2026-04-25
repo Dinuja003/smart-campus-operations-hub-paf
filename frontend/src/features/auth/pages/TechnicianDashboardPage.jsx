@@ -1,4 +1,5 @@
 export default function TechnicianDashboardPage() {
+  // Authorization: technician-only dashboard shell reached through protected routing.
   return (
     <div className="space-y-3">
       <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">TECHNICIAN · DASHBOARD</p>
