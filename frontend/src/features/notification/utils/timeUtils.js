@@ -1,3 +1,4 @@
+// Notification Flow: converts notification timestamps into short relative labels for UI.
 export function formatDistanceToNow(isoString) {
   if (!isoString) return ''
   const diff = Date.now() - new Date(isoString).getTime()

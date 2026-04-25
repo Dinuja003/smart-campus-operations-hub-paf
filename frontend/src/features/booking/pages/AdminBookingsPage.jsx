@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { useBooking } from '@/hooks/useBooking';
+import resourceService from '@/features/resources/services/resourceService';
 
 const toArray = (v) => {
   if (Array.isArray(v)) return v;
@@ -40,6 +41,8 @@ export default function AdminBookingsPage() {
   const [tab, setTab]                 = useState('ALL');
   const [sortDesc, setSortDesc]       = useState(true);
   const [reviewModal, setReviewModal] = useState(null);
+  const [resourceDetail, setResourceDetail] = useState(null);
+  const [resourceLoading, setResourceLoading] = useState(false);
   const [adminNote, setAdminNote]     = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [page, setPage]               = useState(1);
@@ -50,7 +53,22 @@ export default function AdminBookingsPage() {
       .catch(() => setBookings([]));
   }, []);
 
-  const openReview = (b) => { setReviewModal(b); setAdminNote(''); };
+  const openReview = async (b) => { 
+    setReviewModal(b); 
+    setAdminNote(''); 
+    setResourceDetail(null);
+    if (b.resourceId) {
+      setResourceLoading(true);
+      try {
+        const res = await resourceService.getResourceById(b.resourceId);
+        setResourceDetail(res);
+      } catch (_) {
+        setResourceDetail(null);
+      } finally {
+        setResourceLoading(false);
+      }
+    }
+  };
 
   const submitReview = async (approved) => {
     if (!approved && !adminNote.trim()) { alert('Please provide a reason when rejecting.'); return; }
@@ -262,16 +280,36 @@ export default function AdminBookingsPage() {
             </div>
 
             <div className="space-y-3 px-6 py-5">
-              {[
-                { label: 'Resource',    value: reviewModal.resourceType },
-                { label: 'Date & Time', value: `${reviewModal.date} · ${reviewModal.startTime}–${reviewModal.endTime}` },
-                { label: 'Purpose',     value: reviewModal.purpose },
-              ].map(({ label, value }) => (
-                <div key={label} className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">{label}</p>
-                  <p className="mt-0.5 text-sm font-medium text-navy">{value}</p>
-                </div>
-              ))}
+              {/* Resource Details */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Resource</p>
+                {resourceLoading ? (
+                  <p className="mt-0.5 text-sm text-[#8494c2]">Loading resource details…</p>
+                ) : resourceDetail ? (
+                  <div className="mt-2 space-y-1.5 text-sm">
+                    <p className="font-medium text-navy">{resourceDetail.name}</p>
+                    <p className="text-xs text-[#8494c2]">Type: {resourceDetail.type}</p>
+                    <p className="text-xs text-[#8494c2]">Capacity: {resourceDetail.capacity}</p>
+                    {resourceDetail.location && (
+                      <p className="text-xs text-[#8494c2]">Location: {resourceDetail.location.building} {resourceDetail.location.floor ? `- Floor ${resourceDetail.location.floor}` : ''}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-0.5 text-sm font-medium text-navy">{reviewModal.resourceType || '—'}</p>
+                )}
+              </div>
+
+              {/* Date & Time */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Date & Time</p>
+                <p className="mt-0.5 text-sm font-medium text-navy">{reviewModal.date} · {reviewModal.startTime}–{reviewModal.endTime}</p>
+              </div>
+
+              {/* Purpose */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">Purpose</p>
+                <p className="mt-0.5 text-sm font-medium text-navy break-words">{reviewModal.purpose || '—'}</p>
+              </div>
               <div>
                 <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">
                   Admin Note <span className="text-red-400">*required for rejection</span>

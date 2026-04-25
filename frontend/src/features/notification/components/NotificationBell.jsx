@@ -4,6 +4,7 @@ import { useNotifications } from '../context/NotificationContext'
 import { useState, useRef, useEffect } from 'react'
 import { formatDistanceToNow } from '../utils/timeUtils'
 
+// Notification Flow: lightweight navbar inbox preview bound to shared notification context.
 const typeIcon = {
   BOOKING_SUBMITTED: '📋',
   BOOKING_APPROVED: '✅',
@@ -28,6 +29,7 @@ export default function NotificationBell() {
   }, [])
 
   async function handleNotificationClick(notification) {
+    // Notification Flow: same read-and-navigate behavior as full notifications page.
     if (!notification.isRead) await markAsRead(notification.id)
     setOpen(false)
     if (notification.link) navigate(notification.link)

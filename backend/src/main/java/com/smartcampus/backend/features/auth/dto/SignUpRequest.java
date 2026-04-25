@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
+// Auth Flow: payload for creating a new local account before token issuance.
 public class SignUpRequest {
 
     @NotBlank(message = "First name is required")

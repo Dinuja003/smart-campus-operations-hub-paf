@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { persistAuth, signIn, signUp } from "@/features/auth/services/authService"
 import { useUserProfile } from "@/features/users/context/UserProfileContext"
 
+// Auth Flow: single shared UI for local login/signup plus Google OAuth handoff.
 function GoogleMark() {
   return (
     <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 48 48" fill="none">
@@ -39,6 +40,7 @@ export default function AuthScreen({ initialMode = "login" }) {
   const backendOrigin = import.meta.env.VITE_BACKEND_ORIGIN || "http://localhost:8081"
 
   const topError = useMemo(() => {
+    // Auth Flow: backend OAuth failure appends a URL flag consumed by the login screen.
     if (searchParams.get("error") === "google_auth_failed") {
       return "Google authentication failed. Please try again."
     }
@@ -46,6 +48,7 @@ export default function AuthScreen({ initialMode = "login" }) {
   }, [searchParams])
 
   const submit = async (e) => {
+    // Auth Flow: submit local credentials, persist JWT session, then refresh profile context.
     e.preventDefault()
     setError("")
     if (!isLogin && form.password !== form.confirmPassword) {
@@ -69,6 +72,7 @@ export default function AuthScreen({ initialMode = "login" }) {
   }
 
   const toggle = (nextMode) => {
+    // Auth Flow: mirrors active form mode in route for direct /login and /signup entry points.
     setMode(nextMode)
     navigate(nextMode === "login" ? "/login" : "/signup", { replace: true })
     setError("")
@@ -345,7 +349,7 @@ export default function AuthScreen({ initialMode = "login" }) {
                   onClick={() => toggle(isLogin ? "signup" : "login")}
                   className="font-semibold text-[#f45e2b] hover:underline"
                 >
-                  {isLogin ? "Sign up free" : "Sign in"}
+                  {isLogin ? "Sign up" : "Sign in"}
                 </button>
               </p>
             </div>

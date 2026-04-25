@@ -3,6 +3,7 @@ import { Bell, CheckCheck, ArrowRight } from 'lucide-react'
 import { useNotifications } from '../context/NotificationContext'
 import { formatDistanceToNow } from '../utils/timeUtils'
 
+// Notification Flow: full-page inbox for persisted + realtime notification events.
 const typeIcon = {
   BOOKING_SUBMITTED: '📋',
   BOOKING_APPROVED: '✅',
@@ -27,6 +28,7 @@ export default function NotificationsPage() {
   const readCount = notifications.length - unreadCount
 
   async function handleClick(n) {
+    // Notification Flow: opening an item marks it read, then routes to the linked entity.
     if (!n.isRead) await markAsRead(n.id)
     if (n.link) navigate(n.link)
   }

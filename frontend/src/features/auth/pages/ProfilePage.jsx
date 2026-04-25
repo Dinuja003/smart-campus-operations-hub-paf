@@ -8,6 +8,7 @@ import profileService from "@/features/users/services/profileService"
 import { useUserProfile } from "@/features/users/context/UserProfileContext"
 
 export default function ProfilePage() {
+  // Auth Flow: account management view for authenticated user identity data.
   const { profile, profileLoading, setProfile } = useUserProfile()
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -21,6 +22,7 @@ export default function ProfilePage() {
   }, [profile])
 
   const save = async (e) => {
+    // Auth Flow: persists editable profile fields while preserving auth-owned email identity.
     e.preventDefault()
     setSaving(true)
     try {

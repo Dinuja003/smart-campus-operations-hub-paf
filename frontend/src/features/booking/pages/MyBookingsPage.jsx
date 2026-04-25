@@ -199,7 +199,7 @@ export default function MyBookingsPage() {
     if (!form.resourceId) { setSubmitError('Please select a resource.'); return; }
     if (!isTimeValid())   { setSubmitError('End time must be after start time.'); return; }
     const latest = await checkAvailability({ silent: true });
-    if (!latest.some(r => r.id === form.resourceId)) { setSubmitError('Resource is now booked. Choose another.'); setAvailChecked(true); setAvailResources(latest); return; }
+    if (!latest.some(r => r.id === form.resourceId)) { setSubmitError('Resource is already booked. Choose another.'); setAvailChecked(true); setAvailResources(latest); return; }
     try {
       const payload = { resourceId: form.resourceId, bookingReason: form.bookingReason, date: form.date, startTime: form.startTime, endTime: form.endTime, purpose: form.purpose, expectedAttendees: n };
       if (editingId) await updateBooking(editingId, payload); else await createBooking(payload);

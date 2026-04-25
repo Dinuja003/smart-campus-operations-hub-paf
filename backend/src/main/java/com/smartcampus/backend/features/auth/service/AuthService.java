@@ -26,6 +26,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
 
+    // Auth Flow: creates a LOCAL user, hashes password, and returns immediate session token.
     public AuthResponse signUp(SignUpRequest request) {
         String normalizedEmail = request.getEmail().trim().toLowerCase();
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
@@ -46,6 +47,7 @@ public class AuthService {
         return buildAuthResponse(saved);
     }
 
+    // Auth Flow: delegates credential check to AuthenticationManager, then issues JWT.
     public AuthResponse signIn(LoginRequest request) {
         String normalizedEmail = request.getEmail().trim().toLowerCase();
         Authentication authentication = authenticationManager.authenticate(
@@ -62,6 +64,7 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
+    // Auth Flow: standard token payload consumed by frontend session storage.
     public AuthResponse buildAuthResponse(User user) {
         return AuthResponse.builder()
                 .token(jwtService.generateToken(user))
@@ -72,6 +75,7 @@ public class AuthService {
                 .build();
     }
 
+    // Authorization: determines role-specific landing page after successful auth.
     public String getRedirectRoute(UserRole role) {
         return switch (role) {
             case ADMIN -> "/admin/dashboard";

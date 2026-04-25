@@ -4,16 +4,19 @@ const authApi = axios.create({
   baseURL: "/api/auth",
 })
 
+// Auth Flow: local login request -> backend returns JWT + user identity payload.
 export async function signIn(payload) {
   const { data } = await authApi.post("/login", payload)
   return data
 }
 
+// Auth Flow: local signup request -> backend creates user and returns JWT response.
 export async function signUp(payload) {
   const { data } = await authApi.post("/signup", payload)
   return data
 }
 
+// Auth Flow: stores auth session in browser storage for route guards and API headers.
 export function persistAuth(data) {
   if (!data?.token) return
   sessionStorage.setItem("token", data.token)
@@ -22,6 +25,7 @@ export function persistAuth(data) {
   sessionStorage.setItem("email", data.email)
 }
 
+// Security: central cleanup used on logout, unauthorized responses, and guard failures.
 export function clearAuth() {
   sessionStorage.removeItem("token")
   sessionStorage.removeItem("role")
@@ -29,6 +33,7 @@ export function clearAuth() {
   sessionStorage.removeItem("email")
 }
 
+// Security: frontend-side expiry check to avoid using stale JWTs.
 export function isTokenExpired(token) {
   if (!token) return true
   try {
@@ -39,7 +44,7 @@ export function isTokenExpired(token) {
   }
 }
 
-// Intercept 401 responses globally — clear session and redirect to login
+// Security: global 401 handling keeps client state aligned with server auth decisions.
 axios.interceptors.response.use(
   (response) => response,
   (error) => {

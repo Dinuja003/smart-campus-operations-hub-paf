@@ -25,6 +25,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
+            // Security: read Bearer token during STOMP CONNECT handshake.
             String authHeader = accessor.getFirstNativeHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
@@ -32,6 +33,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
                     Claims claims = jwtService.parseClaims(token);
                     String userId = claims.getSubject();
                     String role = claims.get("role", String.class);
+                    // Notification Flow: attach principal so /user/{id}/queue routing can resolve identity.
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                             userId, null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + role))

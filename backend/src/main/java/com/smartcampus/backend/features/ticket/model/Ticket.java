@@ -34,9 +34,27 @@ public class Ticket {
     private List<TicketMessage> messages = new ArrayList<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime firstResponseAt;
+    private LocalDateTime resolvedAt;
     private List<String> hiddenBy = new ArrayList<>();
 
     public Ticket() {
+    }
+
+    public LocalDateTime getFirstResponseAt() {
+        return firstResponseAt;
+    }
+
+    public void setFirstResponseAt(LocalDateTime firstResponseAt) {
+        this.firstResponseAt = firstResponseAt;
+    }
+
+    public LocalDateTime getResolvedAt() {
+        return resolvedAt;
+    }
+
+    public void setResolvedAt(LocalDateTime resolvedAt) {
+        this.resolvedAt = resolvedAt;
     }
 
     public List<TicketMessage> getMessages() {

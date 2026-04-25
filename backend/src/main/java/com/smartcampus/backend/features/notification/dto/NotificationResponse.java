@@ -10,6 +10,7 @@ import java.time.Instant;
 
 @Data
 @Builder
+// Notification Flow: serialized payload used by REST APIs and WebSocket pushes.
 public class NotificationResponse {
     private String id;
     private NotificationType type;
@@ -20,6 +21,7 @@ public class NotificationResponse {
     private boolean isRead;
     private Instant createdAt;
 
+    // Notification Flow: mapper keeps REST and WebSocket payloads identical.
     public static NotificationResponse from(Notification n) {
         return NotificationResponse.builder()
                 .id(n.getId())

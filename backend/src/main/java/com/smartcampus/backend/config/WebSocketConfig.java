@@ -17,6 +17,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
+        // Notification Flow: broker handles topic broadcasts + per-user queue messages.
         registry.enableSimpleBroker("/topic", "/queue");
         registry.setApplicationDestinationPrefixes("/app");
         registry.setUserDestinationPrefix("/user");
@@ -24,6 +25,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Notification Flow: frontend connects to /ws (SockJS fallback supported).
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("http://localhost:5173")
                 .withSockJS();
@@ -31,6 +33,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
+        // Security: validates JWT from STOMP CONNECT headers before message handling.
         registration.interceptors(webSocketChannelInterceptor);
     }
 }

@@ -27,6 +27,7 @@ public class JwtService {
         this.expirationMs = expirationMs;
     }
 
+    // Security: embeds user id + role claims used by API and WebSocket authorization.
     public String generateToken(User user) {
         Instant now = Instant.now();
         Instant expiry = now.plusMillis(expirationMs);
@@ -43,6 +44,7 @@ public class JwtService {
                 .compact();
     }
 
+    // Security: verifies signature/expiry and returns trusted claims for downstream filters.
     public Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey)

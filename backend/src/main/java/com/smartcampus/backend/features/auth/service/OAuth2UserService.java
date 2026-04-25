@@ -17,6 +17,7 @@ public class OAuth2UserService {
 
     private final UserRepository userRepository;
 
+    // Auth Flow: maps Google profile attributes and upserts a local user account.
     public User upsertGoogleUser(OAuth2User oAuth2User) {
         Map<String, Object> attrs = oAuth2User.getAttributes();
         String email = (String) attrs.get("email");

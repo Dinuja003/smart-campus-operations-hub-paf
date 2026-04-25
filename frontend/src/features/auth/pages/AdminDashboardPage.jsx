@@ -1,4 +1,5 @@
 export default function AdminDashboardPage() {
+  // Authorization: role-specific landing page rendered after admin route guard passes.
   return (
     <div className="space-y-3">
       <p className="text-[10px] font-bold uppercase tracking-widest text-[#8494c2]">ADMIN · DASHBOARD</p>
